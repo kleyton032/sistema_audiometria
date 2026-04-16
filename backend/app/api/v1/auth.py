@@ -16,10 +16,10 @@ def login(
     db: Session = Depends(get_db),
 ):
 
-    # 1. Busca o usuário pelo login
+   
     usuario = get_by_login(db, form.username)
 
-    # 2. Verifica se existe e se a senha está correta
+  
     if not usuario or not verify_password(form.password, usuario.ds_senha_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -27,7 +27,7 @@ def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # 3. Gera o token com o login do usuário como "sub" (subject)
+   
     token = create_access_token({"sub": usuario.nm_login})
 
     return TokenResponse(access_token=token)

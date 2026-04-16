@@ -3,8 +3,8 @@ from pydantic import BaseModel
 
 
 class LoginInput(BaseModel):
-    username: str    # valor do campo de login
-    password: str    # senha em texto plano (será verificada contra o hash)
+    username: str    
+    password: str   
 
 
 class TokenResponse(BaseModel):
