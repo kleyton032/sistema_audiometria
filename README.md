@@ -37,5 +37,88 @@ backend/
 └── venv/             # Ambiente virtual Python
 ```
 
+## 🧪 Guia de Execução dos Testes
+
+### Estrutura de Testes
+
+```
+backend/tests/
+├── conftest.py                          # Fixtures do cliente e utilidades
+├── db_tests.py                          # Fixtures do banco de dados SQLite
+└── unit/
+    ├── __init__.py
+    └── auth/
+        ├── __init__.py
+        └── test_security.py             # Testes unitários de segurança
+```
+
+### Instalação das Dependências de Teste
+
+Antes de executar os testes, instale as dependências:
+
+```bash
+cd backend
+pip install -r requirements.txt
+```
+
+As dependências adicionadas para testes são:
+- `pytest==8.3.2` - Framework de testes
+- `pytest-asyncio==0.24.0` - Suporte a testes assíncronos
+- `httpx==0.28.1` - Cliente HTTP para testes
+
+### Executar Testes
+
+```bash
+# Todos os testes
+cd backend
+pytest
+
+# Apenas testes de segurança
+pytest tests/unit/auth/test_security.py -v
+
+# Um teste específico
+pytest tests/unit/auth/test_security.py::TestPasswordHashing::test_hash_password_creates_hash -v
+```
+
+### Opções Úteis do Pytest
+
+```bash
+# Modo verboso (mostra mais detalhes)
+pytest -v
+
+# Mostrar output print
+pytest -s
+
+# Parar no primeiro erro
+pytest -x
+
+# Mostrar cobertura de testes
+pytest --cov=app tests/
+```
+
+### Testes de Segurança Implementados
+
+| Teste | Descrição |
+|-------|-----------|
+| `test_hash_password_creates_hash` | Hash de senha funciona |
+| `test_verify_password_correct` | Verificação com senha correta |
+| `test_verify_password_incorrect` | Verificação com senha incorreta |
+| `test_verify_password_different_hashes` | Hashes diferentes para mesma senha |
+| `test_create_token_success` | Criação de token JWT |
+| `test_decode_token_success` | Decodificação de token válido |
+| `test_decode_invalid_token` | Token inválido é rejeitado |
+| `test_decode_expired_token` | Token expirado é rejeitado |
+| `test_token_modified_raises_error` | Token modificado é rejeitado |
+
+### Notas Sobre os Testes
+
+Os testes usam um banco de dados SQLite em memória (`sqlite:///:memory:`) para isolamento completo:
+
+- **Vantagem**: Testes rápidos e sem dependências do Oracle
+- **Cada teste**: Recebe um banco de dados limpo e isolado
+- **Limpeza**: Automática após cada teste
+
+Para mais informações, veja [backend/tests/README.md](backend/tests/README.md).
+
 ---
 *Este é um projeto em fase de desenvolvimento experimental.*
