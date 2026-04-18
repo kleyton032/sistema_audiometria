@@ -1,4 +1,4 @@
-import { InputNumber, Table, Typography } from 'antd'
+import { InputNumber, Typography, Row, Col, Divider } from 'antd'
 import type { EarThresholds } from '@/types'
 import { FREQUENCIES, type Frequency } from '@/types'
 
@@ -26,56 +26,75 @@ export default function ThresholdInput({ label, color, thresholds, onChange }: P
     })
   }
 
-  const columns = [
-    {
-      title: 'Via',
-      dataIndex: 'via',
-      key: 'via',
-      width: 120,
-      render: (text: string) => <Text strong>{text}</Text>,
-    },
-    ...FREQUENCIES.map((freq) => ({
-      title: `${freq >= 1000 ? freq / 1000 + 'k' : freq} Hz`,
-      dataIndex: String(freq),
-      key: String(freq),
-      width: 90,
-      align: 'center' as const,
-      render: (_: unknown, record: { key: string }) => {
-        const isAir = record.key === 'air'
-        const value = isAir ? thresholds.airConduction[freq] : thresholds.boneConduction[freq]
-        return (
-          <InputNumber
-            size="small"
-            min={-10}
-            max={120}
-            step={5}
-            value={value}
-            onChange={(v) => (isAir ? handleAirChange(freq, v) : handleBoneChange(freq, v))}
-            style={{ width: 70 }}
-            placeholder="—"
-          />
-        )
-      },
-    })),
-  ]
-
-  const data = [
-    { key: 'air', via: 'Via Aérea' },
-    { key: 'bone', via: 'Via Óssea' },
-  ]
-
   return (
-    <div style={{ marginBottom: 16 }}>
-      <Text strong style={{ color, fontSize: 16, marginBottom: 8, display: 'block' }}>
+    <div style={{ marginBottom: 24 }}>
+      <Text strong style={{ color, fontSize: 16, marginBottom: 12, display: 'block' }}>
         {label}
       </Text>
-      <Table
-        columns={columns}
-        dataSource={data}
-        pagination={false}
-        size="small"
-        bordered
-      />
+
+      {/* Via Aérea */}
+      <div style={{ marginBottom: 20 }}>
+        <Text type="secondary" style={{ fontSize: 13, fontWeight: 500, marginBottom: 8, display: 'block' }}>
+          Via Aérea
+        </Text>
+        <Row gutter={[8, 8]}>
+          {FREQUENCIES.map((freq) => {
+            const value = thresholds.airConduction[freq]
+            return (
+              <Col xs={6} sm={6} md={3} key={`air-${freq}`} style={{ minWidth: 80 }}>
+                <div>
+                  <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 4 }}>
+                    {freq >= 1000 ? freq / 1000 + 'k' : freq} Hz
+                  </Text>
+                  <InputNumber
+                    size="small"
+                    min={-10}
+                    max={120}
+                    step={5}
+                    value={value}
+                    onChange={(v) => handleAirChange(freq, v)}
+                    style={{ width: '100%' }}
+                    placeholder="—"
+                  />
+                </div>
+              </Col>
+            )
+          })}
+        </Row>
+      </div>
+
+      <Divider style={{ margin: '12px 0' }} />
+
+      {/* Via Óssea */}
+      <div>
+        <Text type="secondary" style={{ fontSize: 13, fontWeight: 500, marginBottom: 8, display: 'block' }}>
+          Via Óssea
+        </Text>
+        <Row gutter={[8, 8]}>
+          {FREQUENCIES.map((freq) => {
+            const value = thresholds.boneConduction[freq]
+            return (
+              <Col xs={6} sm={6} md={3} key={`bone-${freq}`} style={{ minWidth: 80 }}>
+                <div>
+                  <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 4 }}>
+                    {freq >= 1000 ? freq / 1000 + 'k' : freq} Hz
+                  </Text>
+                  <InputNumber
+                    size="small"
+                    min={-10}
+                    max={120}
+                    step={5}
+                    value={value}
+                    onChange={(v) => handleBoneChange(freq, v)}
+                    style={{ width: '100%' }}
+                    placeholder="—"
+                  />
+                </div>
+              </Col>
+            )
+          })}
+        </Row>
+      </div>
     </div>
   )
 }

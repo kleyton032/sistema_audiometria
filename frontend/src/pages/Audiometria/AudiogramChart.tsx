@@ -30,50 +30,47 @@ function buildChartData(right: EarThresholds, left: EarThresholds) {
   }))
 }
 
-// Símbolo O para orelha direita via aérea
-function RightAirDot(props: { cx?: number; cy?: number }) {
-  const { cx = 0, cy = 0 } = props
+// Símbolo O para orelha direita via aérea (ASHA)
+function RightAirDot(props: { cx?: number; cy?: number; value?: number }) {
+  const { cx = 0, cy = 0, value } = props
+  if (value == null) return null
   return (
-    <circle
-      cx={cx}
-      cy={cy}
-      r={8}
-      stroke="#e74c3c"
-      strokeWidth={2}
-      fill="none"
-    />
+    <circle cx={cx} cy={cy} r={8} stroke="#e74c3c" strokeWidth={2.5} fill="white" />
   )
 }
 
-// Símbolo X para orelha esquerda via aérea
-function LeftAirDot(props: { cx?: number; cy?: number }) {
-  const { cx = 0, cy = 0 } = props
+// Símbolo X para orelha esquerda via aérea (ASHA)
+function LeftAirDot(props: { cx?: number; cy?: number; value?: number }) {
+  const { cx = 0, cy = 0, value } = props
+  if (value == null) return null
   return (
     <g>
-      <line x1={cx - 6} y1={cy - 6} x2={cx + 6} y2={cy + 6} stroke="#2980b9" strokeWidth={2} />
-      <line x1={cx + 6} y1={cy - 6} x2={cx - 6} y2={cy + 6} stroke="#2980b9" strokeWidth={2} />
+      <line x1={cx - 7} y1={cy - 7} x2={cx + 7} y2={cy + 7} stroke="#2980b9" strokeWidth={2.5} />
+      <line x1={cx + 7} y1={cy - 7} x2={cx - 7} y2={cy + 7} stroke="#2980b9" strokeWidth={2.5} />
     </g>
   )
 }
 
-// Símbolo < para orelha direita via óssea
-function RightBoneDot(props: { cx?: number; cy?: number }) {
-  const { cx = 0, cy = 0 } = props
+// Símbolo < para orelha direita via óssea (ASHA)
+function RightBoneDot(props: { cx?: number; cy?: number; value?: number }) {
+  const { cx = 0, cy = 0, value } = props
+  if (value == null) return null
   return (
     <g>
-      <line x1={cx + 5} y1={cy - 7} x2={cx - 5} y2={cy} stroke="#e74c3c" strokeWidth={2} />
-      <line x1={cx - 5} y1={cy} x2={cx + 5} y2={cy + 7} stroke="#e74c3c" strokeWidth={2} />
+      <line x1={cx + 8} y1={cy - 8} x2={cx - 6} y2={cy} stroke="#e74c3c" strokeWidth={2.5} />
+      <line x1={cx - 6} y1={cy} x2={cx + 8} y2={cy + 8} stroke="#e74c3c" strokeWidth={2.5} />
     </g>
   )
 }
 
-// Símbolo > para orelha esquerda via óssea
-function LeftBoneDot(props: { cx?: number; cy?: number }) {
-  const { cx = 0, cy = 0 } = props
+// Símbolo > para orelha esquerda via óssea (ASHA)
+function LeftBoneDot(props: { cx?: number; cy?: number; value?: number }) {
+  const { cx = 0, cy = 0, value } = props
+  if (value == null) return null
   return (
     <g>
-      <line x1={cx - 5} y1={cy - 7} x2={cx + 5} y2={cy} stroke="#2980b9" strokeWidth={2} />
-      <line x1={cx + 5} y1={cy} x2={cx - 5} y2={cy + 7} stroke="#2980b9" strokeWidth={2} />
+      <line x1={cx - 8} y1={cy - 8} x2={cx + 6} y2={cy} stroke="#2980b9" strokeWidth={2.5} />
+      <line x1={cx + 6} y1={cy} x2={cx - 8} y2={cy + 8} stroke="#2980b9" strokeWidth={2.5} />
     </g>
   )
 }
@@ -117,48 +114,57 @@ export default function AudiogramChart({ rightEar, leftEar, title }: Props) {
           />
           <Legend
             payload={[
-              { value: 'OD - Via Aérea (O)', type: 'circle', color: '#e74c3c' },
-              { value: 'OD - Via Óssea (<)', type: 'triangle', color: '#e74c3c' },
-              { value: 'OE - Via Aérea (X)', type: 'cross', color: '#2980b9' },
-              { value: 'OE - Via Óssea (>)', type: 'triangle', color: '#2980b9' },
+              { value: 'OD — Via Aérea  (O) — linha contínua', type: 'line', color: '#e74c3c' },
+              { value: 'OD — Via Óssea  (<) — sem linha', type: 'none', color: '#e74c3c' },
+              { value: 'OE — Via Aérea  (X) — linha tracejada', type: 'line', color: '#2980b9' },
+              { value: 'OE — Via Óssea  (>) — sem linha', type: 'none', color: '#2980b9' },
             ]}
+            wrapperStyle={{ paddingTop: 12 }}
           />
-          {/* Linha de normalidade (25 dBHL) */}
-          <ReferenceLine y={25} stroke="#52c41a" strokeDasharray="5 5" label="Normal" />
+          {/* Linha de normalidade: 20 dBHL (ASHA) */}
+          <ReferenceLine
+            y={20}
+            stroke="#52c41a"
+            strokeDasharray="5 5"
+            label={{ value: 'Normal (20 dBHL)', position: 'insideTopRight', fill: '#52c41a', fontSize: 11 }}
+          />
 
-          {/* OD — Via Aérea (O vermelho, linha contínua) */}
+          {/* OD — Via Aérea: linha contínua vermelha + símbolo O */}
           <Line
             dataKey="rightAir"
             stroke="#e74c3c"
             strokeWidth={2}
             dot={<RightAirDot />}
+            activeDot={{ r: 6, fill: '#e74c3c' }}
             connectNulls
           />
-          {/* OD — Via Óssea (< vermelho, linha tracejada) */}
+          {/* OD — Via Óssea: sem linha, apenas símbolo < */}
           <Line
             dataKey="rightBone"
             stroke="#e74c3c"
-            strokeWidth={1.5}
-            strokeDasharray="5 3"
+            strokeWidth={0}
             dot={<RightBoneDot />}
-            connectNulls
+            activeDot={false}
+            connectNulls={false}
           />
-          {/* OE — Via Aérea (X azul, linha contínua) */}
+          {/* OE — Via Aérea: linha tracejada azul + símbolo X */}
           <Line
             dataKey="leftAir"
             stroke="#2980b9"
             strokeWidth={2}
+            strokeDasharray="8 4"
             dot={<LeftAirDot />}
+            activeDot={{ r: 6, fill: '#2980b9' }}
             connectNulls
           />
-          {/* OE — Via Óssea (> azul, linha tracejada) */}
+          {/* OE — Via Óssea: sem linha, apenas símbolo > */}
           <Line
             dataKey="leftBone"
             stroke="#2980b9"
-            strokeWidth={1.5}
-            strokeDasharray="5 3"
+            strokeWidth={0}
             dot={<LeftBoneDot />}
-            connectNulls
+            activeDot={false}
+            connectNulls={false}
           />
         </LineChart>
       </ResponsiveContainer>

@@ -36,6 +36,8 @@ export interface AudiometryData {
   leftEar: EarThresholds
   speechRight: SpeechAudiometry
   speechLeft: SpeechAudiometry
+  hearingLossType: HearingLossType | null
+  hearingLossGrade: HearingLossGrade | null
   conclusion: string
 }
 
@@ -56,4 +58,12 @@ export function calculatePTA(thresholds: EarThresholds): number | null {
   const v2000 = thresholds.airConduction[2000]
   if (v500 == null || v1000 == null || v2000 == null) return null
   return Math.round((v500 + v1000 + v2000) / 3)
+}
+
+/** Ponto de dado para o gráfico do audiograma */
+export interface AudiometryPoint {
+  frequency: number
+  db: number
+  ear: 'right' | 'left'
+  type: 'air' | 'bone'
 }

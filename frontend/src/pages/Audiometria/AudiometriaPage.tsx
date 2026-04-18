@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { Card, Col, Row, Typography, Input, Divider, Tag } from 'antd'
+import { Card, Col, Row, Typography, Input, Divider, Tag, Select } from 'antd'
 import AudiogramChart from './AudiogramChart'
 import ThresholdInput from './ThresholdInput'
 import SpeechAudiometryInput from './SpeechAudiometryInput'
-import type { AudiometryData } from '@/types'
+import type { AudiometryData, HearingLossType, HearingLossGrade } from '@/types'
 import { calculatePTA, classifyHearingLoss } from '@/types'
 
 const { Title, Text } = Typography
@@ -26,6 +26,8 @@ export default function AudiometriaPage() {
     leftEar: emptyThresholds(),
     speechRight: emptySpeech(),
     speechLeft: emptySpeech(),
+    hearingLossType: null,
+    hearingLossGrade: null,
     conclusion: '',
   })
 
@@ -35,11 +37,11 @@ export default function AudiometriaPage() {
   const gradeLeft = ptaLeft !== null ? classifyHearingLoss(ptaLeft) : null
 
   return (
-    <div>
+    <div style={{ padding: '0 8px' }}>
       <Title level={3}>Audiometria Tonal e Vocal</Title>
 
       {/* Gráfico do Audiograma */}
-      <Card style={{ marginBottom: 24 }}>
+      <Card style={{ marginBottom: 32, boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }}>
         <AudiogramChart
           rightEar={data.rightEar}
           leftEar={data.leftEar}
@@ -47,10 +49,15 @@ export default function AudiometriaPage() {
         />
       </Card>
 
-      {/* Entrada de Limiares */}
-      <Row gutter={24}>
+      {/* Entrada de Limiares e Logoaudiometria */}
+      <Row gutter={[24, 24]}>
         <Col xs={24} lg={12}>
-          <Card>
+          <Card
+            style={{
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+              borderLeft: '4px solid #e74c3c',
+            }}
+          >
             <ThresholdInput
               label="Orelha Direita (OD)"
               color="#e74c3c"
@@ -64,7 +71,7 @@ export default function AudiometriaPage() {
               onChange={(speechRight) => setData({ ...data, speechRight })}
             />
             {ptaRight !== null && (
-              <div style={{ marginTop: 8 }}>
+              <div style={{ marginTop: 16, padding: '12px', backgroundColor: '#fafafa', borderRadius: 6 }}>
                 <Text strong>PTA: {ptaRight} dBHL</Text>{' '}
                 <Tag color={gradeRight === 'Normal' ? 'green' : 'orange'}>{gradeRight}</Tag>
               </div>
@@ -72,7 +79,12 @@ export default function AudiometriaPage() {
           </Card>
         </Col>
         <Col xs={24} lg={12}>
-          <Card>
+          <Card
+            style={{
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+              borderLeft: '4px solid #2980b9',
+            }}
+          >
             <ThresholdInput
               label="Orelha Esquerda (OE)"
               color="#2980b9"
@@ -86,7 +98,7 @@ export default function AudiometriaPage() {
               onChange={(speechLeft) => setData({ ...data, speechLeft })}
             />
             {ptaLeft !== null && (
-              <div style={{ marginTop: 8 }}>
+              <div style={{ marginTop: 16, padding: '12px', backgroundColor: '#fafafa', borderRadius: 6 }}>
                 <Text strong>PTA: {ptaLeft} dBHL</Text>{' '}
                 <Tag color={gradeLeft === 'Normal' ? 'green' : 'orange'}>{gradeLeft}</Tag>
               </div>
@@ -96,14 +108,92 @@ export default function AudiometriaPage() {
       </Row>
 
       {/* Conclusão */}
-      <Divider />
-      <Card>
+      <Divider style={{ margin: '32px 0' }} />
+
+      {/* Classificação */}
+      <Card
+        style={{
+          marginBottom: 24,
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+        }}
+      >
+        <Title level={5}>Classificação Audiológica</Title>
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={12} md={12}>
+            <div>
+              <Text strong style={{ display: 'block', marginBottom: 8 }}>
+                Tipo de Perda
+              </Text>
+              <Select
+                allowClear
+                placeholder="Selecione o tipo de perda"
+                value={data.hearingLossType}
+                onChange={(v: HearingLossType | null) =>
+                  setData({ ...data, hearingLossType: v })
+                }
+                options={[
+                  { label: 'Sem perda auditiva', value: 'Normal' },
+                  { label: 'Perda auditiva condutiva', value: 'Condutiva' },
+                  {
+                    label: 'Perda auditiva neurossensorial',
+                    value: 'Sensorioneural',
+                  },
+                  { label: 'Perda auditiva mista', value: 'Mista' },
+                ]}
+                style={{ width: '100%' }}
+              />
+            </div>
+          </Col>
+          <Col xs={24} sm={12} md={12}>
+            <div>
+              <Text strong style={{ display: 'block', marginBottom: 8 }}>
+                Grau de Perda
+              </Text>
+              <Select
+                allowClear
+                placeholder="Selecione o grau de perda"
+                value={data.hearingLossGrade}
+                onChange={(v: HearingLossGrade | null) =>
+                  setData({ ...data, hearingLossGrade: v })
+                }
+                options={[
+                  { label: 'Audição normal', value: 'Normal' },
+                  { label: 'Perda auditiva de grau leve', value: 'Leve' },
+                  {
+                    label: 'Perda auditiva de grau moderado',
+                    value: 'Moderada',
+                  },
+                  {
+                    label: 'Perda auditiva de grau moderadamente severo',
+                    value: 'Moderadamente Severa',
+                  },
+                  { label: 'Perda auditiva de grau severo', value: 'Severa' },
+                  {
+                    label: 'Perda auditiva de grau profundo',
+                    value: 'Profunda',
+                  },
+                ]}
+                style={{ width: '100%' }}
+              />
+            </div>
+          </Col>
+        </Row>
+      </Card>
+
+      {/* Conclusão */}
+      <Card
+        style={{
+          marginTop: 24,
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+        }}
+      >
         <Title level={5}>Conclusão Clínica</Title>
         <TextArea
           rows={4}
           value={data.conclusion}
           onChange={(e) => setData({ ...data, conclusion: e.target.value })}
           placeholder="Digite a conclusão clínica do exame de audiometria..."
+          style={{ resize: 'vertical' }}
         />
       </Card>
     </div>
