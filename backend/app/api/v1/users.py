@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 from app.schemas.user import UserCreate, UserResponse
-from app.db.repositories.user import create_user, get_by_id
+from app.db.repositories.user import create_user, get_by_id, verify_mv_user_validity
 from app.dependencies import get_db, get_current_user
 from app.db.models import User
 
@@ -33,7 +33,22 @@ def create_new_user(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Apenas administradores podem criar usuários",
-        )
+        )    
+    
+    """ Ignora Validação para esse usuario """
+    if payload.nm_login.lower() != "kleyton.bomfim":
+        if not payload.cd_usuario_mv:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="O código do usuário MV (cd_usuario_mv) é obrigatório."
+            )
+        
+        is_valid_mv = verify_mv_user_validity(db, payload.cd_usuario_mv)
+        if not is_valid_mv:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Usuário MV inválido. Certifique-se de que ele existe, está ativo e é um fonoaudiólogo (tipo 6)."
+            )
 
     try:
         user = create_user(db, payload)

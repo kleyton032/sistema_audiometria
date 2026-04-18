@@ -5,10 +5,10 @@ from app.db.session import Base
 
 
 class User(Base):
-    """Maps the Oracle FAV_TB_SILA_USUARIOS table."""
     __tablename__ = "FAV_TB_SILA_USUARIOS"
 
     id_usuario       = Column("ID_USUARIO",       Integer,              primary_key=True, index=True)
+    cd_usuario_mv    = Column("CD_USUARIO_MV",    String(50),           nullable=True)
     nm_login         = Column("NM_LOGIN",         String(50),           unique=True,  nullable=False)
     nm_usuario       = Column("NM_USUARIO",       String(200),          nullable=False)
     ds_email         = Column("DS_EMAIL",         String(200),          unique=True,  nullable=False)

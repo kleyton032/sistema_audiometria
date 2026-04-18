@@ -9,6 +9,7 @@ PerfilLiteral = Literal["ADMIN", "AUDIÓLOGO", "OPERADOR"]
 
 class UserCreate(BaseModel):
     """Payload para criação de um novo usuário."""
+    cd_usuario_mv:    Optional[str] = None
     nm_login:         str
     nm_usuario:       str
     ds_email:         EmailStr
@@ -35,6 +36,7 @@ class UserCreate(BaseModel):
 class UserResponse(BaseModel):
     """Dados públicos do usuário retornados pela API (sem hash de senha)."""
     id_usuario:       int
+    cd_usuario_mv:    Optional[str]
     nm_login:         str
     nm_usuario:       str
     ds_email:         str
