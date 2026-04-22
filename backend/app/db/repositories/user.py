@@ -35,10 +35,13 @@ def verify_mv_user_validity(db: Session, cd_usuario: str) -> bool:
 
 
 def create_user(db: Session, payload: UserCreate) -> User:
+    # Gera email padrão se não fornecido (baseado no nm_login)
+    email = payload.ds_email or f"{payload.nm_login}@audiometria.local"
+    
     new_user = User(
         nm_login         = payload.nm_login,
         nm_usuario       = payload.nm_usuario,
-        ds_email         = payload.ds_email,
+        ds_email         = email,
         ds_senha_hash    = hash_password(payload.ds_senha),
         nr_conselho      = payload.nr_conselho,
         ds_especialidade = payload.ds_especialidade,

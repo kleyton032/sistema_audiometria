@@ -1,5 +1,5 @@
 # app/schemas/user.py
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, field_validator
 from typing import Literal, Optional
 from datetime import datetime
 
@@ -12,7 +12,7 @@ class UserCreate(BaseModel):
     cd_usuario_mv:    Optional[str] = None
     nm_login:         str
     nm_usuario:       str
-    ds_email:         EmailStr
+    ds_email:         Optional[str] = None
     ds_senha:         str           
     nr_conselho:      Optional[str] = None
     ds_especialidade: Optional[str] = None
