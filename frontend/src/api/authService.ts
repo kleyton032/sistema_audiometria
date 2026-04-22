@@ -11,3 +11,18 @@ export async function login(username: string, password: string): Promise<TokenRe
   })
   return data
 }
+
+export interface CheckMvResponse {
+  existe_local: boolean
+  valido_mv: boolean
+}
+
+export async function checkMvCode(codigoMv: string): Promise<CheckMvResponse> {
+  const { data } = await api.get<CheckMvResponse>(`/auth/check/${codigoMv}`)
+  return data
+}
+
+export async function registerUser(payload: any): Promise<any> {
+  const { data } = await api.post('/auth/register', payload)
+  return data
+}
