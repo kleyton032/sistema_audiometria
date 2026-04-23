@@ -47,6 +47,14 @@ function encaixeBadge(sn: string | null) {
 
 const columns: ColumnsType<AgendaItem> = [
   {
+    title: 'Cód. Atendimento',
+    dataIndex: 'cd_atendimento',
+    key: 'cd_atendimento',
+    width: 110,
+    sorter: (a, b) => (a.cd_atendimento ?? 0) - (b.cd_atendimento ?? 0),
+    render: (v) => <Text strong>{v ?? '—'}</Text>,
+  },
+  {
     title: 'Horário',
     dataIndex: 'hr_agenda',
     key: 'hr_agenda',
