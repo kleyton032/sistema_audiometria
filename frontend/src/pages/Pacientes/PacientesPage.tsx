@@ -83,6 +83,14 @@ const columns: ColumnsType<AgendaItem> = [
     ),
   },
   {
+    title: 'Item Agendado',
+    dataIndex: 'ds_item_agendamento',
+    key: 'ds_item_agendamento',
+    width: 180,
+    ellipsis: true,
+    render: (v) => v ?? <Text type="secondary">—</Text>,
+  },
+  {
     title: 'Telefone',
     dataIndex: 'nr_fone',
     key: 'nr_fone',

@@ -55,6 +55,7 @@ def listar_pacientes(
             cd_paciente=row.get("CD_PACIENTE"),
             nm_paciente=row.get("NM_PACIENTE"),
             cd_item_agendamento=row.get("CD_ITEM_AGENDAMENTO"),
+            ds_item_agendamento=row.get("DS_ITEM_AGENDAMENTO"),
             sn_falta=row.get("SN_FALTA"),
             sn_atendido=row.get("SN_ATENDIDO"),
             nr_fone=row.get("NR_FONE"),

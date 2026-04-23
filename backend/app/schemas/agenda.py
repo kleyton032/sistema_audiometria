@@ -13,6 +13,7 @@ class AgendaItem(BaseModel):
     cd_paciente:              Optional[int]   = None
     nm_paciente:              Optional[str]   = None
     cd_item_agendamento:      Optional[int]   = None
+    ds_item_agendamento:      Optional[str]   = None   # descrição do item (via JOIN)
     sn_falta:                 Optional[str]   = None
     sn_atendido:              Optional[str]   = None
     nr_fone:                  Optional[str]   = None

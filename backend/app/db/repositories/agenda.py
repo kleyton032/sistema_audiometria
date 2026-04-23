@@ -32,30 +32,32 @@ def get_agenda_do_dia(
 ) -> list[dict]:
     query = text("""
         SELECT
-            CD_AGENDA_CENTRAL,
-            HR_AGENDA,
-            DT_AGENDA,
-            CD_PACIENTE,
-            NM_PACIENTE,
-            CD_ITEM_AGENDAMENTO,
-            SN_FALTA,
-            SN_ATENDIDO,
-            NR_FONE,
-            CD_ATENDIMENTO,
-            CD_CONVENIO,
-            CD_PRESTADOR,
-            CD_SETOR,
-            TP_SITUACAO,
-            CD_UNIDADE_ATENDIMENTO,
-            DS_OBSERVACAO,
-            DS_CONSULTORIO,
-            SN_ENCAIXE
-        FROM dbamv.VDIC_RECEPCAO_AGENDA
-        WHERE TRUNC(dt_agenda) = TO_DATE(:data_ref, 'YYYY-MM-DD')
-          AND cd_prestador = :cd_prestador
+            V.CD_AGENDA_CENTRAL,
+            V.HR_AGENDA,
+            V.DT_AGENDA,
+            V.CD_PACIENTE,
+            V.NM_PACIENTE,
+            V.CD_ITEM_AGENDAMENTO,
+            IT.DS_ITEM_AGENDAMENTO,
+            V.SN_FALTA,
+            V.SN_ATENDIDO,
+            V.NR_FONE,
+            V.CD_ATENDIMENTO,
+            V.CD_CONVENIO,
+            V.CD_PRESTADOR,
+            V.CD_SETOR,
+            V.TP_SITUACAO,
+            V.CD_UNIDADE_ATENDIMENTO,
+            V.DS_OBSERVACAO,
+            V.DS_CONSULTORIO,
+            V.SN_ENCAIXE
+        FROM dbamv.VDIC_RECEPCAO_AGENDA V
+        LEFT JOIN dbamv.ITEM_AGENDAMENTO IT ON V.CD_ITEM_AGENDAMENTO = IT.CD_ITEM_AGENDAMENTO
+        WHERE TRUNC(V.dt_agenda) = TO_DATE(:data_ref, 'YYYY-MM-DD')
+          AND V.cd_prestador = :cd_prestador
         ORDER BY
-            HR_AGENDA ASC,
-            CD_AGENDA_CENTRAL DESC
+            V.HR_AGENDA ASC,
+            V.CD_AGENDA_CENTRAL DESC
     """)
 
     rows = db.execute(query, {

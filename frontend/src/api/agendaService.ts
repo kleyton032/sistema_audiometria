@@ -6,8 +6,8 @@ export interface AgendaItem {
   dt_agenda:               string | null   
   cd_paciente:             number | null
   nm_paciente:             string | null
-  cd_item_agendamento:     number | null
-  sn_falta:                string | null
+  cd_item_agendamento:     number | null  
+  ds_item_agendamento:     string | null   // descrição do item  sn_falta:                string | null
   sn_atendido:             string | null
   nr_fone:                 string | null
   cd_atendimento:          number | null
