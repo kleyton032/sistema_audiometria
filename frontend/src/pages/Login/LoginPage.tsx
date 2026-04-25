@@ -54,6 +54,7 @@ export default function LoginPage() {
   }
 
   const handleLoginSubmit = async (values: LoginForm) => {
+    if (step !== 'LOGIN') return
     setLoading(true)
     setError(null)
     try {
@@ -73,6 +74,7 @@ export default function LoginPage() {
   }
 
   const handleRegisterSubmit = async (values: LoginForm) => {
+    if (step !== 'REGISTER') return
     setLoading(true)
     setError(null)
     try {
