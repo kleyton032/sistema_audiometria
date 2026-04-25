@@ -1,8 +1,6 @@
 import { useState } from 'react'
 import { Layout as AntLayout, Menu, Button, theme } from 'antd'
 import {
-  AudioOutlined,
-  SoundOutlined,
   DashboardOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
@@ -24,16 +22,6 @@ const menuItems = [
     key: '/pacientes',
     icon: <TeamOutlined />,
     label: 'Pacientes',
-  },
-  {
-    key: '/audiometria',
-    icon: <AudioOutlined />,
-    label: 'Audiometria',
-  },
-  {
-    key: '/imitanciometria',
-    icon: <SoundOutlined />,
-    label: 'Imitanciometria',
   },
 ]
 
