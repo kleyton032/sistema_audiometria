@@ -16,11 +16,13 @@ import {
   UserOutlined,
   PhoneOutlined,
   CalendarOutlined,
+  ExperimentOutlined,
 } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs, { type Dayjs } from 'dayjs'
 import 'dayjs/locale/pt-br'
 import { getAgendaDoPacientes, type AgendaItem } from '@/api/agendaService'
+import ExameModal, { type TipoExame } from '@/components/ExameModal'
 
 dayjs.locale('pt-br')
 
@@ -45,107 +47,15 @@ function encaixeBadge(sn: string | null) {
   return sn === 'S' ? <Badge status="warning" text="Encaixe" /> : null
 }
 
-const columns: ColumnsType<AgendaItem> = [
-  {
-    title: 'Cód. Atendimento',
-    dataIndex: 'cd_atendimento',
-    key: 'cd_atendimento',
-    width: 110,
-    sorter: (a, b) => (a.cd_atendimento ?? 0) - (b.cd_atendimento ?? 0),
-    render: (v) => <Text strong>{v ?? '—'}</Text>,
-  },
-  {
-    title: 'Horário',
-    dataIndex: 'hr_agenda',
-    key: 'hr_agenda',
-    width: 90,
-    sorter: (a, b) => (a.hr_agenda ?? '').localeCompare(b.hr_agenda ?? ''),
-    render: (v) => <Text strong>{v ?? '—'}</Text>,
-  },
-  {
-    title: 'Paciente',
-    dataIndex: 'nm_paciente',
-    key: 'nm_paciente',
-    ellipsis: true,
-    render: (nome, record) => (
-      <Space direction="vertical" size={0}>
-        <Space>
-          <UserOutlined style={{ color: '#667eea' }} />
-          <Text strong>{nome ?? '—'}</Text>
-        </Space>
-        {record.cd_paciente && (
-          <Text type="secondary" style={{ fontSize: 11 }}>
-            Cód. {record.cd_paciente}
-          </Text>
-        )}
-        {encaixeBadge(record.sn_encaixe)}
-      </Space>
-    ),
-  },
-  {
-    title: 'Item Agendado',
-    dataIndex: 'ds_item_agendamento',
-    key: 'ds_item_agendamento',
-    width: 180,
-    ellipsis: true,
-    render: (v) => v ?? <Text type="secondary">—</Text>,
-  },
-  {
-    title: 'Telefone',
-    dataIndex: 'nr_fone',
-    key: 'nr_fone',
-    width: 140,
-    render: (v) =>
-      v ? (
-        <Space>
-          <PhoneOutlined />
-          <Text>{v}</Text>
-        </Space>
-      ) : (
-        <Text type="secondary">—</Text>
-      ),
-  },
-  {
-    title: 'Situação',
-    dataIndex: 'tp_situacao',
-    key: 'tp_situacao',
-    width: 140,
-    filters: [
-      { text: 'Marcado', value: 'M' },
-      { text: 'Atendido', value: 'A' },
-      { text: 'Falta', value: 'F' },
-      { text: 'Cancelado', value: 'C' },
-      { text: 'Em Atendimento', value: 'R' },
-    ],
-    onFilter: (value, record) =>
-      (record.tp_situacao ?? '').toUpperCase() === value,
-    render: (v) => situacaoTag(v),
-  },
-  {
-    title: 'Consultório',
-    dataIndex: 'ds_consultorio',
-    key: 'ds_consultorio',
-    width: 150,
-    ellipsis: true,
-    render: (v) => v ?? <Text type="secondary">—</Text>,
-  },
-  {
-    title: 'Observação',
-    dataIndex: 'ds_observacao',
-    key: 'ds_observacao',
-    ellipsis: true,
-    render: (v) =>
-      v ? (
-        <Tooltip title={v}>
-          <Text ellipsis style={{ maxWidth: 200 }}>
-            {v}
-          </Text>
-        </Tooltip>
-      ) : (
-        <Text type="secondary">—</Text>
-      ),
-  },
-]
+// Códigos de item que abrem exames
+const CD_AUDIOMETRIA = 2766
+const CD_IMITANCIOMETRIA = 2767
+
+function tipoExamePorItem(cdItem: number | null): TipoExame | null {
+  if (cdItem === CD_AUDIOMETRIA) return 'audiometria'
+  if (cdItem === CD_IMITANCIOMETRIA) return 'imitanciometria'
+  return null
+}
 
 export default function PacientesPage() {
   const [loading, setLoading] = useState(false)
@@ -153,6 +63,143 @@ export default function PacientesPage() {
   const [data, setData] = useState<AgendaItem[]>([])
   const [total, setTotal] = useState(0)
   const [dataRef, setDataRef] = useState<Dayjs>(dayjs())
+
+  // Estado do modal de exame
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalTipo, setModalTipo] = useState<TipoExame | null>(null)
+  const [modalPaciente, setModalPaciente] = useState<string | null>(null)
+  const [modalAtendimento, setModalAtendimento] = useState<number | null>(null)
+
+  function abrirExame(record: AgendaItem) {
+    const tipo = tipoExamePorItem(record.cd_item_agendamento)
+    if (!tipo) return
+    setModalTipo(tipo)
+    setModalPaciente(record.nm_paciente)
+    setModalAtendimento(record.cd_atendimento)
+    setModalOpen(true)
+  }
+
+  const columns: ColumnsType<AgendaItem> = [
+    {
+      title: 'Cód. Atendimento',
+      dataIndex: 'cd_atendimento',
+      key: 'cd_atendimento',
+      width: 110,
+      sorter: (a, b) => (a.cd_atendimento ?? 0) - (b.cd_atendimento ?? 0),
+      render: (v) => <Text strong>{v ?? '—'}</Text>,
+    },
+    {
+      title: 'Horário',
+      dataIndex: 'hr_agenda',
+      key: 'hr_agenda',
+      width: 90,
+      sorter: (a, b) => (a.hr_agenda ?? '').localeCompare(b.hr_agenda ?? ''),
+      render: (v) => <Text strong>{v ?? '—'}</Text>,
+    },
+    {
+      title: 'Paciente',
+      dataIndex: 'nm_paciente',
+      key: 'nm_paciente',
+      ellipsis: true,
+      render: (nome, record) => (
+        <Space direction="vertical" size={0}>
+          <Space>
+            <UserOutlined style={{ color: '#667eea' }} />
+            <Text strong>{nome ?? '—'}</Text>
+          </Space>
+          {record.cd_paciente && (
+            <Text type="secondary" style={{ fontSize: 11 }}>
+              Cód. {record.cd_paciente}
+            </Text>
+          )}
+          {encaixeBadge(record.sn_encaixe)}
+        </Space>
+      ),
+    },
+    {
+      title: 'Item Agendado',
+      dataIndex: 'ds_item_agendamento',
+      key: 'ds_item_agendamento',
+      width: 180,
+      ellipsis: true,
+      render: (v) => v ?? <Text type="secondary">—</Text>,
+    },
+    {
+      title: 'Telefone',
+      dataIndex: 'nr_fone',
+      key: 'nr_fone',
+      width: 140,
+      render: (v) =>
+        v ? (
+          <Space>
+            <PhoneOutlined />
+            <Text>{v}</Text>
+          </Space>
+        ) : (
+          <Text type="secondary">—</Text>
+        ),
+    },
+    {
+      title: 'Situação',
+      dataIndex: 'tp_situacao',
+      key: 'tp_situacao',
+      width: 140,
+      filters: [
+        { text: 'Marcado', value: 'M' },
+        { text: 'Atendido', value: 'A' },
+        { text: 'Falta', value: 'F' },
+        { text: 'Cancelado', value: 'C' },
+        { text: 'Em Atendimento', value: 'R' },
+      ],
+      onFilter: (value, record) =>
+        (record.tp_situacao ?? '').toUpperCase() === value,
+      render: (v) => situacaoTag(v),
+    },
+    {
+      title: 'Consultório',
+      dataIndex: 'ds_consultorio',
+      key: 'ds_consultorio',
+      width: 150,
+      ellipsis: true,
+      render: (v) => v ?? <Text type="secondary">—</Text>,
+    },
+    {
+      title: 'Observação',
+      dataIndex: 'ds_observacao',
+      key: 'ds_observacao',
+      ellipsis: true,
+      render: (v) =>
+        v ? (
+          <Tooltip title={v}>
+            <Text ellipsis style={{ maxWidth: 200 }}>
+              {v}
+            </Text>
+          </Tooltip>
+        ) : (
+          <Text type="secondary">—</Text>
+        ),
+    },
+    {
+      title: 'Realizar Exame',
+      key: 'realizar_exame',
+      width: 130,
+      fixed: 'right',
+      render: (_, record) => {
+        const tipo = tipoExamePorItem(record.cd_item_agendamento)
+        if (!tipo) return <Text type="secondary">—</Text>
+        return (
+          <Button
+            type="primary"
+            size="small"
+            icon={<ExperimentOutlined />}
+            onClick={() => abrirExame(record)}
+          >
+            {tipo === 'audiometria' ? 'Audiometria' : 'Imitanciometria'}
+          </Button>
+        )
+      },
+    },
+  ]
 
   const fetchAgenda = async (d: Dayjs) => {
     setLoading(true)
@@ -237,6 +284,14 @@ export default function PacientesPage() {
           scroll={{ x: 'max-content' }}
         />
       </Card>
+
+      <ExameModal
+        open={modalOpen}
+        tipo={modalTipo}
+        nmPaciente={modalPaciente}
+        cdAtendimento={modalAtendimento}
+        onClose={() => setModalOpen(false)}
+      />
     </div>
   )
 }
