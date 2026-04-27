@@ -18,13 +18,15 @@ def _audiograma_base64(resultado, exame=None) -> str:
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     import matplotlib.ticker as ticker
-    import numpy as np
-    fig, ax = plt.subplots(figsize=(9, 5))
+
+    fig, (ax_od, ax_oe) = plt.subplots(1, 2, figsize=(13, 5))
+    fig.suptitle("Audiograma Tonal", fontsize=11, fontweight="bold")
 
     freqs_va = [250, 500, 1000, 2000, 3000, 4000, 6000, 8000]
     freqs_vo = [500, 1000, 2000, 4000]
     x_va = list(range(len(freqs_va)))
     x_vo = [freqs_va.index(f) for f in freqs_vo]
+    xlabels = ["250", "500", "1k", "2k", "3k", "4k", "6k", "8k"]
 
     def _get(obj, field):
         v = getattr(obj, field, None)
@@ -40,74 +42,71 @@ def _audiograma_base64(resultado, exame=None) -> str:
     nr_od_vo    = bool(getattr(r, "od_vo_nr",    0))
     nr_oe_vo    = bool(getattr(r, "oe_vo_nr",    0))
 
-    # Marker helpers
-    # sem mascaramento → marker normal; com mascaramento → marker alternativo
-    od_va_marker = "^"  if mask_od_va else "o"   # △ vs O
-    oe_va_marker = "s"  if mask_oe_va else "x"   # □ vs X
-    od_vo_marker = "$[$" if mask_od_vo else "<"  # [ vs <
-    oe_vo_marker = "$]$" if mask_oe_vo else ">"  # ] vs >
+    od_va_marker = "^"   if mask_od_va else "o"
+    oe_va_marker = "s"   if mask_oe_va else "x"
+    od_vo_marker = "$[$" if mask_od_vo else "<"
+    oe_vo_marker = "$]$" if mask_oe_vo else ">"
 
-    def _plot_line(vals, xs, color, marker, label, dashed=False, connect=True):
+    def _plot_line(ax, vals, xs, color, marker, label, connect=True):
         pts = [(x, y) for x, y in zip(xs, vals) if y is not None]
         if not pts:
             return
         xs_p, ys_p = zip(*pts)
-        ls = "--" if dashed else "-"
-        lw = 1.5 if connect else 0
-        ax.plot(xs_p, ys_p, linestyle=ls, color=color, label=label,
+        lw = 1.8 if connect else 0
+        ax.plot(xs_p, ys_p, linestyle="-", color=color, label=label,
                 marker=marker, markersize=8, markeredgewidth=2.2,
                 linewidth=lw, markerfacecolor="white" if marker not in ("x", "<", ">") else color)
 
-    def _plot_nr(xs_all, vals, nr_flag, color, marker_nr="v"):
-        """Plota seta NR nos pontos que existem (qualquer freq) quando NR=True."""
+    def _plot_nr(ax, xs_all, nr_flag, color):
         if not nr_flag:
             return
-        # Plota símbolo ↓ em y=115 para cada frequência do eixo
         for x in xs_all:
             ax.annotate("", xy=(x, 118), xytext=(x, 108),
                         arrowprops=dict(arrowstyle="-|>", color=color, lw=2))
 
-    # --- Via aérea OD
+    def _configure_ax(ax, title, color, show_ylabel=True):
+        ax.set_xticks(x_va)
+        ax.set_xticklabels(xlabels, fontsize=8)
+        ax.set_ylim(125, -10)
+        ax.set_yticks(range(-10, 130, 10))
+        ax.yaxis.set_minor_locator(ticker.MultipleLocator(5))
+        ax.tick_params(axis="y", labelsize=8)
+        if show_ylabel:
+            ax.set_ylabel("dB HL", fontsize=9)
+        ax.set_xlabel("Frequência (Hz)", fontsize=9)
+        ax.set_title(title, fontsize=10, fontweight="bold", color=color, pad=8)
+        ax.axhline(25, color="#aaa", linestyle="--", linewidth=0.8)
+        ax.grid(True, which="major", alpha=0.25)
+        ax.set_xlim(-0.5, 7.5)
+        ax.legend(fontsize=7, loc="lower right")
+
+    # ── Ouvido Direito (ax_od) ─────────────────────────────────────────────
     od_va = [_get(r, f"od_va_{f}") for f in freqs_va]
-    _plot_line(od_va, x_va, "#e74c3c", od_va_marker,
-               f"OD — VA {'(mascarado △)' if mask_od_va else '(O)'}")
-    _plot_nr(x_va, od_va, nr_od_va, "#e74c3c")
+    _plot_line(ax_od, od_va, x_va, "#e74c3c", od_va_marker,
+               f"VA {'(△ mascarado)' if mask_od_va else '(O)'}")
+    _plot_nr(ax_od, x_va, nr_od_va, "#e74c3c")
 
-    # --- Via aérea OE
-    oe_va = [_get(r, f"oe_va_{f}") for f in freqs_va]
-    _plot_line(oe_va, x_va, "#2980b9", oe_va_marker,
-               f"OE — VA {'(mascarado □)' if mask_oe_va else '(X)'}",
-               dashed=True)
-    _plot_nr(x_va, oe_va, nr_oe_va, "#2980b9")
-
-    # --- Via óssea OD
     od_vo = [_get(r, f"od_vo_{f}") for f in freqs_vo]
-    _plot_line(od_vo, x_vo, "#e74c3c", od_vo_marker,
-               f"OD — VO {'([)' if mask_od_vo else '(<)'}",
+    _plot_line(ax_od, od_vo, x_vo, "#e74c3c", od_vo_marker,
+               f"VO {'([)' if mask_od_vo else '(<)'}",
                connect=False)
-    _plot_nr(x_vo, od_vo, nr_od_vo, "#e74c3c")
+    _plot_nr(ax_od, x_vo, nr_od_vo, "#e74c3c")
+    _configure_ax(ax_od, "Ouvido Direito", "#e74c3c", show_ylabel=True)
 
-    # --- Via óssea OE
+    # ── Ouvido Esquerdo (ax_oe) ────────────────────────────────────────────
+    oe_va = [_get(r, f"oe_va_{f}") for f in freqs_va]
+    _plot_line(ax_oe, oe_va, x_va, "#2980b9", oe_va_marker,
+               f"VA {'(□ mascarado)' if mask_oe_va else '(X)'}")
+    _plot_nr(ax_oe, x_va, nr_oe_va, "#2980b9")
+
     oe_vo = [_get(r, f"oe_vo_{f}") for f in freqs_vo]
-    _plot_line(oe_vo, x_vo, "#2980b9", oe_vo_marker,
-               f"OE — VO {'(])' if mask_oe_vo else '(>)'}",
+    _plot_line(ax_oe, oe_vo, x_vo, "#2980b9", oe_vo_marker,
+               f"VO {'(])' if mask_oe_vo else '(>)'}",
                connect=False)
-    _plot_nr(x_vo, oe_vo, nr_oe_vo, "#2980b9")
+    _plot_nr(ax_oe, x_vo, nr_oe_vo, "#2980b9")
+    _configure_ax(ax_oe, "Ouvido Esquerdo", "#2980b9", show_ylabel=False)
 
-    # Configuração dos eixos
-    ax.set_xticks(x_va)
-    ax.set_xticklabels(["250", "500", "1k", "2k", "3k", "4k", "6k", "8k"], fontsize=9)
-    ax.set_ylim(125, -10)
-    ax.set_yticks(range(-10, 130, 10))
-    ax.yaxis.set_minor_locator(ticker.MultipleLocator(5))
-    ax.set_ylabel("dB HL", fontsize=9)
-    ax.set_xlabel("Frequência (Hz)", fontsize=9)
-    ax.set_title("Audiograma Tonal", fontsize=11, fontweight="bold", pad=10)
-    ax.axhline(25, color="#aaa", linestyle="--", linewidth=0.8, label="Limite normal (25 dBHL)")
-    ax.grid(True, which="major", alpha=0.25)
-    ax.legend(fontsize=7, loc="lower right")
-    ax.set_xlim(-0.5, 7.5)
-
+    fig.tight_layout()
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=130, bbox_inches="tight")
     plt.close(fig)

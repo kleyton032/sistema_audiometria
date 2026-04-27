@@ -104,6 +104,31 @@ def atualizar_exame_audiometria(
     return exame
 
 
+def get_status_por_atendimentos(
+    db: Session, cd_atendimentos: list[int]
+) -> dict[int, dict]:
+    """Retorna {cd_atendimento: {tipo, status, id_exame}} para uma lista de atendimentos."""
+    if not cd_atendimentos:
+        return {}
+    rows = (
+        db.query(Exame.id_atendimento, Exame.ds_tipo, Exame.ds_status, Exame.id_exame)
+        .filter(Exame.id_atendimento.in_(cd_atendimentos))
+        .all()
+    )
+    result: dict[int, dict] = {}
+    for row in rows:
+        cd = row.id_atendimento
+        # Prioriza FINALIZADO sobre RASCUNHO se houver dois exames do mesmo atendimento
+        existing = result.get(cd)
+        if not existing or row.ds_status == "FINALIZADO":
+            result[cd] = {
+                "id_exame": row.id_exame,
+                "ds_tipo": row.ds_tipo,
+                "ds_status": row.ds_status,
+            }
+    return result
+
+
 def finalizar_exame(db: Session, exame: Exame) -> Exame:
     exame.ds_status = "FINALIZADO"
     db.commit()

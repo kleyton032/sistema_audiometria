@@ -3,11 +3,18 @@ FROM python:3.11-slim-bookworm
 # Evitar prompts interativos durante o apt-get
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Instala ferramentas básicas e a dependência do Oracle (libaio1)
+# Instala ferramentas básicas, dependência do Oracle (libaio1) e libs nativas do WeasyPrint
 RUN apt-get update && apt-get install -y \
     wget \
     unzip \
     libaio1 \
+    libglib2.0-0 \
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    libharfbuzz0b \
+    libfontconfig1 \
+    libcairo2 \
+    fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
 
 # Prepara e instala o Oracle Instant Client Basic Lite (Linux x64 - versão 19.22)

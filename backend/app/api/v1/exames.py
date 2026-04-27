@@ -4,6 +4,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 import io
 from datetime import datetime
+from typing import Any
 
 from app.dependencies import get_db, get_current_user
 from app.db.models import User
@@ -18,6 +19,19 @@ from app.pdf.audiometria import gerar_pdf_audiometria
 from app.pdf.imitanciometria import gerar_pdf_imitanciometria
 
 router = APIRouter(prefix="/exames", tags=["Exames"])
+
+
+@router.post("/status-atendimentos", response_model=dict[str, Any])
+def status_por_atendimentos(
+    body: dict[str, list[int]],
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Recebe {cd_atendimentos: [1,2,3]} e retorna status de exame por atendimento."""
+    ids = body.get("cd_atendimentos", [])
+    result = repo.get_status_por_atendimentos(db, ids)
+    # converte chaves para string (JSON só aceita string como key)
+    return {str(k): v for k, v in result.items()}
 
 
 @router.post(

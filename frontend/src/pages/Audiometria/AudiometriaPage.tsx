@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
   Card, Col, Row, Typography, Input, Divider, Tag, Select,
-  Button, Space, Alert, Spin, notification, Tooltip,
+  Button, Space, Alert, Spin, notification,
 } from 'antd'
 import {
   SaveOutlined, FilePdfOutlined, CheckCircleOutlined, LoadingOutlined,
@@ -290,12 +290,19 @@ export default function AudiometriaPage({ cdPaciente, cdAtendimento }: Audiometr
         />
       )}
 
+      {/* Referência OMS */}
+      <Alert
+        type="info"
+        showIcon
+        style={{ marginBottom: 16 }}
+        message="Referência: Classificação de acordo com a Organização Mundial de Saúde, 2021 — média quadritonal."
+      />
+
       {/* Audiograma */}
       <Card style={{ marginBottom: 32, boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }}>
         <AudiogramChart
           rightEar={data.rightEar}
           leftEar={data.leftEar}
-          title="Audiograma"
           maskingRight={data.maskingRight}
           maskingLeft={data.maskingLeft}
         />
@@ -411,9 +418,6 @@ export default function AudiometriaPage({ cdPaciente, cdAtendimento }: Audiometr
           placeholder="Digite a conclusão clínica do exame de audiometria..."
           style={{ resize: 'vertical' }}
         />
-        <Text type="secondary" style={{ fontSize: 11, display: 'block', marginTop: 8 }}>
-          Referência: Classificação de acordo com a Organização Mundial de Saúde, 2021 — média quadritonal.
-        </Text>
       </Card>
 
       {/* Observações */}
@@ -429,54 +433,37 @@ export default function AudiometriaPage({ cdPaciente, cdAtendimento }: Audiometr
         />
       </Card>
 
-      {/* Barra de ações */}
-      <div
-        style={{
-          marginTop: 32,
-          padding: '16px 24px',
-          background: '#fafafa',
-          border: '1px solid #eee',
-          borderRadius: 8,
-          display: 'flex',
-          justifyContent: 'flex-end',
-        }}
-      >
-        <Space>
-          <Tooltip title={isFinalizado ? 'Exame finalizado' : 'Salvar como rascunho'}>
-            <Button
-              icon={<SaveOutlined />}
-              onClick={salvar}
-              loading={saving}
-              disabled={isFinalizado || !cdPaciente}
-            >
-              Salvar Rascunho
-            </Button>
-          </Tooltip>
-
-          <Tooltip title={isFinalizado ? 'Exame já finalizado' : 'Finalizar e bloquear edição'}>
-            <Button
-              icon={<CheckCircleOutlined />}
-              onClick={finalizar}
-              loading={saving}
-              disabled={isFinalizado || !cdPaciente}
-              style={!isFinalizado && cdPaciente ? { background: '#10b981', borderColor: '#10b981', color: '#fff' } : {}}
-            >
-              Finalizar
-            </Button>
-          </Tooltip>
-
+      {/* Ações */}
+      <Card style={{ marginTop: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+        <Space wrap>
           <Button
             type="primary"
+            icon={<SaveOutlined />}
+            loading={saving}
+            disabled={isFinalizado || !cdPaciente}
+            onClick={salvar}
+          >
+            Salvar Rascunho
+          </Button>
+          <Button
+            type="default"
+            icon={<CheckCircleOutlined />}
+            loading={saving}
+            disabled={isFinalizado || !cdPaciente}
+            onClick={finalizar}
+          >
+            Finalizar Exame
+          </Button>
+          <Button
             icon={<FilePdfOutlined />}
-            onClick={gerarPdf}
             loading={generatingPdf}
-            disabled={!idExame}
-            style={{ background: '#7c3aed', borderColor: '#7c3aed' }}
+            disabled={!isFinalizado}
+            onClick={gerarPdf}
           >
             Gerar Laudo PDF
           </Button>
         </Space>
-      </div>
+      </Card>
     </div>
   )
 }

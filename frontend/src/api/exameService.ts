@@ -138,6 +138,24 @@ export async function gerarLaudoPdf(idExame: number): Promise<Blob> {
   return data as Blob
 }
 
+export interface ExameStatusItem {
+  id_exame: number
+  ds_tipo: string
+  ds_status: 'RASCUNHO' | 'FINALIZADO'
+}
+
+/** Busca status de exame para uma lista de atendimentos de uma vez. */
+export async function buscarStatusAtendimentos(
+  cdAtendimentos: number[]
+): Promise<Record<string, ExameStatusItem>> {
+  if (cdAtendimentos.length === 0) return {}
+  const { data } = await api.post<Record<string, ExameStatusItem>>(
+    '/exames/status-atendimentos',
+    { cd_atendimentos: cdAtendimentos }
+  )
+  return data
+}
+
 // ── Imitanciometria ───────────────────────────────────────────────────────────
 
 export interface ExameImitanciometriaCreate {

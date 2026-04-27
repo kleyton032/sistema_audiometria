@@ -1,3 +1,4 @@
+import React from 'react'
 import {
   LineChart,
   Line,
@@ -15,22 +16,20 @@ import { FREQUENCIES } from '@/types'
 interface Props {
   rightEar: EarThresholds
   leftEar: EarThresholds
-  title?: string
   maskingRight?: { va?: number | null; vo?: number | null }
   maskingLeft?: { va?: number | null; vo?: number | null }
 }
 
-/** Converte os limiares em pontos para o gráfico Recharts */
-function buildChartData(right: EarThresholds, left: EarThresholds) {
+/** Dados de uma única orelha para o gráfico */
+function buildEarData(ear: EarThresholds) {
   return FREQUENCIES.map((freq) => ({
     frequency: `${freq >= 1000 ? freq / 1000 + 'k' : freq}`,
-    freqValue: freq,
-    rightAir: right.airConduction[freq] ?? undefined,
-    rightBone: right.boneConduction[freq] ?? undefined,
-    leftAir: left.airConduction[freq] ?? undefined,
-    leftBone: left.boneConduction[freq] ?? undefined,
+    air: ear.airConduction[freq] ?? undefined,
+    bone: ear.boneConduction[freq] ?? undefined,
   }))
 }
+
+const Y_TICKS = [-10, 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120]
 
 // ── Símbolos sem mascaramento ─────────────────────────────────────────────────
 
@@ -136,129 +135,122 @@ function NRDot(props: { cx?: number; cy?: number; value?: number; color: string 
   )
 }
 
-// ── Componente ────────────────────────────────────────────────────────────────
+// ── Sub-gráfico por orelha ───────────────────────────────────────────────────
 
-export default function AudiogramChart({ rightEar, leftEar, title, maskingRight, maskingLeft }: Props) {
-  const data = buildChartData(rightEar, leftEar)
+type DotProps = { cx?: number; cy?: number; value?: number }
 
-  const useMaskRight_va  = !!(maskingRight?.va)
-  const useMaskRight_vo  = !!(maskingRight?.vo)
-  const useMaskLeft_va   = !!(maskingLeft?.va)
-  const useMaskLeft_vo   = !!(maskingLeft?.vo)
+interface EarChartProps {
+  ear: EarThresholds
+  side: 'OD' | 'OE'
+  masking?: { va?: number | null; vo?: number | null }
+}
+
+function EarChart({ ear, side, masking }: EarChartProps) {
+  const color   = side === 'OD' ? '#e74c3c' : '#2980b9'
+  const data    = buildEarData(ear)
+  const maskVa  = !!(masking?.va)
+  const maskVo  = !!(masking?.vo)
+  const isNR_va = !!ear.airNR
+  const isNR_vo = !!ear.boneNR
+
+  // ── dots via aérea ──────────────────────────────────────────────────────────
+  const AirDot: React.ReactElement | ((p: DotProps) => React.ReactElement | null) = isNR_va
+    ? (p: DotProps) => <NRDot {...p} color={color} />
+    : side === 'OD'
+      ? maskVa ? <RightAirMaskedDot /> : <RightAirDot />
+      : maskVa ? <LeftAirMaskedDot />  : <LeftAirDot />
+
+  // ── dots via óssea ──────────────────────────────────────────────────────────
+  const BoneDot: React.ReactElement | ((p: DotProps) => React.ReactElement | null) = isNR_vo
+    ? (p: DotProps) => <NRDot {...p} color={color} />
+    : side === 'OD'
+      ? maskVo ? <RightBoneMaskedDot /> : <RightBoneDot />
+      : maskVo ? <LeftBoneMaskedDot />  : <LeftBoneDot />
+
+  const airLabel  = isNR_va ? 'VA — NR ↓' : maskVa
+    ? (side === 'OD' ? 'VA — △ mascarado' : 'VA — □ mascarado')
+    : (side === 'OD' ? 'VA — O' : 'VA — X')
+
+  const boneLabel = isNR_vo ? 'VO — NR ↓' : maskVo
+    ? (side === 'OD' ? 'VO — [ mascarado' : 'VO — ] mascarado')
+    : (side === 'OD' ? 'VO — <' : 'VO — >')
 
   return (
-    <div>
-      {title && (
-        <h4 style={{ textAlign: 'center', marginBottom: 8 }}>{title}</h4>
-      )}
-      <ResponsiveContainer width="100%" height={450}>
-        <LineChart data={data} margin={{ top: 10, right: 30, left: 10, bottom: 10 }}>
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ textAlign: 'center', color, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>
+        {side === 'OD' ? 'OUVIDO DIREITO' : 'OUVIDO ESQUERDO'}
+      </div>
+      <ResponsiveContainer width="100%" height={420}>
+        <LineChart data={data} margin={{ top: 8, right: 16, left: 8, bottom: 28 }}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             dataKey="frequency"
-            label={{ value: 'Frequência (Hz)', position: 'insideBottom', offset: -5 }}
+            label={{ value: 'Hz', position: 'insideBottom', offset: -12, fontSize: 10 }}
+            tick={{ fontSize: 10 }}
           />
           <YAxis
             reversed
             domain={[-10, 120]}
-            ticks={[-10, 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120]}
-            label={{
-              value: 'Intensidade (dBHL)',
-              angle: -90,
-              position: 'insideLeft',
-              offset: 10,
-            }}
+            ticks={Y_TICKS}
+            label={{ value: 'dB', angle: -90, position: 'insideLeft', offset: 10, fontSize: 10 }}
+            tick={{ fontSize: 10 }}
+            width={38}
           />
-          <Tooltip
-            formatter={(value: number, name: string) => {
-              const labels: Record<string, string> = {
-                rightAir: 'OD - Via Aérea',
-                rightBone: 'OD - Via Óssea',
-                leftAir: 'OE - Via Aérea',
-                leftBone: 'OE - Via Óssea',
-              }
-              return [`${value} dBHL`, labels[name] || name]
-            }}
-          />
+          <Tooltip formatter={(v: number) => [`${v} dBHL`]} labelFormatter={(l) => `${l} Hz`} />
           <Legend
             payload={[
-              { value: `OD — VA  ${useMaskRight_va ? '△ mascarado' : 'O sem mascaramento'}`, type: 'line', color: '#e74c3c' },
-              { value: `OD — VO  ${useMaskRight_vo ? '[ mascarado' : '< sem mascaramento'}`, type: 'none', color: '#e74c3c' },
-              { value: `OE — VA  ${useMaskLeft_va  ? '□ mascarado' : 'X sem mascaramento'}`, type: 'line', color: '#2980b9' },
-              { value: `OE — VO  ${useMaskLeft_vo  ? '] mascarado' : '> sem mascaramento'}`, type: 'none', color: '#2980b9' },
-              ...(rightEar.airNR  ? [{ value: 'OD — VA  NR (↓)', type: 'none' as const, color: '#e74c3c' }] : []),
-              ...(rightEar.boneNR ? [{ value: 'OD — VO  NR (↓)', type: 'none' as const, color: '#e74c3c' }] : []),
-              ...(leftEar.airNR   ? [{ value: 'OE — VA  NR (↓)', type: 'none' as const, color: '#2980b9' }] : []),
-              ...(leftEar.boneNR  ? [{ value: 'OE — VO  NR (↓)', type: 'none' as const, color: '#2980b9' }] : []),
+              { value: airLabel,  type: 'line', color },
+              { value: boneLabel, type: 'none', color },
             ]}
-            wrapperStyle={{ paddingTop: 12 }}
+            wrapperStyle={{ paddingTop: 8, fontSize: 11 }}
           />
           <ReferenceLine
-            y={20}
-            stroke="#52c41a"
-            strokeDasharray="5 5"
-            label={{ value: 'Normal (20 dBHL)', position: 'insideTopRight', fill: '#52c41a', fontSize: 11 }}
+            y={25}
+            stroke="#aaa"
+            strokeDasharray="4 4"
+            label={{ value: '25 dB', position: 'insideTopRight', fill: '#999', fontSize: 9 }}
           />
-
-          {/* OD — Via Aérea */}
+          {/* Via Aérea */}
           <Line
-            dataKey="rightAir"
-            stroke="#e74c3c"
+            dataKey="air"
+            stroke={color}
             strokeWidth={2}
-            dot={rightEar.airNR
-              ? (p: { cx?: number; cy?: number; value?: number }) => <NRDot {...p} color="#e74c3c" />
-              : useMaskRight_va
-                ? <RightAirMaskedDot />
-                : <RightAirDot />
-            }
-            activeDot={{ r: 6, fill: '#e74c3c' }}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            dot={AirDot as any}
+            activeDot={{ r: 5, fill: color }}
             connectNulls
           />
-          {/* OD — Via Óssea */}
+          {/* Via Óssea — sem linha de conexão */}
           <Line
-            dataKey="rightBone"
-            stroke="#e74c3c"
+            dataKey="bone"
+            stroke={color}
             strokeWidth={0}
-            dot={rightEar.boneNR
-              ? (p: { cx?: number; cy?: number; value?: number }) => <NRDot {...p} color="#e74c3c" />
-              : useMaskRight_vo
-                ? <RightBoneMaskedDot />
-                : <RightBoneDot />
-            }
-            activeDot={false}
-            connectNulls={false}
-          />
-          {/* OE — Via Aérea */}
-          <Line
-            dataKey="leftAir"
-            stroke="#2980b9"
-            strokeWidth={2}
-            strokeDasharray="8 4"
-            dot={leftEar.airNR
-              ? (p: { cx?: number; cy?: number; value?: number }) => <NRDot {...p} color="#2980b9" />
-              : useMaskLeft_va
-                ? <LeftAirMaskedDot />
-                : <LeftAirDot />
-            }
-            activeDot={{ r: 6, fill: '#2980b9' }}
-            connectNulls
-          />
-          {/* OE — Via Óssea */}
-          <Line
-            dataKey="leftBone"
-            stroke="#2980b9"
-            strokeWidth={0}
-            dot={leftEar.boneNR
-              ? (p: { cx?: number; cy?: number; value?: number }) => <NRDot {...p} color="#2980b9" />
-              : useMaskLeft_vo
-                ? <LeftBoneMaskedDot />
-                : <LeftBoneDot />
-            }
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            dot={BoneDot as any}
             activeDot={false}
             connectNulls={false}
           />
         </LineChart>
       </ResponsiveContainer>
+    </div>
+  )
+}
+
+// ── Componente principal ─────────────────────────────────────────────────────
+
+export default function AudiogramChart({ rightEar, leftEar, maskingRight, maskingLeft }: Props) {
+  return (
+    <div>
+      <div style={{
+        textAlign: 'center', fontWeight: 700, fontSize: 14,
+        letterSpacing: 3, color: '#333', marginBottom: 8,
+      }}>
+        AUDIOMETRIA
+      </div>
+      <div style={{ display: 'flex', gap: 4 }}>
+        <EarChart ear={rightEar} side="OD" masking={maskingRight} />
+        <EarChart ear={leftEar}  side="OE" masking={maskingLeft}  />
+      </div>
     </div>
   )
 }

@@ -22,6 +22,7 @@ import type { ColumnsType } from 'antd/es/table'
 import dayjs, { type Dayjs } from 'dayjs'
 import 'dayjs/locale/pt-br'
 import { getAgendaDoPacientes, type AgendaItem } from '@/api/agendaService'
+import { buscarStatusAtendimentos, type ExameStatusItem } from '@/api/exameService'
 import ExameModal, { type TipoExame } from '@/components/ExameModal'
 
 dayjs.locale('pt-br')
@@ -63,6 +64,7 @@ export default function PacientesPage() {
   const [data, setData] = useState<AgendaItem[]>([])
   const [total, setTotal] = useState(0)
   const [dataRef, setDataRef] = useState<Dayjs>(dayjs())
+  const [statusExames, setStatusExames] = useState<Record<string, ExameStatusItem>>({})
 
   // Estado do modal de exame
   const [modalOpen, setModalOpen] = useState(false)
@@ -182,27 +184,40 @@ export default function PacientesPage() {
         ),
     },
     {
-      title: 'Realizar Exame',
+      title: 'Exame',
       key: 'realizar_exame',
-      width: 130,
+      width: 160,
       fixed: 'right',
       render: (_, record) => {
         const tipo = tipoExamePorItem(record.cd_item_agendamento)
         if (!tipo) return <Text type="secondary">—</Text>
         const isAudio = tipo === 'audiometria'
+        const exameStatus = record.cd_atendimento
+          ? statusExames[String(record.cd_atendimento)]
+          : undefined
+        const isFinalizado = exameStatus?.ds_status === 'FINALIZADO'
+        const isRascunho   = exameStatus?.ds_status === 'RASCUNHO'
         return (
-          <Button
-            type="primary"
-            size="small"
-            icon={<ExperimentOutlined />}
-            onClick={() => abrirExame(record)}
-            style={{
-              background: isAudio ? '#7c3aed' : '#10b981',
-              borderColor: isAudio ? '#7c3aed' : '#10b981',
-            }}
-          >
-            {isAudio ? 'Audiometria' : 'Imitanciometria'}
-          </Button>
+          <Space direction="vertical" size={4}>
+            {isFinalizado && (
+              <Tag color="success" style={{ margin: 0 }}>✓ Finalizado</Tag>
+            )}
+            {isRascunho && (
+              <Tag color="processing" style={{ margin: 0 }}>✎ Rascunho</Tag>
+            )}
+            <Button
+              type="primary"
+              size="small"
+              icon={<ExperimentOutlined />}
+              onClick={() => abrirExame(record)}
+              style={{
+                background: isAudio ? '#7c3aed' : '#10b981',
+                borderColor: isAudio ? '#7c3aed' : '#10b981',
+              }}
+            >
+              {isAudio ? 'Audiometria' : 'Imitanciometria'}
+            </Button>
+          </Space>
         )
       },
     },
@@ -215,6 +230,16 @@ export default function PacientesPage() {
       const result = await getAgendaDoPacientes(d.format('YYYY-MM-DD'))
       setData(result.items)
       setTotal(result.total)
+      // Busca status de exame para todos os atendimentos da agenda
+      const ids = result.items
+        .map((i) => i.cd_atendimento)
+        .filter((id): id is number => id != null)
+      if (ids.length > 0) {
+        const status = await buscarStatusAtendimentos(ids)
+        setStatusExames(status)
+      } else {
+        setStatusExames({})
+      }
     } catch (err: unknown) {
       const msg =
         (err as any)?.response?.data?.detail ?? 'Erro ao buscar agenda do MV.'
@@ -223,6 +248,20 @@ export default function PacientesPage() {
       setTotal(0)
     } finally {
       setLoading(false)
+    }
+  }
+
+  /** Re-busca apenas o status dos exames (sem recarregar a lista completa) */
+  const atualizarStatus = async (items: AgendaItem[]) => {
+    const ids = items
+      .map((i) => i.cd_atendimento)
+      .filter((id): id is number => id != null)
+    if (ids.length === 0) return
+    try {
+      const status = await buscarStatusAtendimentos(ids)
+      setStatusExames(status)
+    } catch {
+      // falha silenciosa — status desatualizado é melhor que erro na tela
     }
   }
 
@@ -298,7 +337,10 @@ export default function PacientesPage() {
         nmPaciente={modalPaciente}
         cdPaciente={modalCdPaciente}
         cdAtendimento={modalAtendimento}
-        onClose={() => setModalOpen(false)}
+        onClose={() => {
+          setModalOpen(false)
+          atualizarStatus(data)
+        }}
       />
     </div>
   )
