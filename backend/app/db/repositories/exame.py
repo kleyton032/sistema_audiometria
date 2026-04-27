@@ -14,8 +14,21 @@ _RESULTADO_FIELDS = [
     "oe_va_250", "oe_va_500", "oe_va_1000", "oe_va_2000",
     "oe_va_3000", "oe_va_4000", "oe_va_6000", "oe_va_8000",
     "oe_vo_500", "oe_vo_1000", "oe_vo_2000", "oe_vo_4000",
+    # Logoaudiometria
     "od_lrf", "od_iprf_mon", "od_iprf_int",
+    "od_iprf_dis", "od_iprf_dis_db",
+    "od_iprf_tri", "od_iprf_tri_db",
+    "od_sdt",
     "oe_lrf", "oe_iprf_mon", "oe_iprf_int",
+    "oe_iprf_dis", "oe_iprf_dis_db",
+    "oe_iprf_tri", "oe_iprf_tri_db",
+    "oe_sdt",
+    # Mascaramento
+    "od_mask_va", "od_mask_vo", "od_mask_lrf", "od_mask_iprf",
+    "oe_mask_va", "oe_mask_vo", "oe_mask_lrf", "oe_mask_iprf",
+    # Sem resposta (NR)
+    "od_va_nr", "oe_va_nr", "od_vo_nr", "oe_vo_nr",
+    # Classificação
     "nr_media_od", "nr_media_oe",
     "ds_class_od", "ds_class_oe",
     "ds_tipo_od", "ds_tipo_oe",

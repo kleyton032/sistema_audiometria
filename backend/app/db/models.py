@@ -86,11 +86,38 @@ class ResultadoAudio(Base):
 
     # Logoaudiometria
     od_lrf      = Column("OD_LRF",      Numeric(5, 1))
-    od_iprf_mon = Column("OD_IPRF_MON", Numeric(5, 1))
-    od_iprf_int = Column("OD_IPRF_INT", Numeric(5, 1))
+    od_iprf_mon = Column("OD_IPRF_MON", Numeric(5, 1))   # IPRF MON %
+    od_iprf_int = Column("OD_IPRF_INT", Numeric(5, 1))   # IPRF MON dB
+    od_iprf_dis = Column("OD_IPRF_DIS", Numeric(5, 1))   # IPRF DIS %
+    od_iprf_dis_db = Column("OD_IPRF_DIS_DB", Numeric(5, 1))  # IPRF DIS dB
+    od_iprf_tri = Column("OD_IPRF_TRI", Numeric(5, 1))   # IPRF TRI %
+    od_iprf_tri_db = Column("OD_IPRF_TRI_DB", Numeric(5, 1))  # IPRF TRI dB
+    od_sdt      = Column("OD_SDT",      Numeric(5, 1))   # SDT dB
+
     oe_lrf      = Column("OE_LRF",      Numeric(5, 1))
     oe_iprf_mon = Column("OE_IPRF_MON", Numeric(5, 1))
     oe_iprf_int = Column("OE_IPRF_INT", Numeric(5, 1))
+    oe_iprf_dis = Column("OE_IPRF_DIS", Numeric(5, 1))
+    oe_iprf_dis_db = Column("OE_IPRF_DIS_DB", Numeric(5, 1))
+    oe_iprf_tri = Column("OE_IPRF_TRI", Numeric(5, 1))
+    oe_iprf_tri_db = Column("OE_IPRF_TRI_DB", Numeric(5, 1))
+    oe_sdt      = Column("OE_SDT",      Numeric(5, 1))
+
+    # Mascaramento
+    od_mask_va   = Column("OD_MASK_VA",   Numeric(5, 1))
+    od_mask_vo   = Column("OD_MASK_VO",   Numeric(5, 1))
+    od_mask_lrf  = Column("OD_MASK_LRF",  Numeric(5, 1))
+    od_mask_iprf = Column("OD_MASK_IPRF", Numeric(5, 1))
+    oe_mask_va   = Column("OE_MASK_VA",   Numeric(5, 1))
+    oe_mask_vo   = Column("OE_MASK_VO",   Numeric(5, 1))
+    oe_mask_lrf  = Column("OE_MASK_LRF",  Numeric(5, 1))
+    oe_mask_iprf = Column("OE_MASK_IPRF", Numeric(5, 1))
+
+    # Sem resposta (NR)
+    od_va_nr = Column("OD_VA_NR", Integer, default=0)   # 1 = sem resposta VA OD
+    oe_va_nr = Column("OE_VA_NR", Integer, default=0)   # 1 = sem resposta VA OE
+    od_vo_nr = Column("OD_VO_NR", Integer, default=0)   # 1 = sem resposta VO OD
+    oe_vo_nr = Column("OE_VO_NR", Integer, default=0)   # 1 = sem resposta VO OE
 
     # Classificação
     nr_media_od = Column("NR_MEDIA_OD", Numeric(5, 1))

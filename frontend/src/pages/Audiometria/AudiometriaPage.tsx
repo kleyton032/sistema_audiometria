@@ -26,16 +26,25 @@ const { TextArea } = Input
 
 // ── Helpers de conversão ──────────────────────────────────────────────────────
 
-const emptyThresholds = () => ({ airConduction: {}, boneConduction: {} })
-const emptySpeech = () => ({ srt: null, irf: null, irfIntensity: null })
+const emptyThresholds = () => ({ airConduction: {}, boneConduction: {}, airNR: false, boneNR: false })
+const emptySpeech = () => ({
+  srt: null, sdt: null,
+  irf: null, irfIntensity: null,
+  irfDis: null, irfDisDb: null,
+  irfTri: null, irfTriDb: null,
+})
+const emptyMasking = () => ({ va: null, vo: null, lrf: null, iprf: null })
 const emptyData = (): AudiometryData => ({
   rightEar: emptyThresholds(),
   leftEar: emptyThresholds(),
   speechRight: emptySpeech(),
   speechLeft: emptySpeech(),
+  maskingRight: emptyMasking(),
+  maskingLeft: emptyMasking(),
   hearingLossType: null,
   hearingLossGrade: null,
   conclusion: '',
+  observations: '',
 })
 
 function resultadoToData(r: ResultadoAudioResponse): AudiometryData {
@@ -51,6 +60,8 @@ function resultadoToData(r: ResultadoAudioResponse): AudiometryData {
         500: r.od_vo_500 ?? undefined, 1000: r.od_vo_1000 ?? undefined,
         2000: r.od_vo_2000 ?? undefined, 4000: r.od_vo_4000 ?? undefined,
       },
+      airNR: !!(r.od_va_nr),
+      boneNR: !!(r.od_vo_nr),
     },
     leftEar: {
       airConduction: {
@@ -63,20 +74,41 @@ function resultadoToData(r: ResultadoAudioResponse): AudiometryData {
         500: r.oe_vo_500 ?? undefined, 1000: r.oe_vo_1000 ?? undefined,
         2000: r.oe_vo_2000 ?? undefined, 4000: r.oe_vo_4000 ?? undefined,
       },
+      airNR: !!(r.oe_va_nr),
+      boneNR: !!(r.oe_vo_nr),
     },
     speechRight: {
       srt: r.od_lrf ?? null,
+      sdt: r.od_sdt ?? null,
       irf: r.od_iprf_mon ?? null,
       irfIntensity: r.od_iprf_int ?? null,
+      irfDis: r.od_iprf_dis ?? null,
+      irfDisDb: r.od_iprf_dis_db ?? null,
+      irfTri: r.od_iprf_tri ?? null,
+      irfTriDb: r.od_iprf_tri_db ?? null,
     },
     speechLeft: {
       srt: r.oe_lrf ?? null,
+      sdt: r.oe_sdt ?? null,
       irf: r.oe_iprf_mon ?? null,
       irfIntensity: r.oe_iprf_int ?? null,
+      irfDis: r.oe_iprf_dis ?? null,
+      irfDisDb: r.oe_iprf_dis_db ?? null,
+      irfTri: r.oe_iprf_tri ?? null,
+      irfTriDb: r.oe_iprf_tri_db ?? null,
+    },
+    maskingRight: {
+      va: r.od_mask_va ?? null, vo: r.od_mask_vo ?? null,
+      lrf: r.od_mask_lrf ?? null, iprf: r.od_mask_iprf ?? null,
+    },
+    maskingLeft: {
+      va: r.oe_mask_va ?? null, vo: r.oe_mask_vo ?? null,
+      lrf: r.oe_mask_lrf ?? null, iprf: r.oe_mask_iprf ?? null,
     },
     hearingLossType: (r.ds_tipo_od as HearingLossType) ?? null,
     hearingLossGrade: (r.ds_class_od as HearingLossGrade) ?? null,
     conclusion: r.ds_conclusao ?? '',
+    observations: '',
   }
 }
 
@@ -108,14 +140,29 @@ function dataToPayload(
     oe_vo_2000: bcL[2000] ?? null, oe_vo_4000: bcL[4000] ?? null,
     od_lrf: data.speechRight.srt, od_iprf_mon: data.speechRight.irf,
     od_iprf_int: data.speechRight.irfIntensity,
+    od_iprf_dis: data.speechRight.irfDis, od_iprf_dis_db: data.speechRight.irfDisDb,
+    od_iprf_tri: data.speechRight.irfTri, od_iprf_tri_db: data.speechRight.irfTriDb,
+    od_sdt: data.speechRight.sdt,
     oe_lrf: data.speechLeft.srt, oe_iprf_mon: data.speechLeft.irf,
     oe_iprf_int: data.speechLeft.irfIntensity,
+    oe_iprf_dis: data.speechLeft.irfDis, oe_iprf_dis_db: data.speechLeft.irfDisDb,
+    oe_iprf_tri: data.speechLeft.irfTri, oe_iprf_tri_db: data.speechLeft.irfTriDb,
+    oe_sdt: data.speechLeft.sdt,
+    od_mask_va: data.maskingRight.va, od_mask_vo: data.maskingRight.vo,
+    od_mask_lrf: data.maskingRight.lrf, od_mask_iprf: data.maskingRight.iprf,
+    oe_mask_va: data.maskingLeft.va, oe_mask_vo: data.maskingLeft.vo,
+    oe_mask_lrf: data.maskingLeft.lrf, oe_mask_iprf: data.maskingLeft.iprf,
+    od_va_nr: data.rightEar.airNR  ? 1 : 0,
+    oe_va_nr: data.leftEar.airNR   ? 1 : 0,
+    od_vo_nr: data.rightEar.boneNR ? 1 : 0,
+    oe_vo_nr: data.leftEar.boneNR  ? 1 : 0,
     nr_media_od: ptaRight, nr_media_oe: ptaLeft,
     ds_class_od: data.hearingLossGrade ?? null,
     ds_class_oe: data.hearingLossGrade ?? null,
     ds_tipo_od: data.hearingLossType ?? null,
     ds_tipo_oe: data.hearingLossType ?? null,
     ds_conclusao: data.conclusion || null,
+    ds_observacoes: data.observations || null,
     fl_cae_od_obstruido: 0,
     fl_cae_oe_obstruido: 0,
   }
@@ -245,7 +292,13 @@ export default function AudiometriaPage({ cdPaciente, cdAtendimento }: Audiometr
 
       {/* Audiograma */}
       <Card style={{ marginBottom: 32, boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }}>
-        <AudiogramChart rightEar={data.rightEar} leftEar={data.leftEar} title="Audiograma" />
+        <AudiogramChart
+          rightEar={data.rightEar}
+          leftEar={data.leftEar}
+          title="Audiograma"
+          maskingRight={data.maskingRight}
+          maskingLeft={data.maskingLeft}
+        />
       </Card>
 
       {/* Limiares e Logoaudiometria */}
@@ -262,7 +315,10 @@ export default function AudiometriaPage({ cdPaciente, cdAtendimento }: Audiometr
               label="Orelha Direita"
               color="#e74c3c"
               data={data.speechRight}
+              masking={data.maskingRight}
               onChange={(speechRight) => setData({ ...data, speechRight })}
+              onMaskingChange={(maskingRight) => setData({ ...data, maskingRight })}
+              disabled={isFinalizado}
             />
             {ptaRight !== null && (
               <div style={{ marginTop: 16, padding: '12px', backgroundColor: '#fafafa', borderRadius: 6 }}>
@@ -284,7 +340,10 @@ export default function AudiometriaPage({ cdPaciente, cdAtendimento }: Audiometr
               label="Orelha Esquerda"
               color="#2980b9"
               data={data.speechLeft}
+              masking={data.maskingLeft}
               onChange={(speechLeft) => setData({ ...data, speechLeft })}
+              onMaskingChange={(maskingLeft) => setData({ ...data, maskingLeft })}
+              disabled={isFinalizado}
             />
             {ptaLeft !== null && (
               <div style={{ marginTop: 16, padding: '12px', backgroundColor: '#fafafa', borderRadius: 6 }}>
@@ -350,6 +409,22 @@ export default function AudiometriaPage({ cdPaciente, cdAtendimento }: Audiometr
           value={data.conclusion}
           onChange={(e) => setData({ ...data, conclusion: e.target.value })}
           placeholder="Digite a conclusão clínica do exame de audiometria..."
+          style={{ resize: 'vertical' }}
+        />
+        <Text type="secondary" style={{ fontSize: 11, display: 'block', marginTop: 8 }}>
+          Referência: Classificação de acordo com a Organização Mundial de Saúde, 2021 — média quadritonal.
+        </Text>
+      </Card>
+
+      {/* Observações */}
+      <Card style={{ marginTop: 16, boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }}>
+        <Title level={5}>Comentários / Observações</Title>
+        <TextArea
+          rows={3}
+          disabled={isFinalizado}
+          value={data.observations}
+          onChange={(e) => setData({ ...data, observations: e.target.value })}
+          placeholder="Observações adicionais sobre o exame..."
           style={{ resize: 'vertical' }}
         />
       </Card>

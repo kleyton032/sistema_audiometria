@@ -1,4 +1,4 @@
-import { InputNumber, Typography, Row, Col, Divider } from 'antd'
+import { InputNumber, Typography, Row, Col, Divider, Checkbox } from 'antd'
 import type { EarThresholds } from '@/types'
 import { FREQUENCIES, type Frequency } from '@/types'
 
@@ -9,9 +9,10 @@ interface Props {
   color: string
   thresholds: EarThresholds
   onChange: (updated: EarThresholds) => void
+  disabled?: boolean
 }
 
-export default function ThresholdInput({ label, color, thresholds, onChange }: Props) {
+export default function ThresholdInput({ label, color, thresholds, onChange, disabled }: Props) {
   const handleAirChange = (freq: Frequency, value: number | null) => {
     onChange({
       ...thresholds,
@@ -34,9 +35,18 @@ export default function ThresholdInput({ label, color, thresholds, onChange }: P
 
       {/* Via Aérea */}
       <div style={{ marginBottom: 20 }}>
-        <Text type="secondary" style={{ fontSize: 13, fontWeight: 500, marginBottom: 8, display: 'block' }}>
-          Via Aérea
-        </Text>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 8 }}>
+          <Text type="secondary" style={{ fontSize: 13, fontWeight: 500 }}>
+            Via Aérea
+          </Text>
+          <Checkbox
+            disabled={disabled}
+            checked={!!thresholds.airNR}
+            onChange={(e) => onChange({ ...thresholds, airNR: e.target.checked })}
+          >
+            <Text type="danger" style={{ fontSize: 11, fontWeight: 600 }}>NR (sem resposta)</Text>
+          </Checkbox>
+        </div>
         <Row gutter={[8, 8]}>
           {FREQUENCIES.map((freq) => {
             const value = thresholds.airConduction[freq]
@@ -55,6 +65,7 @@ export default function ThresholdInput({ label, color, thresholds, onChange }: P
                     onChange={(v) => handleAirChange(freq, v)}
                     style={{ width: '100%' }}
                     placeholder="—"
+                    disabled={disabled || !!thresholds.airNR}
                   />
                 </div>
               </Col>
@@ -67,9 +78,18 @@ export default function ThresholdInput({ label, color, thresholds, onChange }: P
 
       {/* Via Óssea */}
       <div>
-        <Text type="secondary" style={{ fontSize: 13, fontWeight: 500, marginBottom: 8, display: 'block' }}>
-          Via Óssea
-        </Text>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 8 }}>
+          <Text type="secondary" style={{ fontSize: 13, fontWeight: 500 }}>
+            Via Óssea
+          </Text>
+          <Checkbox
+            disabled={disabled}
+            checked={!!thresholds.boneNR}
+            onChange={(e) => onChange({ ...thresholds, boneNR: e.target.checked })}
+          >
+            <Text type="danger" style={{ fontSize: 11, fontWeight: 600 }}>NR (sem resposta)</Text>
+          </Checkbox>
+        </div>
         <Row gutter={[8, 8]}>
           {FREQUENCIES.map((freq) => {
             const value = thresholds.boneConduction[freq]
@@ -88,6 +108,7 @@ export default function ThresholdInput({ label, color, thresholds, onChange }: P
                     onChange={(v) => handleBoneChange(freq, v)}
                     style={{ width: '100%' }}
                     placeholder="—"
+                    disabled={disabled || !!thresholds.boneNR}
                   />
                 </div>
               </Col>

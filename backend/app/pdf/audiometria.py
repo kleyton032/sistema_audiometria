@@ -13,11 +13,12 @@ if TYPE_CHECKING:
 
 # ── Audiograma ────────────────────────────────────────────────────────────────
 
-def _audiograma_base64(resultado) -> str:
+def _audiograma_base64(resultado, exame=None) -> str:
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     import matplotlib.ticker as ticker
+    import numpy as np
     fig, ax = plt.subplots(figsize=(9, 5))
 
     freqs_va = [250, 500, 1000, 2000, 3000, 4000, 6000, 8000]
@@ -29,36 +30,69 @@ def _audiograma_base64(resultado) -> str:
         v = getattr(obj, field, None)
         return float(v) if v is not None else None
 
-    # --- Via aérea OD (círculo vermelho)
-    od_va = [_get(resultado, f"od_va_{f}") for f in freqs_va]
-    pts = [(x, y) for x, y in zip(x_va, od_va) if y is not None]
-    if pts:
-        xs, ys = zip(*pts)
-        ax.plot(xs, ys, "o-", color="#e74c3c", label="OD — via aérea", markersize=7, linewidth=1.5)
+    r = resultado
+    mask_od_va  = bool(getattr(r, "od_mask_va",  None))
+    mask_oe_va  = bool(getattr(r, "oe_mask_va",  None))
+    mask_od_vo  = bool(getattr(r, "od_mask_vo",  None))
+    mask_oe_vo  = bool(getattr(r, "oe_mask_vo",  None))
+    nr_od_va    = bool(getattr(r, "od_va_nr",    0))
+    nr_oe_va    = bool(getattr(r, "oe_va_nr",    0))
+    nr_od_vo    = bool(getattr(r, "od_vo_nr",    0))
+    nr_oe_vo    = bool(getattr(r, "oe_vo_nr",    0))
 
-    # --- Via aérea OE (× azul)
-    oe_va = [_get(resultado, f"oe_va_{f}") for f in freqs_va]
-    pts = [(x, y) for x, y in zip(x_va, oe_va) if y is not None]
-    if pts:
-        xs, ys = zip(*pts)
-        ax.plot(xs, ys, "x-", color="#2980b9", label="OE — via aérea",
-                markersize=8, markeredgewidth=2, linewidth=1.5)
+    # Marker helpers
+    # sem mascaramento → marker normal; com mascaramento → marker alternativo
+    od_va_marker = "^"  if mask_od_va else "o"   # △ vs O
+    oe_va_marker = "s"  if mask_oe_va else "x"   # □ vs X
+    od_vo_marker = "$[$" if mask_od_vo else "<"  # [ vs <
+    oe_vo_marker = "$]$" if mask_oe_vo else ">"  # ] vs >
 
-    # --- Via óssea OD (< vermelho tracejado)
-    od_vo = [_get(resultado, f"od_vo_{f}") for f in freqs_vo]
-    pts = [(x, y) for x, y in zip(x_vo, od_vo) if y is not None]
-    if pts:
-        xs, ys = zip(*pts)
-        ax.plot(xs, ys, "<--", color="#e74c3c", label="OD — via óssea",
-                markersize=7, linewidth=1.2, linestyle="dashed")
+    def _plot_line(vals, xs, color, marker, label, dashed=False, connect=True):
+        pts = [(x, y) for x, y in zip(xs, vals) if y is not None]
+        if not pts:
+            return
+        xs_p, ys_p = zip(*pts)
+        ls = "--" if dashed else "-"
+        lw = 1.5 if connect else 0
+        ax.plot(xs_p, ys_p, linestyle=ls, color=color, label=label,
+                marker=marker, markersize=8, markeredgewidth=2.2,
+                linewidth=lw, markerfacecolor="white" if marker not in ("x", "<", ">") else color)
 
-    # --- Via óssea OE (> azul tracejado)
-    oe_vo = [_get(resultado, f"oe_vo_{f}") for f in freqs_vo]
-    pts = [(x, y) for x, y in zip(x_vo, oe_vo) if y is not None]
-    if pts:
-        xs, ys = zip(*pts)
-        ax.plot(xs, ys, ">--", color="#2980b9", label="OE — via óssea",
-                markersize=7, linewidth=1.2, linestyle="dashed")
+    def _plot_nr(xs_all, vals, nr_flag, color, marker_nr="v"):
+        """Plota seta NR nos pontos que existem (qualquer freq) quando NR=True."""
+        if not nr_flag:
+            return
+        # Plota símbolo ↓ em y=115 para cada frequência do eixo
+        for x in xs_all:
+            ax.annotate("", xy=(x, 118), xytext=(x, 108),
+                        arrowprops=dict(arrowstyle="-|>", color=color, lw=2))
+
+    # --- Via aérea OD
+    od_va = [_get(r, f"od_va_{f}") for f in freqs_va]
+    _plot_line(od_va, x_va, "#e74c3c", od_va_marker,
+               f"OD — VA {'(mascarado △)' if mask_od_va else '(O)'}")
+    _plot_nr(x_va, od_va, nr_od_va, "#e74c3c")
+
+    # --- Via aérea OE
+    oe_va = [_get(r, f"oe_va_{f}") for f in freqs_va]
+    _plot_line(oe_va, x_va, "#2980b9", oe_va_marker,
+               f"OE — VA {'(mascarado □)' if mask_oe_va else '(X)'}",
+               dashed=True)
+    _plot_nr(x_va, oe_va, nr_oe_va, "#2980b9")
+
+    # --- Via óssea OD
+    od_vo = [_get(r, f"od_vo_{f}") for f in freqs_vo]
+    _plot_line(od_vo, x_vo, "#e74c3c", od_vo_marker,
+               f"OD — VO {'([)' if mask_od_vo else '(<)'}",
+               connect=False)
+    _plot_nr(x_vo, od_vo, nr_od_vo, "#e74c3c")
+
+    # --- Via óssea OE
+    oe_vo = [_get(r, f"oe_vo_{f}") for f in freqs_vo]
+    _plot_line(oe_vo, x_vo, "#2980b9", oe_vo_marker,
+               f"OE — VO {'(])' if mask_oe_vo else '(>)'}",
+               connect=False)
+    _plot_nr(x_vo, oe_vo, nr_oe_vo, "#2980b9")
 
     # Configuração dos eixos
     ax.set_xticks(x_va)
@@ -91,7 +125,7 @@ def _fmt(v) -> str:
 
 def _html(exame: "Exame", nm_usuario: str, nr_conselho: str) -> str:
     r = exame.resultado_audio
-    img_b64 = _audiograma_base64(r)
+    img_b64 = _audiograma_base64(r, exame)
     dt = exame.dt_exame
     dt_str = dt.strftime("%d/%m/%Y às %H:%M") if isinstance(dt, datetime) else str(dt)
 
@@ -202,24 +236,74 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str) -> str:
 <table>
   <thead>
     <tr class="freq-header">
-      <th>Orelha</th>
-      <th>LRF (dBHL)</th>
-      <th>IPRF (%)</th>
-      <th>Intensidade IPRF (dBHL)</th>
+      <th rowspan="2">Orelha</th>
+      <th rowspan="2">LRF (dBHL)</th>
+      <th rowspan="2">SDT (dBHL)</th>
+      <th colspan="2">IPRF MON</th>
+      <th colspan="2">IPRF DIS</th>
+      <th colspan="2">IPRF TRI</th>
+    </tr>
+    <tr class="freq-header">
+      <th>%</th><th>dBHL</th>
+      <th>%</th><th>dBHL</th>
+      <th>%</th><th>dBHL</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <th><span class="tag tag-od">OD</span></th>
       <td>{_fmt(r.od_lrf)}</td>
+      <td>{_fmt(getattr(r,'od_sdt',None))}</td>
       <td>{_fmt(r.od_iprf_mon)}</td>
       <td>{_fmt(r.od_iprf_int)}</td>
+      <td>{_fmt(getattr(r,'od_iprf_dis',None))}</td>
+      <td>{_fmt(getattr(r,'od_iprf_dis_db',None))}</td>
+      <td>{_fmt(getattr(r,'od_iprf_tri',None))}</td>
+      <td>{_fmt(getattr(r,'od_iprf_tri_db',None))}</td>
     </tr>
     <tr>
       <th><span class="tag tag-oe">OE</span></th>
       <td>{_fmt(r.oe_lrf)}</td>
+      <td>{_fmt(getattr(r,'oe_sdt',None))}</td>
       <td>{_fmt(r.oe_iprf_mon)}</td>
       <td>{_fmt(r.oe_iprf_int)}</td>
+      <td>{_fmt(getattr(r,'oe_iprf_dis',None))}</td>
+      <td>{_fmt(getattr(r,'oe_iprf_dis_db',None))}</td>
+      <td>{_fmt(getattr(r,'oe_iprf_tri',None))}</td>
+      <td>{_fmt(getattr(r,'oe_iprf_tri_db',None))}</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Mascaramento (dB NB)</h2>
+<table>
+  <thead>
+    <tr class="freq-header">
+      <th>Via</th>
+      <th>OD — até</th>
+      <th>OE — até</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>VA</th>
+      <td>{_fmt(getattr(r,'od_mask_va',None))}</td>
+      <td>{_fmt(getattr(r,'oe_mask_va',None))}</td>
+    </tr>
+    <tr>
+      <th>VO</th>
+      <td>{_fmt(getattr(r,'od_mask_vo',None))}</td>
+      <td>{_fmt(getattr(r,'oe_mask_vo',None))}</td>
+    </tr>
+    <tr>
+      <th>LRF</th>
+      <td>{_fmt(getattr(r,'od_mask_lrf',None))}</td>
+      <td>{_fmt(getattr(r,'oe_mask_lrf',None))}</td>
+    </tr>
+    <tr>
+      <th>IPRF</th>
+      <td>{_fmt(getattr(r,'od_mask_iprf',None))}</td>
+      <td>{_fmt(getattr(r,'oe_mask_iprf',None))}</td>
     </tr>
   </tbody>
 </table>
@@ -246,11 +330,14 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str) -> str:
     </tr>
   </tbody>
 </table>
+<p style="font-size:9px; color:#666; margin-top:4px;">
+  Referência: Classificação de acordo com a Organização Mundial de Saúde, 2021 — média quadritonal.
+</p>
 
 <h2>Conclusão Clínica</h2>
 <div class="conclusao">{conclusao or "—"}</div>
 
-{"<p style='margin-top:8px; font-size:10px; color:#888;'><strong>Observações:</strong> " + obs + "</p>" if obs != "—" else ""}
+{"<h2>Comentários / Observações</h2><div class='conclusao'>" + obs.replace(chr(10), '<br>') + "</div>" if obs != "—" else ""}
 
 <div class="assinatura">
   <div class="linha"></div>

@@ -26,12 +26,27 @@ export interface ExameAudiometriaCreate {
   oe_vo_2000?: number | null; oe_vo_4000?: number | null
   // Logoaudiometria
   od_lrf?: number | null; od_iprf_mon?: number | null; od_iprf_int?: number | null
+  od_iprf_dis?: number | null; od_iprf_dis_db?: number | null
+  od_iprf_tri?: number | null; od_iprf_tri_db?: number | null
+  od_sdt?: number | null
   oe_lrf?: number | null; oe_iprf_mon?: number | null; oe_iprf_int?: number | null
+  oe_iprf_dis?: number | null; oe_iprf_dis_db?: number | null
+  oe_iprf_tri?: number | null; oe_iprf_tri_db?: number | null
+  oe_sdt?: number | null
+  // Mascaramento
+  od_mask_va?: number | null; od_mask_vo?: number | null
+  od_mask_lrf?: number | null; od_mask_iprf?: number | null
+  oe_mask_va?: number | null; oe_mask_vo?: number | null
+  oe_mask_lrf?: number | null; oe_mask_iprf?: number | null
+  // Sem resposta (NR)
+  od_va_nr?: number; oe_va_nr?: number
+  od_vo_nr?: number; oe_vo_nr?: number
   // Classificação
   nr_media_od?: number | null; nr_media_oe?: number | null
   ds_class_od?: string | null; ds_class_oe?: string | null
   ds_tipo_od?: string | null; ds_tipo_oe?: string | null
   ds_conclusao?: string | null
+  ds_observacoes?: string | null
 }
 
 export interface ResultadoAudioResponse {
@@ -48,7 +63,19 @@ export interface ResultadoAudioResponse {
   oe_vo_500?: number | null; oe_vo_1000?: number | null
   oe_vo_2000?: number | null; oe_vo_4000?: number | null
   od_lrf?: number | null; od_iprf_mon?: number | null; od_iprf_int?: number | null
+  od_iprf_dis?: number | null; od_iprf_dis_db?: number | null
+  od_iprf_tri?: number | null; od_iprf_tri_db?: number | null
+  od_sdt?: number | null
   oe_lrf?: number | null; oe_iprf_mon?: number | null; oe_iprf_int?: number | null
+  oe_iprf_dis?: number | null; oe_iprf_dis_db?: number | null
+  oe_iprf_tri?: number | null; oe_iprf_tri_db?: number | null
+  oe_sdt?: number | null
+  od_mask_va?: number | null; od_mask_vo?: number | null
+  od_mask_lrf?: number | null; od_mask_iprf?: number | null
+  oe_mask_va?: number | null; oe_mask_vo?: number | null
+  oe_mask_lrf?: number | null; oe_mask_iprf?: number | null
+  od_va_nr?: number; oe_va_nr?: number
+  od_vo_nr?: number; oe_vo_nr?: number
   nr_media_od?: number | null; nr_media_oe?: number | null
   ds_class_od?: string | null; ds_class_oe?: string | null
   ds_tipo_od?: string | null; ds_tipo_oe?: string | null

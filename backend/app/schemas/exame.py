@@ -47,12 +47,39 @@ class ExameAudiometriaCreate(BaseModel):
     oe_vo_4000: Optional[float] = None
 
     # Logoaudiometria
-    od_lrf:      Optional[float] = None
-    od_iprf_mon: Optional[float] = None
-    od_iprf_int: Optional[float] = None
-    oe_lrf:      Optional[float] = None
-    oe_iprf_mon: Optional[float] = None
-    oe_iprf_int: Optional[float] = None
+    od_lrf:         Optional[float] = None
+    od_iprf_mon:    Optional[float] = None
+    od_iprf_int:    Optional[float] = None
+    od_iprf_dis:    Optional[float] = None
+    od_iprf_dis_db: Optional[float] = None
+    od_iprf_tri:    Optional[float] = None
+    od_iprf_tri_db: Optional[float] = None
+    od_sdt:         Optional[float] = None
+
+    oe_lrf:         Optional[float] = None
+    oe_iprf_mon:    Optional[float] = None
+    oe_iprf_int:    Optional[float] = None
+    oe_iprf_dis:    Optional[float] = None
+    oe_iprf_dis_db: Optional[float] = None
+    oe_iprf_tri:    Optional[float] = None
+    oe_iprf_tri_db: Optional[float] = None
+    oe_sdt:         Optional[float] = None
+
+    # Mascaramento
+    od_mask_va:   Optional[float] = None
+    od_mask_vo:   Optional[float] = None
+    od_mask_lrf:  Optional[float] = None
+    od_mask_iprf: Optional[float] = None
+    oe_mask_va:   Optional[float] = None
+    oe_mask_vo:   Optional[float] = None
+    oe_mask_lrf:  Optional[float] = None
+    oe_mask_iprf: Optional[float] = None
+
+    # Sem resposta (NR)
+    od_va_nr: int = 0
+    oe_va_nr: int = 0
+    od_vo_nr: int = 0
+    oe_vo_nr: int = 0
 
     # Classificação
     nr_media_od: Optional[float] = None
@@ -98,12 +125,39 @@ class ResultadoAudioResponse(BaseModel):
     oe_vo_2000: Optional[float] = None
     oe_vo_4000: Optional[float] = None
 
-    od_lrf:      Optional[float] = None
-    od_iprf_mon: Optional[float] = None
-    od_iprf_int: Optional[float] = None
-    oe_lrf:      Optional[float] = None
-    oe_iprf_mon: Optional[float] = None
-    oe_iprf_int: Optional[float] = None
+    od_lrf:         Optional[float] = None
+    od_iprf_mon:    Optional[float] = None
+    od_iprf_int:    Optional[float] = None
+    od_iprf_dis:    Optional[float] = None
+    od_iprf_dis_db: Optional[float] = None
+    od_iprf_tri:    Optional[float] = None
+    od_iprf_tri_db: Optional[float] = None
+    od_sdt:         Optional[float] = None
+
+    oe_lrf:         Optional[float] = None
+    oe_iprf_mon:    Optional[float] = None
+    oe_iprf_int:    Optional[float] = None
+    oe_iprf_dis:    Optional[float] = None
+    oe_iprf_dis_db: Optional[float] = None
+    oe_iprf_tri:    Optional[float] = None
+    oe_iprf_tri_db: Optional[float] = None
+    oe_sdt:         Optional[float] = None
+
+    # Mascaramento
+    od_mask_va:   Optional[float] = None
+    od_mask_vo:   Optional[float] = None
+    od_mask_lrf:  Optional[float] = None
+    od_mask_iprf: Optional[float] = None
+    oe_mask_va:   Optional[float] = None
+    oe_mask_vo:   Optional[float] = None
+    oe_mask_lrf:  Optional[float] = None
+    oe_mask_iprf: Optional[float] = None
+
+    # Sem resposta (NR)
+    od_va_nr: int = 0
+    oe_va_nr: int = 0
+    od_vo_nr: int = 0
+    oe_vo_nr: int = 0
 
     nr_media_od: Optional[float] = None
     nr_media_oe: Optional[float] = None
