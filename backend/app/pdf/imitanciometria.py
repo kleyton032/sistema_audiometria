@@ -245,6 +245,24 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str) -> str:
   </tbody>
 </table>
 
+<h2>Classificação dos Timpanogramas — Jerger, Jerger e Maudin (1972)</h2>
+<table>
+  <thead>
+    <tr class="freq-header">
+      <th>Tipo de Curva</th>
+      <th>Pico / Complacência</th>
+      <th>Pressão de Referência</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><th>Tipo A</th><td>0,3 a 1,65 ml</td><td>0 a -100 daPa</td></tr>
+    <tr><th>Tipo As ou Ar</th><td>&lt; 0,3 ml</td><td>0 a -100 daPa</td></tr>
+    <tr><th>Tipo Ad</th><td>&gt; 1,65 ml</td><td>0 a -100 daPa</td></tr>
+    <tr><th>Tipo B</th><td>Ausência de mobilidade</td><td>Não apresenta pico</td></tr>
+    <tr><th>Tipo C</th><td>Pico deslocado para pressão negativa</td><td>&lt; -100 daPa</td></tr>
+  </tbody>
+</table>
+
 <h2>Conclusão Clínica</h2>
 <div class="conclusao">{conclusao or "—"}</div>
 

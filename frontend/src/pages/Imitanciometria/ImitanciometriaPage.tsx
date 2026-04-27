@@ -1,11 +1,73 @@
 import { useState, useEffect } from 'react'
 import {
   Card, Col, Row, Typography, Input, Divider,
-  Button, Space, Alert, Spin, notification,
+  Button, Space, Alert, Spin, notification, Collapse, Table, Tag,
 } from 'antd'
+import { InfoCircleOutlined } from '@ant-design/icons'
 import {
   SaveOutlined, FilePdfOutlined, CheckCircleOutlined, LoadingOutlined,
 } from '@ant-design/icons'
+
+// ── Referência de Jerger ──────────────────────────────────────────────────────
+
+const JERGER_ROWS = [
+  { tipo: 'A',         pico: '0,3 a 1,65 ml',  pressao: '0 a -100 daPa',  color: 'green' },
+  { tipo: 'As ou Ar',  pico: '< 0,3 ml',        pressao: '0 a -100 daPa',  color: 'blue'  },
+  { tipo: 'Ad',        pico: '> 1,65 ml',        pressao: '0 a -100 daPa',  color: 'gold'  },
+  { tipo: 'B',         pico: 'Ausência de mobilidade', pressao: 'Não apresenta pico', color: 'red'  },
+  { tipo: 'C',         pico: 'Pico deslocado para pressão negativa', pressao: '< -100 daPa', color: 'volcano' },
+]
+
+const jergerColumns = [
+  {
+    title: 'Tipo de Curva',
+    dataIndex: 'tipo',
+    key: 'tipo',
+    width: 110,
+    render: (v: string, r: typeof JERGER_ROWS[0]) => (
+      <Tag color={r.color} style={{ fontWeight: 600 }}>Tipo {v}</Tag>
+    ),
+  },
+  {
+    title: 'Pico / Complacência',
+    dataIndex: 'pico',
+    key: 'pico',
+  },
+  {
+    title: 'Pressão de Referência',
+    dataIndex: 'pressao',
+    key: 'pressao',
+  },
+]
+
+function ReferenciasJerger() {
+  return (
+    <Collapse
+      size="small"
+      defaultActiveKey={['1']}
+      style={{ marginBottom: 24 }}
+      items={[{
+        key: '1',
+        label: (
+          <span>
+            <InfoCircleOutlined style={{ marginRight: 8, color: '#667eea' }} />
+            Classificação dos Timpanogramas — Jerger, Jerger e Maudin (1972)
+          </span>
+        ),
+        children: (
+          <Table
+            size="small"
+            dataSource={JERGER_ROWS}
+            columns={jergerColumns}
+            rowKey="tipo"
+            pagination={false}
+            bordered
+          />
+        ),
+      }]}
+    />
+  )
+}
 import TympanogramChart from './TympanogramChart'
 import TympanogramInput from './TympanogramInput'
 import ReflexTableInput from './ReflexTableInput'
@@ -234,6 +296,9 @@ export default function ImitanciometriaPage({ cdPaciente, cdAtendimento }: Imita
           }
         />
       )}
+
+      {/* Referências de Jerger */}
+      <ReferenciasJerger />
 
       {/* Gráfico do Timpanograma */}
       <Card style={{ marginBottom: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
