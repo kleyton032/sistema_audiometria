@@ -41,8 +41,9 @@ class Exame(Base):
     ds_status            = Column("DS_STATUS",            String(20), default="RASCUNHO", nullable=False)
     ds_observacoes       = Column("DS_OBSERVACOES",       String(2000), nullable=True)
 
-    resultado_audio = relationship("ResultadoAudio", back_populates="exame", uselist=False)
-    laudos          = relationship("Laudo", back_populates="exame")
+    resultado_audio  = relationship("ResultadoAudio",  back_populates="exame", uselist=False)
+    resultado_imitan = relationship("ResultadoImitan", back_populates="exame", uselist=False)
+    laudos           = relationship("Laudo", back_populates="exame")
 
 
 class ResultadoAudio(Base):
@@ -101,6 +102,51 @@ class ResultadoAudio(Base):
     ds_conclusao = Column("DS_CONCLUSAO", String(2000))
 
     exame = relationship("Exame", back_populates="resultado_audio")
+
+
+class ResultadoImitan(Base):
+    __tablename__ = "FAV_TB_SILA_RESULTADOS_IMITAN"
+
+    id_resultado = Column("ID_RESULTADO", Integer, primary_key=True)
+    id_exame     = Column("ID_EXAME", Integer, ForeignKey("FAV_TB_SILA_EXAMES.ID_EXAME"), nullable=False, unique=True)
+
+    # Timpanograma OD
+    od_ecv        = Column("OD_ECV",        Numeric(4, 2))
+    od_pico       = Column("OD_PICO",       Numeric(4, 2))
+    od_pressao    = Column("OD_PRESSAO",    Numeric(5, 1))
+    od_gradiante  = Column("OD_GRADIANTE",  Numeric(4, 2))
+    od_tipo_curva = Column("OD_TIPO_CURVA", String(5))
+
+    # Timpanograma OE
+    oe_ecv        = Column("OE_ECV",        Numeric(4, 2))
+    oe_pico       = Column("OE_PICO",       Numeric(4, 2))
+    oe_pressao    = Column("OE_PRESSAO",    Numeric(5, 1))
+    oe_gradiante  = Column("OE_GRADIANTE",  Numeric(4, 2))
+    oe_tipo_curva = Column("OE_TIPO_CURVA", String(5))
+
+    # Reflexos Estapedianos OD (sonda OD)
+    od_contra_500  = Column("OD_CONTRA_500",  Numeric(5, 1))
+    od_contra_1000 = Column("OD_CONTRA_1000", Numeric(5, 1))
+    od_contra_2000 = Column("OD_CONTRA_2000", Numeric(5, 1))
+    od_contra_4000 = Column("OD_CONTRA_4000", Numeric(5, 1))
+    od_ipsi_500    = Column("OD_IPSI_500",    Numeric(5, 1))
+    od_ipsi_1000   = Column("OD_IPSI_1000",   Numeric(5, 1))
+    od_ipsi_2000   = Column("OD_IPSI_2000",   Numeric(5, 1))
+    od_ipsi_4000   = Column("OD_IPSI_4000",   Numeric(5, 1))
+
+    # Reflexos Estapedianos OE (sonda OE)
+    oe_contra_500  = Column("OE_CONTRA_500",  Numeric(5, 1))
+    oe_contra_1000 = Column("OE_CONTRA_1000", Numeric(5, 1))
+    oe_contra_2000 = Column("OE_CONTRA_2000", Numeric(5, 1))
+    oe_contra_4000 = Column("OE_CONTRA_4000", Numeric(5, 1))
+    oe_ipsi_500    = Column("OE_IPSI_500",    Numeric(5, 1))
+    oe_ipsi_1000   = Column("OE_IPSI_1000",   Numeric(5, 1))
+    oe_ipsi_2000   = Column("OE_IPSI_2000",   Numeric(5, 1))
+    oe_ipsi_4000   = Column("OE_IPSI_4000",   Numeric(5, 1))
+
+    ds_conclusao = Column("DS_CONCLUSAO", String(2000))
+
+    exame = relationship("Exame", back_populates="resultado_imitan")
 
 
 class Laudo(Base):

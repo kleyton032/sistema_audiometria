@@ -10,10 +10,12 @@ from app.db.models import User
 from app.db.repositories import exame as repo
 from app.schemas.exame import (
     ExameAudiometriaCreate,
+    ExameImitanciometriaCreate,
     ExameResponse,
     LaudoResponse,
 )
 from app.pdf.audiometria import gerar_pdf_audiometria
+from app.pdf.imitanciometria import gerar_pdf_imitanciometria
 
 router = APIRouter(prefix="/exames", tags=["Exames"])
 
@@ -94,18 +96,24 @@ def gerar_laudo(
     exame = repo.get_exame_por_id(db, id_exame)
     if not exame:
         raise HTTPException(status_code=404, detail="Exame não encontrado.")
-    if not exame.resultado_audio:
-        raise HTTPException(
-            status_code=400,
-            detail="Exame não possui resultado registrado.",
-        )
 
     nm_usuario = current_user.nm_usuario
     nr_conselho = current_user.nr_conselho or ""
-    pdf_bytes = gerar_pdf_audiometria(exame, nm_usuario, nr_conselho)
 
-    dt_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-    nm_arquivo = f"laudo_audio_{exame.id_exame}_{dt_str}.pdf"
+    if exame.ds_tipo == "AUDIOMETRIA":
+        if not exame.resultado_audio:
+            raise HTTPException(status_code=400, detail="Exame não possui resultado registrado.")
+        pdf_bytes = gerar_pdf_audiometria(exame, nm_usuario, nr_conselho)
+        nm_arquivo = f"laudo_audio_{exame.id_exame}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+
+    elif exame.ds_tipo == "IMITANCIOMETRIA":
+        if not exame.resultado_imitan:
+            raise HTTPException(status_code=400, detail="Exame não possui resultado registrado.")
+        pdf_bytes = gerar_pdf_imitanciometria(exame, nm_usuario, nr_conselho)
+        nm_arquivo = f"laudo_imitan_{exame.id_exame}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+
+    else:
+        raise HTTPException(status_code=400, detail=f"Tipo de exame não suportado: {exame.ds_tipo}")
 
     repo.salvar_laudo(db, exame.id_exame, current_user.id_usuario, pdf_bytes, nm_arquivo)
 
@@ -114,3 +122,42 @@ def gerar_laudo(
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{nm_arquivo}"'},
     )
+
+
+# ── Imitanciometria ───────────────────────────────────────────────────────────
+
+@router.post(
+    "/imitanciometria",
+    response_model=ExameResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def criar_exame_imitanciometria(
+    payload: ExameImitanciometriaCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return repo.criar_exame_imitanciometria(db, payload, current_user.id_usuario)
+
+
+@router.put("/imitanciometria/{id_exame}", response_model=ExameResponse)
+def atualizar_exame_imitanciometria(
+    id_exame: int,
+    payload: ExameImitanciometriaCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    exame = repo.get_exame_por_id(db, id_exame)
+    if not exame:
+        raise HTTPException(status_code=404, detail="Exame não encontrado.")
+    if exame.ds_status == "FINALIZADO":
+        raise HTTPException(status_code=400, detail="Exame finalizado não pode ser alterado.")
+    return repo.atualizar_exame_imitanciometria(db, exame, payload)
+
+
+@router.get("/imitanciometria/por-atendimento/{cd_atendimento}", response_model=ExameResponse | None)
+def buscar_imitan_por_atendimento(
+    cd_atendimento: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return repo.get_exame_imitan_por_atendimento(db, cd_atendimento)

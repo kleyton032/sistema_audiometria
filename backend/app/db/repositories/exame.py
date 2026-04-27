@@ -4,8 +4,8 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import text
 
-from app.db.models import Exame, ResultadoAudio, Laudo
-from app.schemas.exame import ExameAudiometriaCreate
+from app.db.models import Exame, ResultadoAudio, ResultadoImitan, Laudo
+from app.schemas.exame import ExameAudiometriaCreate, ExameImitanciometriaCreate
 
 _RESULTADO_FIELDS = [
     "od_va_250", "od_va_500", "od_va_1000", "od_va_2000",
@@ -134,6 +134,93 @@ def _criar_resultado(db: Session, id_exame: int, payload: ExameAudiometriaCreate
 
     resultado = ResultadoAudio(id_resultado=id_resultado, id_exame=id_exame)
     for field in _RESULTADO_FIELDS:
+        setattr(resultado, field, getattr(payload, field, None))
+
+    db.add(resultado)
+
+
+# ── Imitanciometria ───────────────────────────────────────────────────────────
+
+_IMITAN_FIELDS = [
+    "od_ecv", "od_pico", "od_pressao", "od_gradiante", "od_tipo_curva",
+    "oe_ecv", "oe_pico", "oe_pressao", "oe_gradiante", "oe_tipo_curva",
+    "od_contra_500", "od_contra_1000", "od_contra_2000", "od_contra_4000",
+    "od_ipsi_500",   "od_ipsi_1000",   "od_ipsi_2000",   "od_ipsi_4000",
+    "oe_contra_500", "oe_contra_1000", "oe_contra_2000", "oe_contra_4000",
+    "oe_ipsi_500",   "oe_ipsi_1000",   "oe_ipsi_2000",   "oe_ipsi_4000",
+    "ds_conclusao",
+]
+
+
+def get_exame_imitan_por_atendimento(db: Session, cd_atendimento: int) -> Optional[Exame]:
+    return (
+        db.query(Exame)
+        .filter(
+            Exame.id_atendimento == cd_atendimento,
+            Exame.ds_tipo == "IMITANCIOMETRIA",
+        )
+        .order_by(Exame.dt_exame.desc())
+        .first()
+    )
+
+
+def criar_exame_imitanciometria(
+    db: Session,
+    payload: ExameImitanciometriaCreate,
+    id_usuario: int,
+) -> Exame:
+    id_exame = db.execute(
+        text("SELECT SEQ_FAV_SILA_EXAMES.NEXTVAL FROM DUAL")
+    ).scalar()
+
+    exame = Exame(
+        id_exame=id_exame,
+        id_paciente=payload.id_paciente,
+        id_usuario=id_usuario,
+        id_atendimento=payload.id_atendimento,
+        ds_tipo="IMITANCIOMETRIA",
+        ds_observacoes=payload.ds_observacoes,
+        ds_status="RASCUNHO",
+    )
+    db.add(exame)
+    db.flush()
+
+    _criar_resultado_imitan(db, id_exame, payload)
+
+    db.commit()
+    db.refresh(exame)
+    return exame
+
+
+def atualizar_exame_imitanciometria(
+    db: Session,
+    exame: Exame,
+    payload: ExameImitanciometriaCreate,
+) -> Exame:
+    exame.ds_observacoes = payload.ds_observacoes
+
+    if exame.resultado_imitan:
+        for field in _IMITAN_FIELDS:
+            setattr(exame.resultado_imitan, field, getattr(payload, field, None))
+    else:
+        _criar_resultado_imitan(db, exame.id_exame, payload)
+
+    db.commit()
+    db.refresh(exame)
+    return exame
+
+
+def _criar_resultado_imitan(
+    db: Session,
+    id_exame: int,
+    payload: ExameImitanciometriaCreate,
+) -> None:
+    id_resultado = db.execute(
+        text("SELECT SEQ_FAV_SILA_RES_IMITAN.NEXTVAL FROM DUAL")
+    ).scalar()
+
+    resultado = ResultadoImitan(id_resultado=id_resultado, id_exame=id_exame)
+    for field in _IMITAN_FIELDS:
         setattr(resultado, field, getattr(payload, field, None))
 
     db.add(resultado)

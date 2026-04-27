@@ -56,7 +56,9 @@ export default function ExameModal({
       {tipo === 'audiometria' && (
         <AudiometriaPage cdPaciente={cdPaciente} cdAtendimento={cdAtendimento} />
       )}
-      {tipo === 'imitanciometria' && <ImitanciometriaPage />}
+      {tipo === 'imitanciometria' && (
+        <ImitanciometriaPage cdPaciente={cdPaciente} cdAtendimento={cdAtendimento} />
+      )}
     </Modal>
   )
 }

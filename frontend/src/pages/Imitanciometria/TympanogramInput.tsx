@@ -72,6 +72,18 @@ export default function TympanogramInput({ label, color, data, onChange }: Props
             placeholder="ml"
           />
         </Col>
+        <Col xs={24} sm={12}>
+          <Text type="secondary">Gradiente</Text>
+          <InputNumber
+            value={data.gradient}
+            onChange={(v) => onChange({ ...data, gradient: v })}
+            min={0}
+            max={5}
+            step={0.05}
+            style={{ width: '100%' }}
+            placeholder="—"
+          />
+        </Col>
       </Row>
     </div>
   )

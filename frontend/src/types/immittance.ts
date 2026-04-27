@@ -18,10 +18,11 @@ export interface TympanogramPoint {
 /** Dados numéricos do timpanograma de uma orelha */
 export interface TympanogramData {
   type: TympanogramType | null
-  staticCompliance: number | null // ml
-  earCanalVolume: number | null // ml
-  peakPressure: number | null // daPa
-  curve: TympanogramPoint[] // pontos para o gráfico
+  staticCompliance: number | null // ml (pico)
+  earCanalVolume: number | null   // ml (ECV)
+  peakPressure: number | null     // daPa
+  gradient: number | null         // gradiente
+  curve: TympanogramPoint[]       // pontos para o gráfico
 }
 
 /** Resultado de reflexo em uma frequência/modo */
@@ -69,6 +70,7 @@ export function createEmptyTympanogram(): TympanogramData {
     staticCompliance: null,
     earCanalVolume: null,
     peakPressure: null,
+    gradient: null,
     curve: [],
   }
 }

@@ -127,7 +127,8 @@ class ExameResponse(BaseModel):
     fl_cae_oe_obstruido: int           = 0
     ds_observacoes:      Optional[str] = None
     dt_exame:            datetime
-    resultado_audio:     Optional[ResultadoAudioResponse] = None
+    resultado_audio:     Optional[ResultadoAudioResponse]  = None
+    resultado_imitan:    Optional["ResultadoImitanResponse"] = None
 
     model_config = {"from_attributes": True}
 
@@ -139,5 +140,88 @@ class LaudoResponse(BaseModel):
     nr_tamanho_bytes: Optional[int] = None
     dt_geracao:       datetime
     ds_status:        str
+
+    model_config = {"from_attributes": True}
+
+
+# ── Imitanciometria ───────────────────────────────────────────────────────────
+
+class ExameImitanciometriaCreate(BaseModel):
+    id_paciente:    int
+    id_atendimento: Optional[int] = None
+    ds_observacoes: Optional[str] = None
+
+    # Timpanograma OD
+    od_ecv:        Optional[float] = None
+    od_pico:       Optional[float] = None
+    od_pressao:    Optional[float] = None
+    od_gradiante:  Optional[float] = None
+    od_tipo_curva: Optional[str]   = None
+
+    # Timpanograma OE
+    oe_ecv:        Optional[float] = None
+    oe_pico:       Optional[float] = None
+    oe_pressao:    Optional[float] = None
+    oe_gradiante:  Optional[float] = None
+    oe_tipo_curva: Optional[str]   = None
+
+    # Reflexos OD
+    od_contra_500:  Optional[float] = None
+    od_contra_1000: Optional[float] = None
+    od_contra_2000: Optional[float] = None
+    od_contra_4000: Optional[float] = None
+    od_ipsi_500:    Optional[float] = None
+    od_ipsi_1000:   Optional[float] = None
+    od_ipsi_2000:   Optional[float] = None
+    od_ipsi_4000:   Optional[float] = None
+
+    # Reflexos OE
+    oe_contra_500:  Optional[float] = None
+    oe_contra_1000: Optional[float] = None
+    oe_contra_2000: Optional[float] = None
+    oe_contra_4000: Optional[float] = None
+    oe_ipsi_500:    Optional[float] = None
+    oe_ipsi_1000:   Optional[float] = None
+    oe_ipsi_2000:   Optional[float] = None
+    oe_ipsi_4000:   Optional[float] = None
+
+    ds_conclusao: Optional[str] = None
+
+
+class ResultadoImitanResponse(BaseModel):
+    id_resultado: int
+    id_exame:     int
+
+    od_ecv:        Optional[float] = None
+    od_pico:       Optional[float] = None
+    od_pressao:    Optional[float] = None
+    od_gradiante:  Optional[float] = None
+    od_tipo_curva: Optional[str]   = None
+
+    oe_ecv:        Optional[float] = None
+    oe_pico:       Optional[float] = None
+    oe_pressao:    Optional[float] = None
+    oe_gradiante:  Optional[float] = None
+    oe_tipo_curva: Optional[str]   = None
+
+    od_contra_500:  Optional[float] = None
+    od_contra_1000: Optional[float] = None
+    od_contra_2000: Optional[float] = None
+    od_contra_4000: Optional[float] = None
+    od_ipsi_500:    Optional[float] = None
+    od_ipsi_1000:   Optional[float] = None
+    od_ipsi_2000:   Optional[float] = None
+    od_ipsi_4000:   Optional[float] = None
+
+    oe_contra_500:  Optional[float] = None
+    oe_contra_1000: Optional[float] = None
+    oe_contra_2000: Optional[float] = None
+    oe_contra_4000: Optional[float] = None
+    oe_ipsi_500:    Optional[float] = None
+    oe_ipsi_1000:   Optional[float] = None
+    oe_ipsi_2000:   Optional[float] = None
+    oe_ipsi_4000:   Optional[float] = None
+
+    ds_conclusao: Optional[str] = None
 
     model_config = {"from_attributes": True}
