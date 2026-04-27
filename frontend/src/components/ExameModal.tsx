@@ -8,6 +8,7 @@ interface ExameModalProps {
   open: boolean
   tipo: TipoExame | null
   nmPaciente: string | null
+  cdPaciente: number | null
   cdAtendimento: number | null
   onClose: () => void
 }
@@ -21,6 +22,7 @@ export default function ExameModal({
   open,
   tipo,
   nmPaciente,
+  cdPaciente,
   cdAtendimento,
   onClose,
 }: ExameModalProps) {
@@ -51,7 +53,9 @@ export default function ExameModal({
       styles={{ body: { maxHeight: 'calc(100vh - 120px)', overflowY: 'auto', padding: '16px 24px' } }}
       destroyOnClose
     >
-      {tipo === 'audiometria' && <AudiometriaPage />}
+      {tipo === 'audiometria' && (
+        <AudiometriaPage cdPaciente={cdPaciente} cdAtendimento={cdAtendimento} />
+      )}
       {tipo === 'imitanciometria' && <ImitanciometriaPage />}
     </Modal>
   )

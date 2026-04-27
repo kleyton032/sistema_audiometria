@@ -7,6 +7,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 30000, // 30s — evita loading infinito se o backend não responder
 })
 
 api.interceptors.request.use((config) => {

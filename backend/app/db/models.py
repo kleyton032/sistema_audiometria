@@ -1,5 +1,6 @@
 # app/db/models.py
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, Numeric, ForeignKey, LargeBinary
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.session import Base
 
@@ -22,3 +23,98 @@ class User(Base):
 
     def __repr__(self):
         return f"<User login={self.nm_login} profile={self.ds_perfil}>"
+
+
+class Exame(Base):
+    __tablename__ = "FAV_TB_SILA_EXAMES"
+
+    id_exame             = Column("ID_EXAME",             Integer, primary_key=True)
+    id_paciente          = Column("ID_PACIENTE",          Integer, nullable=False)
+    id_usuario           = Column("ID_USUARIO",           Integer, ForeignKey("FAV_TB_SILA_USUARIOS.ID_USUARIO"), nullable=False)
+    id_atendimento       = Column("ID_ATENDIMENTO",       Integer, nullable=True)
+    id_equipamento       = Column("ID_EQUIPAMENTO",       Integer, nullable=True)
+    ds_tipo              = Column("DS_TIPO",              String(30), nullable=False)
+    ds_queixa_principal  = Column("DS_QUEIXA_PRINCIPAL",  String(1000), nullable=True)
+    fl_cae_od_obstruido  = Column("FL_CAE_OD_OBSTRUIDO",  Integer, default=0)
+    fl_cae_oe_obstruido  = Column("FL_CAE_OE_OBSTRUIDO",  Integer, default=0)
+    dt_exame             = Column("DT_EXAME",             DateTime(timezone=True), server_default=func.now(), nullable=False)
+    ds_status            = Column("DS_STATUS",            String(20), default="RASCUNHO", nullable=False)
+    ds_observacoes       = Column("DS_OBSERVACOES",       String(2000), nullable=True)
+
+    resultado_audio = relationship("ResultadoAudio", back_populates="exame", uselist=False)
+    laudos          = relationship("Laudo", back_populates="exame")
+
+
+class ResultadoAudio(Base):
+    __tablename__ = "FAV_TB_SILA_RESULTADOS_AUDIO"
+
+    id_resultado = Column("ID_RESULTADO", Integer, primary_key=True)
+    id_exame     = Column("ID_EXAME", Integer, ForeignKey("FAV_TB_SILA_EXAMES.ID_EXAME"), nullable=False, unique=True)
+
+    # Via aérea OD
+    od_va_250  = Column("OD_VA_250",  Numeric(5, 1))
+    od_va_500  = Column("OD_VA_500",  Numeric(5, 1))
+    od_va_1000 = Column("OD_VA_1000", Numeric(5, 1))
+    od_va_2000 = Column("OD_VA_2000", Numeric(5, 1))
+    od_va_3000 = Column("OD_VA_3000", Numeric(5, 1))
+    od_va_4000 = Column("OD_VA_4000", Numeric(5, 1))
+    od_va_6000 = Column("OD_VA_6000", Numeric(5, 1))
+    od_va_8000 = Column("OD_VA_8000", Numeric(5, 1))
+
+    # Via óssea OD
+    od_vo_500  = Column("OD_VO_500",  Numeric(5, 1))
+    od_vo_1000 = Column("OD_VO_1000", Numeric(5, 1))
+    od_vo_2000 = Column("OD_VO_2000", Numeric(5, 1))
+    od_vo_4000 = Column("OD_VO_4000", Numeric(5, 1))
+
+    # Via aérea OE
+    oe_va_250  = Column("OE_VA_250",  Numeric(5, 1))
+    oe_va_500  = Column("OE_VA_500",  Numeric(5, 1))
+    oe_va_1000 = Column("OE_VA_1000", Numeric(5, 1))
+    oe_va_2000 = Column("OE_VA_2000", Numeric(5, 1))
+    oe_va_3000 = Column("OE_VA_3000", Numeric(5, 1))
+    oe_va_4000 = Column("OE_VA_4000", Numeric(5, 1))
+    oe_va_6000 = Column("OE_VA_6000", Numeric(5, 1))
+    oe_va_8000 = Column("OE_VA_8000", Numeric(5, 1))
+
+    # Via óssea OE
+    oe_vo_500  = Column("OE_VO_500",  Numeric(5, 1))
+    oe_vo_1000 = Column("OE_VO_1000", Numeric(5, 1))
+    oe_vo_2000 = Column("OE_VO_2000", Numeric(5, 1))
+    oe_vo_4000 = Column("OE_VO_4000", Numeric(5, 1))
+
+    # Logoaudiometria
+    od_lrf      = Column("OD_LRF",      Numeric(5, 1))
+    od_iprf_mon = Column("OD_IPRF_MON", Numeric(5, 1))
+    od_iprf_int = Column("OD_IPRF_INT", Numeric(5, 1))
+    oe_lrf      = Column("OE_LRF",      Numeric(5, 1))
+    oe_iprf_mon = Column("OE_IPRF_MON", Numeric(5, 1))
+    oe_iprf_int = Column("OE_IPRF_INT", Numeric(5, 1))
+
+    # Classificação
+    nr_media_od = Column("NR_MEDIA_OD", Numeric(5, 1))
+    nr_media_oe = Column("NR_MEDIA_OE", Numeric(5, 1))
+    ds_class_od = Column("DS_CLASS_OD", String(50))
+    ds_class_oe = Column("DS_CLASS_OE", String(50))
+    ds_tipo_od  = Column("DS_TIPO_OD",  String(30))
+    ds_tipo_oe  = Column("DS_TIPO_OE",  String(30))
+    ds_conclusao = Column("DS_CONCLUSAO", String(2000))
+
+    exame = relationship("Exame", back_populates="resultado_audio")
+
+
+class Laudo(Base):
+    __tablename__ = "FAV_TB_SILA_LAUDOS"
+
+    id_laudo         = Column("ID_LAUDO",         Integer, primary_key=True)
+    id_exame         = Column("ID_EXAME",         Integer, ForeignKey("FAV_TB_SILA_EXAMES.ID_EXAME"), nullable=False)
+    id_usuario_gerou = Column("ID_USUARIO_GEROU", Integer, ForeignKey("FAV_TB_SILA_USUARIOS.ID_USUARIO"), nullable=False)
+    nm_arquivo       = Column("NM_ARQUIVO",       String(255), nullable=False)
+    ds_caminho       = Column("DS_CAMINHO",       String(500))
+    bl_pdf           = Column("BL_PDF",           LargeBinary)
+    nr_tamanho_bytes = Column("NR_TAMANHO_BYTES", Integer)
+    ds_hash_sha256   = Column("DS_HASH_SHA256",   String(64))
+    dt_geracao       = Column("DT_GERACAO",       DateTime(timezone=True), server_default=func.now(), nullable=False)
+    ds_status        = Column("DS_STATUS",        String(20), default="ATIVO", nullable=False)
+
+    exame = relationship("Exame", back_populates="laudos")

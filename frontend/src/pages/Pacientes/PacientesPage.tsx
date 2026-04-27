@@ -68,6 +68,7 @@ export default function PacientesPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [modalTipo, setModalTipo] = useState<TipoExame | null>(null)
   const [modalPaciente, setModalPaciente] = useState<string | null>(null)
+  const [modalCdPaciente, setModalCdPaciente] = useState<number | null>(null)
   const [modalAtendimento, setModalAtendimento] = useState<number | null>(null)
 
   function abrirExame(record: AgendaItem) {
@@ -75,6 +76,7 @@ export default function PacientesPage() {
     if (!tipo) return
     setModalTipo(tipo)
     setModalPaciente(record.nm_paciente)
+    setModalCdPaciente(record.cd_paciente)
     setModalAtendimento(record.cd_atendimento)
     setModalOpen(true)
   }
@@ -294,6 +296,7 @@ export default function PacientesPage() {
         open={modalOpen}
         tipo={modalTipo}
         nmPaciente={modalPaciente}
+        cdPaciente={modalCdPaciente}
         cdAtendimento={modalAtendimento}
         onClose={() => setModalOpen(false)}
       />
