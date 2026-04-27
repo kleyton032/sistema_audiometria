@@ -187,14 +187,19 @@ export default function PacientesPage() {
       render: (_, record) => {
         const tipo = tipoExamePorItem(record.cd_item_agendamento)
         if (!tipo) return <Text type="secondary">—</Text>
+        const isAudio = tipo === 'audiometria'
         return (
           <Button
             type="primary"
             size="small"
             icon={<ExperimentOutlined />}
             onClick={() => abrirExame(record)}
+            style={{
+              background: isAudio ? '#7c3aed' : '#10b981',
+              borderColor: isAudio ? '#7c3aed' : '#10b981',
+            }}
           >
-            {tipo === 'audiometria' ? 'Audiometria' : 'Imitanciometria'}
+            {isAudio ? 'Audiometria' : 'Imitanciometria'}
           </Button>
         )
       },
