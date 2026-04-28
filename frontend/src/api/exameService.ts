@@ -238,3 +238,16 @@ export async function atualizarExameImitanciometria(
   )
   return data
 }
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+
+export interface DashboardStats {
+  audiometrias: number
+  imitanciometrias: number
+  laudos_gerados: number
+}
+
+export async function buscarEstatisticasDashboard(): Promise<DashboardStats> {
+  const { data } = await api.get<DashboardStats>('/exames/dashboard/stats')
+  return data
+}

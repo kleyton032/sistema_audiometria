@@ -21,6 +21,14 @@ from app.pdf.imitanciometria import gerar_pdf_imitanciometria
 router = APIRouter(prefix="/exames", tags=["Exames"])
 
 
+@router.get("/dashboard/stats")
+def dashboard_stats(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return repo.get_dashboard_stats(db)
+
+
 @router.post("/status-atendimentos", response_model=dict[str, Any])
 def status_por_atendimentos(
     body: dict[str, list[int]],

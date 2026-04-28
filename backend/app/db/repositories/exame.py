@@ -7,6 +7,17 @@ from sqlalchemy.sql import text
 from app.db.models import Exame, ResultadoAudio, ResultadoImitan, Laudo
 from app.schemas.exame import ExameAudiometriaCreate, ExameImitanciometriaCreate
 
+
+def get_dashboard_stats(db: Session) -> dict:
+    audiometrias = db.query(Exame).filter(Exame.ds_tipo == "AUDIOMETRIA").count()
+    imitanciometrias = db.query(Exame).filter(Exame.ds_tipo == "IMITANCIOMETRIA").count()
+    laudos = db.query(Laudo).filter(Laudo.ds_status == "ATIVO").count()
+    return {
+        "audiometrias": audiometrias,
+        "imitanciometrias": imitanciometrias,
+        "laudos_gerados": laudos,
+    }
+
 _RESULTADO_FIELDS = [
     "od_va_250", "od_va_500", "od_va_1000", "od_va_2000",
     "od_va_3000", "od_va_4000", "od_va_6000", "od_va_8000",
