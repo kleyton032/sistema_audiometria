@@ -1,10 +1,10 @@
 # app/api/v1/exames.py
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 import io
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 from app.dependencies import get_db, get_current_user
 from app.db.models import User
@@ -13,6 +13,7 @@ from app.schemas.exame import (
     ExameAudiometriaCreate,
     ExameImitanciometriaCreate,
     ExameResponse,
+    ExameGerencialResponse,
     LaudoResponse,
 )
 from app.pdf.audiometria import gerar_pdf_audiometria
@@ -27,6 +28,25 @@ def dashboard_stats(
     db: Session = Depends(get_db),
 ):
     return repo.get_dashboard_stats(db)
+
+
+@router.get("/gerencial", response_model=ExameGerencialResponse)
+def buscar_gerencial(
+    id_paciente:    Optional[int] = Query(None, description="Prontuário do paciente"),
+    id_atendimento: Optional[int] = Query(None, description="Código do atendimento"),
+    nm_paciente:    Optional[str] = Query(None, description="Nome do paciente (parcial)"),
+    ds_tipo:        Optional[str] = Query(None, description="AUDIOMETRIA | IMITANCIOMETRIA"),
+    dt_inicio:      Optional[str] = Query(None, description="Data início YYYY-MM-DD"),
+    dt_fim:         Optional[str] = Query(None, description="Data fim YYYY-MM-DD"),
+    skip:           int           = Query(0,  ge=0),
+    limit:          int           = Query(50, ge=1, le=200),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return repo.buscar_exames_gerencial(
+        db, id_paciente, id_atendimento, nm_paciente,
+        ds_tipo, dt_inicio, dt_fim, skip, limit,
+    )
 
 
 @router.post("/status-atendimentos", response_model=dict[str, Any])
@@ -93,6 +113,34 @@ def buscar_exame(
     if not exame:
         raise HTTPException(status_code=404, detail="Exame não encontrado.")
     return exame
+
+
+@router.get("/{id_exame}/laudos", response_model=list[LaudoResponse])
+def listar_laudos(
+    id_exame: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return repo.listar_laudos_por_exame(db, id_exame)
+
+
+@router.get("/{id_exame}/ultimo-laudo")
+def download_ultimo_laudo(
+    id_exame: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    laudos = repo.listar_laudos_por_exame(db, id_exame)
+    if not laudos:
+        raise HTTPException(status_code=404, detail="Nenhum laudo encontrado.")
+    laudo = laudos[0]
+    if not laudo.bl_pdf:
+        raise HTTPException(status_code=404, detail="PDF não disponível.")
+    return StreamingResponse(
+        io.BytesIO(laudo.bl_pdf),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{laudo.nm_arquivo}"'},
+    )
 
 
 @router.post("/{id_exame}/finalizar", response_model=ExameResponse)

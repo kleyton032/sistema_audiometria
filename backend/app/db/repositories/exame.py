@@ -18,6 +18,99 @@ def get_dashboard_stats(db: Session) -> dict:
         "laudos_gerados": laudos,
     }
 
+
+def buscar_exames_gerencial(
+    db: Session,
+    id_paciente: Optional[int] = None,
+    id_atendimento: Optional[int] = None,
+    nm_paciente: Optional[str] = None,
+    ds_tipo: Optional[str] = None,
+    dt_inicio: Optional[str] = None,
+    dt_fim: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50,
+) -> dict:
+    where_parts = ["1=1"]
+    params: dict = {}
+
+    if id_paciente is not None:
+        where_parts.append("e.ID_PACIENTE = :id_paciente")
+        params["id_paciente"] = id_paciente
+    if id_atendimento is not None:
+        where_parts.append("e.ID_ATENDIMENTO = :id_atendimento")
+        params["id_atendimento"] = id_atendimento
+    if nm_paciente:
+        where_parts.append("UPPER(p.NM_PACIENTE) LIKE UPPER(:nm_paciente)")
+        params["nm_paciente"] = f"%{nm_paciente}%"
+    if ds_tipo:
+        where_parts.append("e.DS_TIPO = :ds_tipo")
+        params["ds_tipo"] = ds_tipo
+    if dt_inicio:
+        where_parts.append("TRUNC(e.DT_EXAME) >= TO_DATE(:dt_inicio, 'YYYY-MM-DD')")
+        params["dt_inicio"] = dt_inicio
+    if dt_fim:
+        where_parts.append("TRUNC(e.DT_EXAME) <= TO_DATE(:dt_fim, 'YYYY-MM-DD')")
+        params["dt_fim"] = dt_fim
+
+    where = "WHERE " + " AND ".join(where_parts)
+    join = "LEFT JOIN dbamv.PACIENTE p ON p.CD_PACIENTE = e.ID_PACIENTE"
+
+    count_sql = f"SELECT COUNT(*) FROM FAV_TB_SILA_EXAMES e {join} {where}"
+    total = db.execute(text(count_sql), params).scalar() or 0
+
+    end_row = skip + limit
+    data_sql = text(f"""
+        SELECT ID_EXAME, ID_PACIENTE, ID_ATENDIMENTO, NM_PACIENTE, DS_TIPO, DS_STATUS, DT_EXAME, NR_LAUDOS FROM (
+            SELECT a.*, ROWNUM AS rn FROM (
+                SELECT
+                    e.ID_EXAME,
+                    e.ID_PACIENTE,
+                    e.ID_ATENDIMENTO,
+                    p.NM_PACIENTE,
+                    e.DS_TIPO,
+                    e.DS_STATUS,
+                    e.DT_EXAME,
+                    (SELECT COUNT(*) FROM FAV_TB_SILA_LAUDOS l
+                     WHERE l.ID_EXAME = e.ID_EXAME AND l.DS_STATUS = 'ATIVO') AS NR_LAUDOS
+                FROM FAV_TB_SILA_EXAMES e
+                {join}
+                {where}
+                ORDER BY e.DT_EXAME DESC
+            ) a WHERE ROWNUM <= :end_row
+        ) WHERE rn > :skip
+    """)
+    rows = db.execute(data_sql, {**params, "skip": skip, "end_row": end_row}).mappings().all()
+
+    return {
+        "total": total,
+        "items": [
+            {
+                "id_exame":       row["id_exame"],
+                "id_paciente":    row["id_paciente"],
+                "id_atendimento": row["id_atendimento"],
+                "nm_paciente":    row["nm_paciente"],
+                "ds_tipo":        row["ds_tipo"],
+                "ds_status":      row["ds_status"],
+                "dt_exame":       row["dt_exame"],
+                "nr_laudos":      int(row["nr_laudos"] or 0),
+            }
+            for row in rows
+        ],
+    }
+
+
+def listar_laudos_por_exame(db: Session, id_exame: int) -> list:
+    return (
+        db.query(Laudo)
+        .filter(Laudo.id_exame == id_exame, Laudo.ds_status == "ATIVO")
+        .order_by(Laudo.dt_geracao.desc())
+        .all()
+    )
+
+
+def get_laudo_por_id(db: Session, id_laudo: int) -> Optional[Laudo]:
+    return db.query(Laudo).filter(Laudo.id_laudo == id_laudo).first()
+
 _RESULTADO_FIELDS = [
     "od_va_250", "od_va_500", "od_va_1000", "od_va_2000",
     "od_va_3000", "od_va_4000", "od_va_6000", "od_va_8000",

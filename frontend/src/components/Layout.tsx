@@ -6,6 +6,7 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   TeamOutlined,
+  SearchOutlined,
 } from '@ant-design/icons'
 import { useNavigate, useLocation, Outlet } from 'react-router-dom'
 import { useAuth } from '@/contexts'
@@ -22,6 +23,11 @@ const menuItems = [
     key: '/pacientes',
     icon: <TeamOutlined />,
     label: 'Pacientes',
+  },
+  {
+    key: '/consulta',
+    icon: <SearchOutlined />,
+    label: 'Consulta de Exames',
   },
 ]
 

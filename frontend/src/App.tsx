@@ -8,6 +8,7 @@ import { DashboardPage } from '@/pages/Dashboard'
 import { AudiometriaPage } from '@/pages/Audiometria'
 import { ImitanciometriaPage } from '@/pages/Imitanciometria'
 import { PacientesPage } from '@/pages/Pacientes'
+import { ConsultaPage } from '@/pages/Consulta'
 
 export default function App() {
   return (
@@ -35,6 +36,7 @@ export default function App() {
             >
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/pacientes" element={<PacientesPage />} />
+              <Route path="/consulta" element={<ConsultaPage />} />
               <Route path="/audiometria" element={<AudiometriaPage />} />
               <Route path="/imitanciometria" element={<ImitanciometriaPage />} />
             </Route>

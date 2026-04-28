@@ -25,7 +25,7 @@ def _timpanograma_base64(resultado) -> str:
     def gaussian_curve(peak_pressure, peak_compliance, width=80):
         if peak_pressure is None or peak_compliance is None:
             return None
-        return peak_compliance * np.exp(
+        return float(peak_compliance) * np.exp(
             -((pressures - float(peak_pressure)) ** 2) / (2 * float(width) ** 2)
         )
 

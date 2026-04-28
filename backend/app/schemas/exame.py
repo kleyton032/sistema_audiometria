@@ -279,3 +279,21 @@ class ResultadoImitanResponse(BaseModel):
     ds_conclusao: Optional[str] = None
 
     model_config = {"from_attributes": True}
+
+
+# ── Consulta Gerencial ────────────────────────────────────────────────────────
+
+class ExameGerencialItem(BaseModel):
+    id_exame:       int
+    id_paciente:    int
+    id_atendimento: Optional[int] = None
+    nm_paciente:    Optional[str] = None
+    ds_tipo:        str
+    ds_status:      str
+    dt_exame:       datetime
+    nr_laudos:      int = 0
+
+
+class ExameGerencialResponse(BaseModel):
+    total: int
+    items: list[ExameGerencialItem]

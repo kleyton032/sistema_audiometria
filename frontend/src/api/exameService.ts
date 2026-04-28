@@ -251,3 +251,62 @@ export async function buscarEstatisticasDashboard(): Promise<DashboardStats> {
   const { data } = await api.get<DashboardStats>('/exames/dashboard/stats')
   return data
 }
+
+// ── Consulta Gerencial ────────────────────────────────────────────────────────
+
+export interface ExameGerencialItem {
+  id_exame:       number
+  id_paciente:    number
+  id_atendimento: number | null
+  nm_paciente:    string | null
+  ds_tipo:        string
+  ds_status:      string
+  dt_exame:       string
+  nr_laudos:      number
+}
+
+export interface ExameGerencialFiltros {
+  id_paciente?:    number
+  id_atendimento?: number
+  nm_paciente?:    string
+  ds_tipo?:        string
+  dt_inicio?:      string
+  dt_fim?:         string
+  skip?:           number
+  limit?:          number
+}
+
+export interface ExameGerencialResponse {
+  total: number
+  items: ExameGerencialItem[]
+}
+
+export async function buscarExamesGerencial(
+  filtros: ExameGerencialFiltros,
+): Promise<ExameGerencialResponse> {
+  const { data } = await api.get<ExameGerencialResponse>('/exames/gerencial', {
+    params: filtros,
+  })
+  return data
+}
+
+export interface LaudoItem {
+  id_laudo:         number
+  id_exame:         number
+  nm_arquivo:       string
+  nr_tamanho_bytes: number | null
+  dt_geracao:       string
+  ds_status:        string
+}
+
+export async function listarLaudosPorExame(idExame: number): Promise<LaudoItem[]> {
+  const { data } = await api.get<LaudoItem[]>(`/exames/${idExame}/laudos`)
+  return data
+}
+
+export async function downloadUltimoLaudo(idExame: number): Promise<Blob> {
+  const { data } = await api.get(`/exames/${idExame}/ultimo-laudo`, {
+    responseType: 'blob',
+  })
+  return data as Blob
+}
