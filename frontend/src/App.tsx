@@ -9,6 +9,7 @@ import { AudiometriaPage } from '@/pages/Audiometria'
 import { ImitanciometriaPage } from '@/pages/Imitanciometria'
 import { PacientesPage } from '@/pages/Pacientes'
 import { ConsultaPage } from '@/pages/Consulta'
+import { PTSPage } from '@/pages/PTS'
 
 export default function App() {
   return (
@@ -39,6 +40,7 @@ export default function App() {
               <Route path="/consulta" element={<ConsultaPage />} />
               <Route path="/audiometria" element={<AudiometriaPage />} />
               <Route path="/imitanciometria" element={<ImitanciometriaPage />} />
+              <Route path="/pts" element={<PTSPage />} />
             </Route>
 
             {/* Redirect padrão */}

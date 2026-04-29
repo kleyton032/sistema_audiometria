@@ -11,6 +11,18 @@ from app.db.models import User
 router = APIRouter(prefix="/users", tags=["Usuários"])
 
 
+@router.get(
+    "/me",
+    response_model=UserResponse,
+    summary="Dados do usuário autenticado",
+)
+def get_me(
+    current_user: User = Depends(get_current_user),
+):
+    """Retorna os dados do usuário logado (extraídos do JWT)."""
+    return current_user
+
+
 @router.post(
     "/",
     response_model=UserResponse,

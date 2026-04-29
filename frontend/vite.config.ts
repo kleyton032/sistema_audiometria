@@ -10,6 +10,7 @@ export default defineConfig({
     },
   },
   server: {
+    host: true,   // escuta em 0.0.0.0 → acessível na rede local
     port: 5173,
     proxy: {
       '/api': {

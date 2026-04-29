@@ -7,41 +7,53 @@ import {
   MenuUnfoldOutlined,
   TeamOutlined,
   SearchOutlined,
+  FileProtectOutlined,
 } from '@ant-design/icons'
 import { useNavigate, useLocation, Outlet } from 'react-router-dom'
 import { useAuth } from '@/contexts'
 
 const { Header, Sider, Content } = AntLayout
 
-const menuItems = [
-  {
-    key: '/dashboard',
-    icon: <DashboardOutlined />,
-    label: 'Dashboard',
-  },
-  {
-    key: '/pacientes',
-    icon: <TeamOutlined />,
-    label: 'Pacientes',
-  },
-  {
-    key: '/consulta',
-    icon: <SearchOutlined />,
-    label: 'Consulta de Exames',
-  },
-]
+const PTS_ALLOWED_USERS = ['kleyton.bomfim']
 
 export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
-  const { logout } = useAuth()
+  const { logout, nm_login } = useAuth()
   const { token: themeToken } = theme.useToken()
 
   const handleLogout = () => {
     logout()
     navigate('/login')
   }
+
+  const menuItems = [
+    {
+      key: '/dashboard',
+      icon: <DashboardOutlined />,
+      label: 'Dashboard',
+    },
+    {
+      key: '/pacientes',
+      icon: <TeamOutlined />,
+      label: 'Pacientes',
+    },
+    {
+      key: '/consulta',
+      icon: <SearchOutlined />,
+      label: 'Consulta de Exames',
+    },
+    ...(nm_login && PTS_ALLOWED_USERS.includes(nm_login)
+      ? [
+          {
+            key: '/pts',
+            icon: <FileProtectOutlined />,
+            label: 'PTS',
+          },
+        ]
+      : []),
+  ]
 
   return (
     <AntLayout style={{ minHeight: '100vh' }}>
