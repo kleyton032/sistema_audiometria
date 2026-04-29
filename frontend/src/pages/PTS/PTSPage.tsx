@@ -36,13 +36,23 @@ import {
   PERIODICIDADES,
   AREAS,
   AREA_LABEL,
+  CER_GRUPOS,
+  CER_GRUPO_LABEL,
+  CER_OPCOES,
+  type CerGrupo,
   type Area,
 } from './data/listas'
-import { getMe } from '@/api'
+import { getMe, getPTSDiagnosticosPrincipais, getPTSDiagnosticosArea, getPTSDiagnosticosTerapeuticos, getPTSEspecialidades, getPTSItensMultidisciplinar, getPTSTerapiasIndicadas } from '@/api'
 import type { User } from '@/types'
 
 const { Title, Text } = Typography
 dayjs.locale('pt-br')
+
+// ── tipo linha diagnóstico médico principal ─────────────────────────────────
+interface DiagPrincipalRow {
+  key: number
+  diagnostico: string | undefined
+}
 
 // ── tipo linha de terapia indicada ───────────────────────────────────────────
 interface TerapiaRow {
@@ -66,11 +76,6 @@ interface DiagnosticoAreaRow {
 }
 
 interface PTSFormValues {
-  diag_principal_1: string | undefined
-  diag_principal_2: string | undefined
-  diag_principal_3: string | undefined
-  diag_principal_4: string | undefined
-  diag_outros: string | undefined
   queixa_principal: string | undefined
   diag_terapeutico_1: string | undefined
   diag_terapeutico_2: string | undefined
@@ -102,22 +107,10 @@ interface PTSFormValues {
   opme_com_baixa: boolean
   opme_orteses: boolean
   opme_outros: string | undefined
-  // CER IV
-  cer_fisioterapia: boolean
-  cer_fisio_aquatica: boolean
-  cer_fonoaudiologia: boolean
-  cer_terapia_ocupacional: boolean
-  cer_ed_fisica: boolean
-  cer_psicologia: boolean
-  cer_psicologia_musical: boolean
-  cer_psicopedagogia: boolean
-  cer_professor_braille: boolean
+  // CER IV — agora gerenciado por estado (cerTerapias), removido da interface do form
+  cer_terapias_texto: string | undefined
   // Serviços externos
   ext_nao_realiza: boolean
-  ext_fisio_to: string | undefined
-  ext_psicologia: string | undefined
-  ext_fonoaudiologia: string | undefined
-  ext_outras: string | undefined
   // Condutas
   conduta_avaliacao_medica: string | undefined
   conduta_multidisciplinar: string | undefined
@@ -133,6 +126,7 @@ interface PTSFormValues {
   instrumento_4: string | undefined
   instrumento_outros: string | undefined
   // Programa Específico
+  prog_nao_se_aplica: boolean
   prog_glaucoma: boolean
   prog_catarata: boolean
   prog_alem_olhar: boolean
@@ -160,9 +154,36 @@ export default function PTSPage() {
   const [objetivos, setObjetivos] = useState<ObjetivosState>(criarObjetivosIniciais)
   const [usuarioMe, setUsuarioMe] = useState<User | null>(null)
   const [terapias, setTerapias] = useState<TerapiaRow[]>([{ key: 1, terapia: undefined, tipo_atendimento: undefined, periodicidade: undefined, qtde_sessoes: undefined }])
+  const [diagPrincipais, setDiagPrincipais] = useState<DiagPrincipalRow[]>([{ key: 1, diagnostico: undefined }])
+  const [opcoesDiagPrincipais, setOpcoesDiagPrincipais] = useState<string[]>([])
+  const [opcoesDiagTerapeuticos, setOpcoesDiagTerapeuticos] = useState<string[]>([])
+  const [diagTerapeuticos, setDiagTerapeuticos] = useState<DiagPrincipalRow[]>([{ key: 1, diagnostico: undefined }])
+  const [cerTerapias, setCerTerapias] = useState<Record<CerGrupo, DiagPrincipalRow[]>>(
+    () => Object.fromEntries(CER_GRUPOS.map((g) => [g, [{ key: Date.now() + Math.random(), diagnostico: undefined }]])) as Record<CerGrupo, DiagPrincipalRow[]>
+  )
+  const [conductaRows, setConductaRows] = useState<DiagPrincipalRow[]>([{ key: 1, diagnostico: undefined }])
+  const [opcoesEspecialidades, setOpcoesEspecialidades] = useState<{ cd: string; ds: string }[]>([])
+  const [multidisciplinarRows, setMultidisciplinarRows] = useState<DiagPrincipalRow[]>([{ key: 1, diagnostico: undefined }])
+  const [opcoesMultidisciplinar, setOpcoesMultidisciplinar] = useState<{ cd: string; ds: string }[]>([])
+  const [opcoesTerapiasIndicadas, setOpcoesTerapiasIndicadas] = useState<{ cd: string; ds: string }[]>([])
+  const [opcoesDiagArea, setOpcoesDiagArea] = useState<Record<Area, string[]>>({
+    visual: [],
+    intelectual: [],
+    fisica: [],
+    auditiva: [],
+  })
 
   useEffect(() => {
     getMe().then(setUsuarioMe).catch(() => null)
+    getPTSDiagnosticosPrincipais().then(setOpcoesDiagPrincipais).catch(() => null)
+    getPTSDiagnosticosTerapeuticos().then(setOpcoesDiagTerapeuticos).catch(() => null)
+    getPTSEspecialidades().then(setOpcoesEspecialidades).catch(() => null)
+    getPTSItensMultidisciplinar().then(setOpcoesMultidisciplinar).catch(() => null)
+    getPTSTerapiasIndicadas().then(setOpcoesTerapiasIndicadas).catch(() => null)
+    // Visual: sem dados por enquanto (id_especialidade não definido)
+    getPTSDiagnosticosArea(64).then((v) => setOpcoesDiagArea((p) => ({ ...p, intelectual: v }))).catch(() => null)
+    getPTSDiagnosticosArea(66).then((v) => setOpcoesDiagArea((p) => ({ ...p, fisica: v }))).catch(() => null)
+    getPTSDiagnosticosArea(68).then((v) => setOpcoesDiagArea((p) => ({ ...p, auditiva: v }))).catch(() => null)
   }, [])
 
   // ── colunas tabela diagnóstico por área ───────────────────────────────────
@@ -183,7 +204,7 @@ export default function PTSPage() {
           allowClear
           showSearch
           optionFilterProp="label"
-          options={toOptions(DIAGNOSTICOS_AREA[row.area])}
+          options={toOptions(opcoesDiagArea[row.area])}
           value={diagnosticosArea[row.area]}
           onChange={(v) => setDiagnosticosArea((prev) => ({ ...prev, [row.area]: v }))}
         />
@@ -226,6 +247,13 @@ export default function PTSPage() {
   const handleSave = (values: PTSFormValues) => {
     const payload = {
       ...values,
+      diagnosticos_principais: diagPrincipais.map((r) => r.diagnostico).filter(Boolean),
+      diagnosticos_terapeuticos: diagTerapeuticos.map((r) => r.diagnostico).filter(Boolean),
+      cer_terapias: Object.fromEntries(
+        CER_GRUPOS.map((g) => [g, cerTerapias[g].map((r) => r.diagnostico).filter(Boolean)])
+      ),
+      conduta_avaliacao_medica: conductaRows.map((r) => r.diagnostico).filter(Boolean),
+      conduta_multidisciplinar: multidisciplinarRows.map((r) => r.diagnostico).filter(Boolean),
       diagnosticos_area: diagnosticosArea,
       grau_area: grauArea,
       objetivos,
@@ -275,33 +303,70 @@ export default function PTSPage() {
         <Card
           title={
             <div style={{ background: '#d9d9d9', margin: '-12px -24px', padding: '10px 24px', borderRadius: '8px 8px 0 0' }}>
-              <Text strong>Diagnóstico Médico Principal</Text>
+              <Row justify="space-between" align="middle">
+                <Text strong>Diagnóstico Médico Principal</Text>
+                <Button
+                  size="small"
+                  icon={<PlusOutlined />}
+                  onClick={() =>
+                    setDiagPrincipais((prev) => [
+                      ...prev,
+                      { key: Date.now(), diagnostico: undefined },
+                    ])
+                  }
+                >
+                  Adicionar
+                </Button>
+              </Row>
             </div>
           }
           style={{ marginBottom: 16 }}
+          bodyStyle={{ padding: 0 }}
         >
-          <Row gutter={[16, 8]}>
-            {[1, 2, 3, 4].map((n) => (
-              <Col span={24} key={n}>
-                <Form.Item
-                  name={`diag_principal_${n}` as keyof PTSFormValues}
-                  label={n === 1 ? undefined : undefined}
-                  style={{ marginBottom: 8 }}
-                >
+          <Table<DiagPrincipalRow>
+            dataSource={diagPrincipais}
+            rowKey="key"
+            pagination={false}
+            size="small"
+            bordered
+            showHeader={false}
+            columns={[
+              {
+                dataIndex: 'diagnostico',
+                render: (_: unknown, row) => (
                   <Select
-                    placeholder="Selecione..."
+                    style={{ width: '100%' }}
+                    placeholder="Selecione o diagnóstico..."
                     allowClear
                     showSearch
                     optionFilterProp="label"
-                    options={toOptions(DIAGNOSTICOS_PRINCIPAIS)}
+                    options={opcoesDiagPrincipais.map((v) => ({ label: v, value: v }))}
+                    value={row.diagnostico}
+                    onChange={(v) =>
+                      setDiagPrincipais((prev) =>
+                        prev.map((r) => (r.key === row.key ? { ...r, diagnostico: v } : r))
+                      )
+                    }
                   />
-                </Form.Item>
-              </Col>
-            ))}
-          </Row>
-          <Form.Item label="Outros:" name="diag_outros" style={{ marginBottom: 0 }}>
-            <Input placeholder="Outros diagnósticos..." />
-          </Form.Item>
+                ),
+              },
+              {
+                width: 48,
+                render: (_: unknown, row) =>
+                  diagPrincipais.length > 1 ? (
+                    <Button
+                      type="text"
+                      danger
+                      size="small"
+                      icon={<DeleteOutlined />}
+                      onClick={() =>
+                        setDiagPrincipais((prev) => prev.filter((r) => r.key !== row.key))
+                      }
+                    />
+                  ) : null,
+              },
+            ]}
+          />
         </Card>
 
         {/* ── SEÇÃO 2: Diagnóstico Médico Específico da Área ── */}
@@ -339,29 +404,70 @@ export default function PTSPage() {
         <Card
           title={
             <div style={{ background: '#d9d9d9', margin: '-12px -24px', padding: '10px 24px', borderRadius: '8px 8px 0 0' }}>
-              <Text strong>Diagnóstico(s) Terapêutico(s)</Text>
+              <Row justify="space-between" align="middle">
+                <Text strong>Diagnóstico(s) Terapêutico(s)</Text>
+                <Button
+                  size="small"
+                  icon={<PlusOutlined />}
+                  onClick={() =>
+                    setDiagTerapeuticos((prev) => [
+                      ...prev,
+                      { key: Date.now(), diagnostico: undefined },
+                    ])
+                  }
+                >
+                  Adicionar
+                </Button>
+              </Row>
             </div>
           }
           style={{ marginBottom: 16 }}
+          bodyStyle={{ padding: 0 }}
         >
-          <Row gutter={[16, 8]}>
-            {[1, 2, 3].map((n) => (
-              <Col span={24} key={n}>
-                <Form.Item
-                  name={`diag_terapeutico_${n}` as keyof PTSFormValues}
-                  style={{ marginBottom: 8 }}
-                >
+          <Table<DiagPrincipalRow>
+            dataSource={diagTerapeuticos}
+            rowKey="key"
+            pagination={false}
+            size="small"
+            bordered
+            showHeader={false}
+            columns={[
+              {
+                dataIndex: 'diagnostico',
+                render: (_: unknown, row) => (
                   <Select
-                    placeholder="Selecione..."
+                    style={{ width: '100%' }}
+                    placeholder="Selecione o diagnóstico terapêutico..."
                     allowClear
                     showSearch
                     optionFilterProp="label"
-                    options={toOptions(DIAGNOSTICOS_TERAPEUTICOS)}
+                    options={opcoesDiagTerapeuticos.map((v) => ({ label: v, value: v }))}
+                    value={row.diagnostico}
+                    onChange={(v) =>
+                      setDiagTerapeuticos((prev) =>
+                        prev.map((r) => (r.key === row.key ? { ...r, diagnostico: v } : r))
+                      )
+                    }
                   />
-                </Form.Item>
-              </Col>
-            ))}
-          </Row>
+                ),
+              },
+              {
+                width: 48,
+                render: (_: unknown, row) =>
+                  diagTerapeuticos.length > 1 ? (
+                    <Button
+                      type="text"
+                      danger
+                      size="small"
+                      icon={<DeleteOutlined />}
+                      onClick={() =>
+                        setDiagTerapeuticos((prev) => prev.filter((r) => r.key !== row.key))
+                      }
+                    />
+                  ) : null,
+              },
+            ]}
+          />
         </Card>
 
         {/* ── SEÇÃO 6: Deficiências Associadas ── */}
@@ -461,25 +567,13 @@ export default function PTSPage() {
           }
           style={{ marginBottom: 16 }}
         >
-          <Row gutter={[24, 8]}>
-            {([
-              ['cer_fisioterapia',       'Fisioterapia'],
-              ['cer_fisio_aquatica',     'Fisioterapia Aquática'],
-              ['cer_fonoaudiologia',     'Fonoaudiologia'],
-              ['cer_terapia_ocupacional','Terapia Ocupacional'],
-              ['cer_ed_fisica',          'Profissional de Educação Física'],
-              ['cer_psicologia',         'Psicologia'],
-              ['cer_psicologia_musical', 'Psicologia Sonoro Musical'],
-              ['cer_psicopedagogia',     'Psicopedagogia'],
-              ['cer_professor_braille',  'Professor de Braille'],
-            ] as [string, string][]).map(([name, label]) => (
-              <Col key={name} xs={24} sm={12} md={8} lg={6}>
-                <Form.Item name={name as keyof PTSFormValues} valuePropName="checked" style={{ marginBottom: 4 }}>
-                  <Checkbox>{label}</Checkbox>
-                </Form.Item>
-              </Col>
-            ))}
-          </Row>
+          <Form.Item name="cer_terapias_texto" style={{ marginBottom: 0 }}>
+            <Input.TextArea
+              rows={3}
+              placeholder="Informação será preenchida automaticamente a partir da base de dados..."
+              disabled
+            />
+          </Form.Item>
         </Card>
 
         {/* ── SEÇÃO 10: Faz outras terapias em serviços externos ── */}
@@ -491,61 +585,228 @@ export default function PTSPage() {
           }
           style={{ marginBottom: 16 }}
         >
-          <Row gutter={[16, 8]}>
-            <Col xs={24} sm={12} md={6}>
-              <Form.Item label="Fisioterapia / Terap. Ocupacional" name="ext_fisio_to">
-                <Input.TextArea rows={3} placeholder="Descreva..." />
-              </Form.Item>
+          <Row gutter={[12, 12]}>
+            {CER_GRUPOS.map((grupo) => (
+              <Col key={grupo} xs={24} sm={12}>
+                <Card
+                  size="small"
+                  style={{ border: '1px solid #d9d9d9', height: '100%' }}
+                  bodyStyle={{ padding: 0 }}
+                  title={
+                    <Row justify="space-between" align="middle">
+                      <Text strong>{CER_GRUPO_LABEL[grupo]}</Text>
+                      <Button
+                        size="small"
+                        icon={<PlusOutlined />}
+                        onClick={() =>
+                          setCerTerapias((prev) => ({
+                            ...prev,
+                            [grupo]: [...prev[grupo], { key: Date.now(), diagnostico: undefined }],
+                          }))
+                        }
+                      >
+                        Adicionar
+                      </Button>
+                    </Row>
+                  }
+                >
+                <Table<DiagPrincipalRow>
+                  dataSource={cerTerapias[grupo]}
+                  rowKey="key"
+                  pagination={false}
+                  size="small"
+                  showHeader={false}
+                  columns={[
+                    {
+                      dataIndex: 'diagnostico',
+                      render: (_: unknown, row) => (
+                        <Select
+                          style={{ width: '100%' }}
+                          placeholder="Selecione..."
+                          allowClear
+                          showSearch
+                          optionFilterProp="label"
+                          options={CER_OPCOES[grupo].map((v) => ({ label: v, value: v }))}
+                          value={row.diagnostico}
+                          onChange={(v) =>
+                            setCerTerapias((prev) => ({
+                              ...prev,
+                              [grupo]: prev[grupo].map((r) =>
+                                r.key === row.key ? { ...r, diagnostico: v } : r
+                              ),
+                            }))
+                          }
+                        />
+                      ),
+                    },
+                    {
+                      width: 48,
+                      render: (_: unknown, row) =>
+                        cerTerapias[grupo].length > 1 ? (
+                          <Button
+                            type="text"
+                            danger
+                            size="small"
+                            icon={<DeleteOutlined />}
+                            onClick={() =>
+                              setCerTerapias((prev) => ({
+                                ...prev,
+                                [grupo]: prev[grupo].filter((r) => r.key !== row.key),
+                              }))
+                            }
+                          />
+                        ) : null,
+                    },
+                  ]}
+                />
+              </Card>
             </Col>
-            <Col xs={24} sm={12} md={6}>
-              <Form.Item label="Psicologia / Psicopedagogia" name="ext_psicologia">
-                <Input.TextArea rows={3} placeholder="Descreva..." />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={6}>
-              <Form.Item label="Fonoaudiologia" name="ext_fonoaudiologia">
-                <Input.TextArea rows={3} placeholder="Descreva..." />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={6}>
-              <Form.Item label="Outras" name="ext_outras">
-                <Input.TextArea rows={3} placeholder="Descreva..." />
-              </Form.Item>
-            </Col>
+            ))}
           </Row>
-          <Divider style={{ margin: '4px 0 8px' }} />
+          <Divider style={{ margin: '12px 0 8px' }} />
           <Form.Item name="ext_nao_realiza" valuePropName="checked" style={{ marginBottom: 0 }}>
             <Checkbox>Não Realiza</Checkbox>
           </Form.Item>
         </Card>
 
-        {/* ── SEÇÃO 11: Conduta: Avaliação Médica ── */}
-        <Card
-          title={
-            <div style={{ background: '#d9d9d9', margin: '-12px -24px', padding: '10px 24px', borderRadius: '8px 8px 0 0' }}>
-              <Text strong>Conduta: Avaliação Médica</Text>
-            </div>
-          }
-          style={{ marginBottom: 16 }}
-        >
-          <Form.Item name="conduta_avaliacao_medica" style={{ marginBottom: 0 }}>
-            <Input.TextArea rows={3} placeholder="Descreva a conduta de avaliação médica..." />
-          </Form.Item>
-        </Card>
+        {/* ── SEÇÕES 11 e 12: Avaliação Médica + Atendimento Multidisciplinar ── */}
+        <Row gutter={16} style={{ marginBottom: 16 }}>
+          <Col span={12}>
+            <Card
+              title={
+                <div style={{ background: '#d9d9d9', margin: '-12px -24px', padding: '10px 24px', borderRadius: '8px 8px 0 0' }}>
+                  <Row justify="space-between" align="middle">
+                    <Text strong>Conduta: Avaliação Médica</Text>
+                    <Button
+                      size="small"
+                      icon={<PlusOutlined />}
+                      onClick={() =>
+                        setConductaRows((prev) => [...prev, { key: Date.now(), diagnostico: undefined }])
+                      }
+                    >
+                      Adicionar
+                    </Button>
+                  </Row>
+                </div>
+              }
+              style={{ height: '100%' }}
+              bodyStyle={{ padding: 0 }}
+            >
+              <Table<DiagPrincipalRow>
+                dataSource={conductaRows}
+                rowKey="key"
+                pagination={false}
+                size="small"
+                bordered
+                showHeader={false}
+                columns={[
+                  {
+                    dataIndex: 'diagnostico',
+                    render: (_: unknown, row) => (
+                      <Select
+                        style={{ width: '100%' }}
+                        placeholder="Selecione a especialidade / conduta..."
+                        allowClear
+                        showSearch
+                        optionFilterProp="label"
+                        options={opcoesEspecialidades.map((e) => ({ label: e.ds, value: e.cd }))}
+                        value={row.diagnostico}
+                        onChange={(v) =>
+                          setConductaRows((prev) =>
+                            prev.map((r) => (r.key === row.key ? { ...r, diagnostico: v } : r))
+                          )
+                        }
+                      />
+                    ),
+                  },
+                  {
+                    width: 48,
+                    render: (_: unknown, row) =>
+                      conductaRows.length > 1 ? (
+                        <Button
+                          type="text"
+                          danger
+                          size="small"
+                          icon={<DeleteOutlined />}
+                          onClick={() =>
+                            setConductaRows((prev) => prev.filter((r) => r.key !== row.key))
+                          }
+                        />
+                      ) : null,
+                  },
+                ]}
+              />
+            </Card>
+          </Col>
 
-        {/* ── SEÇÃO 12: Conduta: Atendimento Multidisciplinar ── */}
-        <Card
-          title={
-            <div style={{ background: '#d9d9d9', margin: '-12px -24px', padding: '10px 24px', borderRadius: '8px 8px 0 0' }}>
-              <Text strong>Conduta: Atendimento Multidisciplinar</Text>
-            </div>
-          }
-          style={{ marginBottom: 16 }}
-        >
-          <Form.Item name="conduta_multidisciplinar" style={{ marginBottom: 0 }}>
-            <Input.TextArea rows={3} placeholder="Descreva a conduta de atendimento multidisciplinar..." />
-          </Form.Item>
-        </Card>
+          <Col span={12}>
+            <Card
+              title={
+                <div style={{ background: '#d9d9d9', margin: '-12px -24px', padding: '10px 24px', borderRadius: '8px 8px 0 0' }}>
+                  <Row justify="space-between" align="middle">
+                    <Text strong>Conduta: Atendimento Multidisciplinar</Text>
+                    <Button
+                      size="small"
+                      icon={<PlusOutlined />}
+                      onClick={() =>
+                        setMultidisciplinarRows((prev) => [...prev, { key: Date.now(), diagnostico: undefined }])
+                      }
+                    >
+                      Adicionar
+                    </Button>
+                  </Row>
+                </div>
+              }
+              style={{ height: '100%' }}
+              bodyStyle={{ padding: 0 }}
+            >
+              <Table<DiagPrincipalRow>
+                dataSource={multidisciplinarRows}
+                rowKey="key"
+                pagination={false}
+                size="small"
+                bordered
+                showHeader={false}
+                columns={[
+                  {
+                    dataIndex: 'diagnostico',
+                    render: (_: unknown, row) => (
+                      <Select
+                        style={{ width: '100%' }}
+                        placeholder="Selecione o item de avaliação/rastreio..."
+                        allowClear
+                        showSearch
+                        optionFilterProp="label"
+                        options={opcoesMultidisciplinar.map((e) => ({ label: e.ds, value: e.cd }))}
+                        value={row.diagnostico}
+                        onChange={(v) =>
+                          setMultidisciplinarRows((prev) =>
+                            prev.map((r) => (r.key === row.key ? { ...r, diagnostico: v } : r))
+                          )
+                        }
+                      />
+                    ),
+                  },
+                  {
+                    width: 48,
+                    render: (_: unknown, row) =>
+                      multidisciplinarRows.length > 1 ? (
+                        <Button
+                          type="text"
+                          danger
+                          size="small"
+                          icon={<DeleteOutlined />}
+                          onClick={() =>
+                            setMultidisciplinarRows((prev) => prev.filter((r) => r.key !== row.key))
+                          }
+                        />
+                      ) : null,
+                  },
+                ]}
+              />
+            </Card>
+          </Col>
+        </Row>
 
         {/* ── SEÇÃO 13: Objetivos por Especialidade ── */}
         <Card
@@ -663,6 +924,7 @@ export default function PTSPage() {
             <Col flex="1">
               <Row gutter={[24, 8]}>
                 {([
+                  ['prog_nao_se_aplica',       'Não se Aplica'],
                   ['prog_glaucoma',            'Glaucoma Congênito'],
                   ['prog_catarata',            'Catarata Congênita'],
                   ['prog_alem_olhar',          'Além do Olhar'],
@@ -726,7 +988,7 @@ export default function PTSPage() {
                     allowClear
                     showSearch
                     optionFilterProp="label"
-                    options={TERAPIAS_INDICADAS.map((v) => ({ label: v, value: v }))}
+                    options={opcoesTerapiasIndicadas.map((e) => ({ label: e.ds, value: e.cd }))}
                     value={row.terapia}
                     onChange={(v) => setTerapias((prev) => prev.map((r) => r.key === row.key ? { ...r, terapia: v } : r))}
                   />
@@ -741,7 +1003,7 @@ export default function PTSPage() {
                     style={{ width: '100%' }}
                     placeholder="Selecione..."
                     allowClear
-                    options={TIPOS_ATENDIMENTO.map((v) => ({ label: v, value: v }))}
+                    options={TIPOS_ATENDIMENTO}
                     value={row.tipo_atendimento}
                     onChange={(v) => setTerapias((prev) => prev.map((r) => r.key === row.key ? { ...r, tipo_atendimento: v } : r))}
                   />
@@ -756,7 +1018,7 @@ export default function PTSPage() {
                     style={{ width: '100%' }}
                     placeholder="Selecione..."
                     allowClear
-                    options={PERIODICIDADES.map((v) => ({ label: v, value: v }))}
+                    options={PERIODICIDADES}
                     value={row.periodicidade}
                     onChange={(v) => setTerapias((prev) => prev.map((r) => r.key === row.key ? { ...r, periodicidade: v } : r))}
                   />
@@ -798,23 +1060,6 @@ export default function PTSPage() {
         {/* ── SEÇÃO 20: Rodapé do documento ── */}
         <Card style={{ marginBottom: 16 }}>
           <Space direction="vertical" style={{ width: '100%' }} size={12}>
-            {/* Vigência */}
-            <Row align="middle" gutter={12}>
-              <Col flex="none">
-                <Text strong>PTS entrou em vigor em:</Text>
-              </Col>
-              <Col flex="200px">
-                <Form.Item name="pts_vigencia" style={{ marginBottom: 0 }}>
-                  <DatePicker
-                    format="MM/YYYY"
-                    picker="month"
-                    style={{ width: '100%' }}
-                    placeholder="Mês/Ano"
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
-
             {/* Não concluído */}
             <Form.Item name="pts_nao_concluido" valuePropName="checked" style={{ marginBottom: 0 }}>
               <Checkbox>

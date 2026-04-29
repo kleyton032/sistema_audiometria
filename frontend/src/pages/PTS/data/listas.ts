@@ -184,19 +184,68 @@ export const TERAPIAS_INDICADAS: string[] = [
   'ATENDIMENTO MULTIDISCIPLINAR',
 ]
 
-export const TIPOS_ATENDIMENTO: string[] = [
-  'INDIVIDUAL',
-  'GRUPO',
-  'DOMICILIAR',
-  'TELECONSULTA',
+export const TIPOS_ATENDIMENTO: { value: string; label: string }[] = [
+  { value: '01', label: 'Individual' },
+  { value: '02', label: 'Dupla' },
+  { value: '03', label: 'Grupo 3' },
+  { value: '04', label: 'Grupo 4' },
+  { value: '05', label: 'Grupo 5' },
+  { value: '06', label: 'Grupo 6' },
+  { value: '07', label: 'Grupo 7' },
+  { value: '08', label: 'Grupo 8' },
+  { value: '09', label: 'Grupo 9' },
+  { value: '10', label: 'Grupo 10' },
 ]
 
-export const PERIODICIDADES: string[] = [
-  'DIÁRIO',
-  'SEMANAL',
-  '2X POR SEMANA',
-  '3X POR SEMANA',
-  'QUINZENAL',
-  'MENSAL',
-  'SOB DEMANDA',
+export const PERIODICIDADES: { value: string; label: string }[] = [
+  { value: '1', label: 'Semanal' },
+  { value: '2', label: 'Quinzenal' },
+  { value: '3', label: 'Mensal' },
+  { value: '4', label: 'Bimestral' },
+  { value: '5', label: 'Trimestral' },
+  { value: '6', label: 'Semestral' },
+  { value: '7', label: 'Anual' },
 ]
+
+// ── Seção 9: Faz outras terapias no CER IV ───────────────────────────────────
+export const CER_GRUPOS = [
+  'fisio_to',
+  'psicologia',
+  'fonoaudiologia',
+  'outros',
+] as const
+export type CerGrupo = (typeof CER_GRUPOS)[number]
+
+export const CER_GRUPO_LABEL: Record<CerGrupo, string> = {
+  fisio_to:       'Fisioterapia / Terapia Ocupacional',
+  psicologia:     'Psicologia / Psicopedagogia',
+  fonoaudiologia: 'Fonoaudiologia',
+  outros:         'Outros',
+}
+
+export const CER_OPCOES: Record<CerGrupo, string[]> = {
+  fisio_to: [
+    'FISIOTERAPIA MOTORA',
+    'FISIOTERAPIA AQUÁTICA',
+    'TERAPIA OCUPACIONAL',
+    'ESTIMULAÇÃO VISUAL',
+  ],
+  psicologia: [
+    'PSICOTERAPIA',
+    'PSICOTERAPIA - APOIO FAMILIAR',
+    'PSICOPEDAGOGIA',
+  ],
+  fonoaudiologia: [
+    'FONOTERAPIA MOTRICIDADE OROFACIAL',
+    'FONOTERAPIA LINGUAGEM',
+    'REABILITAÇÃO AUDITIVA',
+    'FONOTERAPIA COMUNICAÇÃO ALTERNATIVA',
+  ],
+  outros: [
+    'CLÍNICA DE TOXINA BOTULÍNICA',
+    'BRAILLE',
+    'TECNOLOGIA ASSISTIVA',
+    'ORIENTAÇÃO E MOBILIDADE',
+    'MUSICOTERAPIA',
+  ],
+}
