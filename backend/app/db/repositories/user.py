@@ -55,14 +55,29 @@ def buscar_prestador_mv(db: Session, cd_usuario: str) -> PrestadorMVInfo | None:
 
 def sync_user_prestador(db: Session, user: User, prestador: PrestadorMVInfo) -> User:
     """Sincroniza dados profissionais do MV para um usuário local existente."""
-    user.nm_usuario = prestador.nm_prestador
-
+    # Verifica se houve mudanças antes de comitar
+    has_changes = False
+    
+    if user.nm_usuario != prestador.nm_prestador:
+        user.nm_usuario = prestador.nm_prestador
+        has_changes = True
+    
     if user.prestador:
-        user.prestador.cd_prestador = prestador.cd_prestador
-        user.prestador.nm_prestador = prestador.nm_prestador
-        user.prestador.ds_conselho = prestador.ds_conselho
-        user.prestador.ds_codigo_conselho = prestador.ds_codigo_conselho
-        user.prestador.nm_tip_presta = prestador.nm_tip_presta
+        if (user.prestador.cd_prestador != prestador.cd_prestador or
+            user.prestador.nm_prestador != prestador.nm_prestador or
+            user.prestador.ds_conselho != prestador.ds_conselho or
+            user.prestador.ds_codigo_conselho != prestador.ds_codigo_conselho or
+            user.prestador.nm_tip_presta != prestador.nm_tip_presta):
+            
+            user.prestador.cd_prestador = prestador.cd_prestador
+            user.prestador.nm_prestador = prestador.nm_prestador
+            user.prestador.ds_conselho = prestador.ds_conselho
+            user.prestador.ds_codigo_conselho = prestador.ds_codigo_conselho
+            user.prestador.nm_tip_presta = prestador.nm_tip_presta
+            
+            from datetime import datetime
+            user.prestador.dt_sincronizacao = datetime.now()
+            has_changes = True
     else:
         db.add(
             UsuarioPrestador(
@@ -74,9 +89,11 @@ def sync_user_prestador(db: Session, user: User, prestador: PrestadorMVInfo) -> 
                 nm_tip_presta=prestador.nm_tip_presta,
             )
         )
-
-    db.commit()
-    db.refresh(user)
+        has_changes = True
+    
+    if has_changes:
+        db.commit()
+        db.refresh(user)
     return user
 
 

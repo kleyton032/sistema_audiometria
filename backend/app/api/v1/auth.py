@@ -30,7 +30,7 @@ def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    if usuario.cd_usuario_mv and usuario.prestador is None:
+    if usuario.cd_usuario_mv:
         usuario = sync_existing_user_from_mv(db, usuario)
 
     token = create_access_token({"sub": usuario.nm_login})

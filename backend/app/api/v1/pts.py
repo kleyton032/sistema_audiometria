@@ -139,7 +139,7 @@ def finalizar_pts(
     # CD_USUARIO_MV é o login utilizado em DBASGU.USUARIOS.CD_USUARIO
     nm_usuario = current_user.cd_usuario_mv or current_user.nm_login
     db.execute(
-        text('BEGIN FAV_PRC_PTS_INSERE_FILA(:id_pts, :nm_usuario); END;'),
+        text('BEGIN PRC_FAV_PTS_INSERE_FILA(:id_pts, :nm_usuario); END;'),
         {'id_pts': id_pts, 'nm_usuario': nm_usuario},
     )
     db.commit()
@@ -160,7 +160,7 @@ def cancelar_pts(
     _: User = Depends(get_current_user),
 ):
     db.execute(
-        text("BEGIN FAV_PRC_PTS_CANCELA_FILA(:id_pts, 'Cancelado via PTS'); END;"),
+        text("BEGIN PRC_FAV_PTS_CANCELA_FILA(:id_pts, 'Cancelado via PTS'); END;"),
         {'id_pts': id_pts},
     )
     db.commit()
