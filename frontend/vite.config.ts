@@ -19,4 +19,7 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    target: ['chrome86', 'es2015'],
+  },
 })
