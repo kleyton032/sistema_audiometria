@@ -249,3 +249,5 @@ export const CER_OPCOES: Record<CerGrupo, string[]> = {
     'MUSICOTERAPIA',
   ],
 }
+
+export const EXTERNAL_TERAPY_OPTIONS = Object.values(CER_OPCOES).flat().sort()

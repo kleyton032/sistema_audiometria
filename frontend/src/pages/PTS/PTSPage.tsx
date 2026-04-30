@@ -41,6 +41,7 @@ import {
   CER_GRUPOS,
   CER_GRUPO_LABEL,
   CER_OPCOES,
+  EXTERNAL_TERAPY_OPTIONS,
   type CerGrupo,
   type Area,
 } from './data/listas'
@@ -165,9 +166,7 @@ export default function PTSPage() {
   const [opcoesDiagPrincipais, setOpcoesDiagPrincipais] = useState<string[]>([])
   const [opcoesDiagTerapeuticos, setOpcoesDiagTerapeuticos] = useState<string[]>([])
   const [diagTerapeuticos, setDiagTerapeuticos] = useState<DiagPrincipalRow[]>([{ key: 1, diagnostico: undefined }])
-  const [cerTerapias, setCerTerapias] = useState<Record<CerGrupo, DiagPrincipalRow[]>>(
-    () => Object.fromEntries(CER_GRUPOS.map((g) => [g, [{ key: Date.now() + Math.random(), diagnostico: undefined }]])) as Record<CerGrupo, DiagPrincipalRow[]>
-  )
+  const [extTerapias, setExtTerapias] = useState<DiagPrincipalRow[]>([{ key: Date.now(), diagnostico: undefined }])
   const [conductaRows, setConductaRows] = useState<DiagPrincipalRow[]>([{ key: 1, diagnostico: undefined }])
   const [opcoesEspecialidades, setOpcoesEspecialidades] = useState<{ cd: string; ds: string }[]>([])
   const [multidisciplinarRows, setMultidisciplinarRows] = useState<DiagPrincipalRow[]>([{ key: 1, diagnostico: undefined }])
@@ -266,9 +265,7 @@ export default function PTSPage() {
       ...values,
       diagnosticos_principais: diagPrincipais.map((r) => r.diagnostico).filter(Boolean),
       diagnosticos_terapeuticos: diagTerapeuticos.map((r) => r.diagnostico).filter(Boolean),
-      cer_terapias: Object.fromEntries(
-        CER_GRUPOS.map((g) => [g, cerTerapias[g].map((r) => r.diagnostico).filter(Boolean)])
-      ),
+      cer_terapias: extTerapias.map((r) => r.diagnostico).filter(Boolean),
       conduta_avaliacao_medica: conductaRows.map((r) => r.diagnostico).filter(Boolean),
       conduta_multidisciplinar: multidisciplinarRows.map((r) => r.diagnostico).filter(Boolean),
       instrumentos: instrumentoRows.map((r) => r.diagnostico).filter(Boolean),
@@ -703,93 +700,72 @@ export default function PTSPage() {
         <Card
           role="region"
           aria-labelledby="sec-ext-terapias"
-          title={<SectionHeader title="10. Terapias em Serviços Externos" id="sec-ext-terapias" />}
+          title={
+            <SectionHeader title="10. Especificação das Terapias Externas (Fisio, Fono, Psic, Outros)" id="sec-ext-terapias">
+              <Button
+                size="small"
+                icon={<PlusOutlined />}
+                onClick={() =>
+                  setExtTerapias((prev) => [...prev, { key: Date.now(), diagnostico: undefined }])
+                }
+              >
+                Adicionar
+              </Button>
+            </SectionHeader>
+          }
           style={{ marginBottom: 16 }}
+          styles={{ body: { padding: 0 } }}
         >
-          <Row gutter={[12, 12]}>
-            {CER_GRUPOS.map((grupo) => (
-              <Col key={grupo} xs={24} sm={12}>
-                <Card
-                  size="small"
-                  style={{ border: '1px solid #d9d9d9', height: '100%' }}
-                  styles={{ body: { padding: 0 } }}
-                  title={
-                    <Row justify="space-between" align="middle">
-                      <Text strong>{CER_GRUPO_LABEL[grupo]}</Text>
-                      <Button
-                        size="small"
-                        icon={<PlusOutlined />}
-                        onClick={() =>
-                          setCerTerapias((prev) => ({
-                            ...prev,
-                            [grupo]: [...prev[grupo], { key: Date.now(), diagnostico: undefined }],
-                          }))
-                        }
-                      >
-                        Adicionar
-                      </Button>
-                    </Row>
-                  }
-                >
-                <Table<DiagPrincipalRow>
-                  dataSource={cerTerapias[grupo]}
-                  rowKey="key"
-                  pagination={false}
-                  size="small"
-                  showHeader={false}
-                  columns={[
-                    {
-                      dataIndex: 'diagnostico',
-                      render: (_: unknown, row) => (
-                        <Select
-                          style={{ width: '100%' }}
-                          placeholder="Selecione..."
-                          aria-label={`Serviço externo para ${CER_GRUPO_LABEL[grupo]}`}
-                          allowClear
-                          showSearch
-                          optionFilterProp="label"
-                          options={CER_OPCOES[grupo].map((v) => ({ label: v, value: v }))}
-                          value={row.diagnostico}
-                          onChange={(v) =>
-                            setCerTerapias((prev) => ({
-                              ...prev,
-                              [grupo]: prev[grupo].map((r) =>
-                                r.key === row.key ? { ...r, diagnostico: v } : r
-                              ),
-                            }))
-                          }
-                        />
-                      ),
-                    },
-                    {
-                      width: 48,
-                      render: (_: unknown, row) =>
-                        cerTerapias[grupo].length > 1 ? (
-                          <Button
-                            type="text"
-                            danger
-                            size="small"
-                            icon={<DeleteOutlined />}
-                            aria-label={`Remover item de ${CER_GRUPO_LABEL[grupo]}`}
-                            onClick={() =>
-                              setCerTerapias((prev) => ({
-                                ...prev,
-                                [grupo]: prev[grupo].filter((r) => r.key !== row.key),
-                              }))
-                            }
-                          />
-                        ) : null,
-                    },
-                  ]}
-                />
-              </Card>
-            </Col>
-            ))}
-          </Row>
-          <Divider style={{ margin: '12px 0 8px' }} />
-          <Form.Item name="ext_nao_realiza" valuePropName="checked" style={{ marginBottom: 0 }}>
-            <Checkbox>Não Realiza</Checkbox>
-          </Form.Item>
+          <Table<DiagPrincipalRow>
+            dataSource={extTerapias}
+            rowKey="key"
+            pagination={false}
+            size="small"
+            showHeader={false}
+            columns={[
+              {
+                dataIndex: 'diagnostico',
+                render: (_: unknown, row) => (
+                  <Select
+                    style={{ width: '100%' }}
+                    placeholder="Selecione a terapia externa..."
+                    aria-label="Terapia externa"
+                    allowClear
+                    showSearch
+                    optionFilterProp="label"
+                    options={EXTERNAL_TERAPY_OPTIONS.map((v) => ({ label: v, value: v }))}
+                    value={row.diagnostico}
+                    onChange={(v) =>
+                      setExtTerapias((prev) =>
+                        prev.map((r) => (r.key === row.key ? { ...r, diagnostico: v } : r))
+                      )
+                    }
+                  />
+                ),
+              },
+              {
+                width: 48,
+                render: (_: unknown, row) =>
+                  extTerapias.length > 1 ? (
+                    <Button
+                      type="text"
+                      danger
+                      size="small"
+                      icon={<DeleteOutlined />}
+                      aria-label="Remover terapia externa"
+                      onClick={() =>
+                        setExtTerapias((prev) => prev.filter((r) => r.key !== row.key))
+                      }
+                    />
+                  ) : null,
+              },
+            ]}
+          />
+          <div style={{ padding: '12px 24px', borderTop: '1px solid #f0f0f0' }}>
+            <Form.Item name="ext_nao_realiza" valuePropName="checked" style={{ marginBottom: 0 }}>
+              <Checkbox>Não Realiza</Checkbox>
+            </Form.Item>
+          </div>
         </Card>
 
         {/* ── SEÇÕES 11 e 12: Avaliação Médica + Atendimento Multidisciplinar ── */}
