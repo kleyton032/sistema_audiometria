@@ -43,6 +43,13 @@ export async function getPTSDiagnosticosArea(idEspecialidade: number): Promise<s
   return data.map((d) => d.ds_diagnostico)
 }
 
+export async function getPTSInstrumentosAvaliacao(): Promise<{ cd: string; ds: string }[]> {
+  const { data } = await api.get<{ codigo: string; descricao: string }[]>(
+    '/pts/instrumentos-avaliacao',
+  )
+  return data.map((e) => ({ cd: e.codigo, ds: e.descricao }))
+}
+
 export async function finalizarPTS(idPts: number): Promise<{ status: string; mensagem: string }> {
   const { data } = await api.post<{ status: string; mensagem: string }>(
     `/pts/${idPts}/finalizar`,

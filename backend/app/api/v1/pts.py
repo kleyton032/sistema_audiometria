@@ -218,3 +218,29 @@ def listar_diagnosticos_terapeuticos(
         )
     ).fetchall()
     return [{"ds_diagnostico": r[0]} for r in rows]
+
+
+class InstrumentoAvaliacaoOut(BaseModel):
+    codigo: str
+    descricao: str
+
+
+@router.get(
+    '/instrumentos-avaliacao',
+    response_model=list[InstrumentoAvaliacaoOut],
+    summary='Lista de instrumentos de avaliação (tabela fav_instr_aval_cer4)',
+)
+def listar_instrumentos_avaliacao(
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    rows = db.execute(
+        text(
+            """
+            SELECT ''||i.seq CODIGO, UPPER(i.instrumento) DESCRICAO
+            FROM fav_instr_aval_cer4 i
+            ORDER BY UPPER(i.instrumento)
+            """
+        )
+    ).fetchall()
+    return [{'codigo': str(r[0]), 'descricao': r[1]} for r in rows]

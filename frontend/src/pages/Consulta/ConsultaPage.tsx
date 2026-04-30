@@ -263,12 +263,12 @@ export default function ConsultaPage() {
       {result && (
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
           <Col xs={24} sm={8}>
-            <Card bordered={false} size="small">
+            <Card variant="borderless" size="small">
               <Statistic title="Total encontrado" value={result.total} valueStyle={{ color: '#667eea' }} />
             </Card>
           </Col>
           <Col xs={24} sm={8}>
-            <Card bordered={false} size="small">
+            <Card variant="borderless" size="small">
               <Statistic
                 title="Audiometrias (página)"
                 value={totalAudio}
@@ -278,7 +278,7 @@ export default function ConsultaPage() {
             </Card>
           </Col>
           <Col xs={24} sm={8}>
-            <Card bordered={false} size="small">
+            <Card variant="borderless" size="small">
               <Statistic
                 title="Imitanciometrias (página)"
                 value={totalImitan}
@@ -292,7 +292,7 @@ export default function ConsultaPage() {
 
       {/* Tabela */}
       {result && (
-        <Card bordered={false}>
+        <Card variant="borderless">
           <Table<ExameGerencialItem>
             rowKey="id_exame"
             columns={columns}

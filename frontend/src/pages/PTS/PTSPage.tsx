@@ -44,7 +44,7 @@ import {
   type CerGrupo,
   type Area,
 } from './data/listas'
-import { getMe, getPTSDiagnosticosPrincipais, getPTSDiagnosticosArea, getPTSDiagnosticosTerapeuticos, getPTSEspecialidades, getPTSItensMultidisciplinar, getPTSTerapiasIndicadas, finalizarPTS, cancelarPTS } from '@/api'
+import { getMe, getPTSDiagnosticosPrincipais, getPTSDiagnosticosArea, getPTSDiagnosticosTerapeuticos, getPTSEspecialidades, getPTSItensMultidisciplinar, getPTSTerapiasIndicadas, getPTSInstrumentosAvaliacao, finalizarPTS, cancelarPTS } from '@/api'
 import type { User } from '@/types'
 
 const { Title, Text } = Typography
@@ -178,6 +178,7 @@ export default function PTSPage() {
   const [finalizandoPTS, setFinalizandoPTS] = useState(false)
   const [cancelandoPTS, setCancelandoPTS] = useState(false)
   const [idPtsSalvo, setIdPtsSalvo] = useState<number | null>(null)
+  const [opcoesInstrumentos, setOpcoesInstrumentos] = useState<{ cd: string; ds: string }[]>([])
   const [opcoesDiagArea, setOpcoesDiagArea] = useState<Record<Area, string[]>>({
     visual: [],
     intelectual: [],
@@ -192,6 +193,7 @@ export default function PTSPage() {
     getPTSEspecialidades().then(setOpcoesEspecialidades).catch(() => null)
     getPTSItensMultidisciplinar().then(setOpcoesMultidisciplinar).catch(() => null)
     getPTSTerapiasIndicadas().then(setOpcoesTerapiasIndicadas).catch(() => null)
+    getPTSInstrumentosAvaliacao().then(setOpcoesInstrumentos).catch(() => null)
     // Visual: sem dados por enquanto (id_especialidade não definido)
     getPTSDiagnosticosArea(64).then((v) => setOpcoesDiagArea((p) => ({ ...p, intelectual: v }))).catch(() => null)
     getPTSDiagnosticosArea(66).then((v) => setOpcoesDiagArea((p) => ({ ...p, fisica: v }))).catch(() => null)
@@ -303,6 +305,19 @@ export default function PTSPage() {
     }
   }
 
+  const SectionHeader = ({ title, children, id }: { title: string; children?: React.ReactNode; id?: string }) => (
+    <div style={{ background: '#f0f2f5', borderBottom: '1px solid #d9d9d9', margin: '-12px -24px 12px', padding: '10px 24px', borderRadius: '8px 8px 0 0' }}>
+      <Row justify="space-between" align="middle">
+        <Col>
+          <Title level={4} id={id} style={{ margin: 0, fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#434343' }}>
+            {title}
+          </Title>
+        </Col>
+        {children && <Col>{children}</Col>}
+      </Row>
+    </div>
+  )
+
   const handleCancelar = async () => {
     if (idPtsSalvo === null) return
     setCancelandoPTS(true)
@@ -320,9 +335,9 @@ export default function PTSPage() {
     <Space direction="vertical" style={{ width: '100%' }} size="large">
       {/* Cabeçalho */}
       <Card
-        bordered={false}
+        variant="borderless"
         style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
-        bodyStyle={{ padding: '20px 24px' }}
+        styles={{ body: { padding: '20px 24px' } }}
       >
         <Space style={{ width: '100%', justifyContent: 'space-between' }} align="start">
           <Space>
@@ -351,9 +366,9 @@ export default function PTSPage() {
         <Card
           role="region"
           aria-label={`Paciente: ${paciente.nm_paciente}`}
-          bordered={false}
+          variant="borderless"
           style={{ background: '#f0f5ff', borderLeft: '4px solid #667eea' }}
-          bodyStyle={{ padding: '12px 20px' }}
+          styles={{ body: { padding: '12px 20px' } }}
         >
           <Space size="large">
             <Space direction="vertical" size={0}>
@@ -389,27 +404,26 @@ export default function PTSPage() {
 
         {/* ── SEÇÃO 1: Diagnóstico Médico Principal ── */}
         <Card
+          role="region"
+          aria-labelledby="sec-diag-principal"
           title={
-            <div style={{ background: '#d9d9d9', margin: '-12px -24px', padding: '10px 24px', borderRadius: '8px 8px 0 0' }}>
-              <Row justify="space-between" align="middle">
-                <Text strong>Diagnóstico Médico Principal</Text>
-                <Button
-                  size="small"
-                  icon={<PlusOutlined />}
-                  onClick={() =>
-                    setDiagPrincipais((prev) => [
-                      ...prev,
-                      { key: Date.now(), diagnostico: undefined },
-                    ])
-                  }
-                >
-                  Adicionar
-                </Button>
-              </Row>
-            </div>
+            <SectionHeader title="01. Diagnóstico Médico Principal (CID-10)" id="sec-diag-principal">
+              <Button
+                size="small"
+                icon={<PlusOutlined />}
+                onClick={() =>
+                  setDiagPrincipais((prev) => [
+                    ...prev,
+                    { key: Date.now(), diagnostico: undefined },
+                  ])
+                }
+              >
+                Adicionar
+              </Button>
+            </SectionHeader>
           }
           style={{ marginBottom: 16 }}
-          bodyStyle={{ padding: 0 }}
+          styles={{ body: { padding: 0 } }}
         >
           <Table<DiagPrincipalRow>
             dataSource={diagPrincipais}
@@ -460,7 +474,13 @@ export default function PTSPage() {
         </Card>
 
         {/* ── SEÇÃO 2: Diagnóstico Médico Específico da Área ── */}
-        <Card style={{ marginBottom: 16 }} bodyStyle={{ padding: 0 }}>
+        <Card 
+          role="region"
+          aria-labelledby="sec-diag-area"
+          title={<SectionHeader title="02. Diagnóstico Médico Específico por Área" id="sec-diag-area" />}
+          style={{ marginBottom: 16 }} 
+          styles={{ body: { padding: 0 } }}
+        >
           <Table
             dataSource={tableData}
             columns={colsDiagArea}
@@ -472,7 +492,13 @@ export default function PTSPage() {
         </Card>
 
         {/* ── SEÇÃO 3: Área de deficiência / Grau ── */}
-        <Card style={{ marginBottom: 16 }} bodyStyle={{ padding: 0 }}>
+        <Card 
+          role="region"
+          aria-labelledby="sec-area-def"
+          title={<SectionHeader title="03. Classificação do Grau de Deficiência" id="sec-area-def" />}
+          style={{ marginBottom: 16 }} 
+          styles={{ body: { padding: 0 } }}
+        >
           <Table
             dataSource={tableData}
             columns={colsGrau}
@@ -484,35 +510,39 @@ export default function PTSPage() {
         </Card>
 
         {/* ── SEÇÃO 4: Queixa(s) Principal(is) ── */}
-        <Card style={{ marginBottom: 16 }}>
-          <Form.Item label={<Text strong>Queixa(s) Principal(is):</Text>} name="queixa_principal">
-            <Input.TextArea rows={4} placeholder="Descreva as queixas principais do paciente..." />
+        <Card 
+          role="region" 
+          aria-labelledby="sec-queixa"
+          title={<SectionHeader title="04. Queixas Principais e Histórico" id="sec-queixa" />}
+          style={{ marginBottom: 16 }}
+        >
+          <Form.Item name="queixa_principal" style={{ marginBottom: 0 }}>
+            <Input.TextArea rows={4} aria-label="Descreva as queixas principais" placeholder="Descreva as queixas principais do paciente..." />
           </Form.Item>
         </Card>
 
         {/* ── SEÇÃO 5: Diagnóstico(s) Terapêutico(s) ── */}
         <Card
+          role="region"
+          aria-labelledby="sec-diag-terapeutico"
           title={
-            <div style={{ background: '#d9d9d9', margin: '-12px -24px', padding: '10px 24px', borderRadius: '8px 8px 0 0' }}>
-              <Row justify="space-between" align="middle">
-                <Text strong>Diagnóstico(s) Terapêutico(s)</Text>
-                <Button
-                  size="small"
-                  icon={<PlusOutlined />}
-                  onClick={() =>
-                    setDiagTerapeuticos((prev) => [
-                      ...prev,
-                      { key: Date.now(), diagnostico: undefined },
-                    ])
-                  }
-                >
-                  Adicionar
-                </Button>
-              </Row>
-            </div>
+            <SectionHeader title="05. Diagnóstico Terapêutico Multidisciplinar" id="sec-diag-terapeutico">
+              <Button
+                size="small"
+                icon={<PlusOutlined />}
+                onClick={() =>
+                  setDiagTerapeuticos((prev) => [
+                    ...prev,
+                    { key: Date.now(), diagnostico: undefined },
+                  ])
+                }
+              >
+                Adicionar
+              </Button>
+            </SectionHeader>
           }
           style={{ marginBottom: 16 }}
-          bodyStyle={{ padding: 0 }}
+          styles={{ body: { padding: 0 } }}
         >
           <Table<DiagPrincipalRow>
             dataSource={diagTerapeuticos}
@@ -563,31 +593,36 @@ export default function PTSPage() {
         </Card>
 
         {/* ── SEÇÃO 6: Deficiências Associadas ── */}
-        <Card style={{ marginBottom: 16 }}>
-          <Space align="center" wrap>
-            <Text strong>Deficiência(s) Associada(s):</Text>
-            <Form.Item name="def_associada_visual" valuePropName="checked" style={{ marginBottom: 0 }}>
-              <Checkbox>Visual</Checkbox>
-            </Form.Item>
-            <Form.Item name="def_associada_intelectual" valuePropName="checked" style={{ marginBottom: 0 }}>
-              <Checkbox>Intelectual</Checkbox>
-            </Form.Item>
-            <Form.Item name="def_associada_fisica" valuePropName="checked" style={{ marginBottom: 0 }}>
-              <Checkbox>Física</Checkbox>
-            </Form.Item>
-            <Form.Item name="def_associada_auditiva" valuePropName="checked" style={{ marginBottom: 0 }}>
-              <Checkbox>Auditiva</Checkbox>
-            </Form.Item>
-          </Space>
+        <Card 
+          role="region" 
+          aria-labelledby="sec-def-associada"
+          title={<SectionHeader title="06. Deficiência(s) Associada(s)" id="sec-def-associada" />}
+          style={{ marginBottom: 16 }}
+        >
+          <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
+            <legend className="ant-form-item-label" style={{ marginBottom: 8, display: 'none' }}>Deficiências Associadas</legend>
+            <Space align="center" wrap>
+              <Form.Item name="def_associada_visual" valuePropName="checked" style={{ marginBottom: 0 }}>
+                <Checkbox>Visual</Checkbox>
+              </Form.Item>
+              <Form.Item name="def_associada_intelectual" valuePropName="checked" style={{ marginBottom: 0 }}>
+                <Checkbox>Intelectual</Checkbox>
+              </Form.Item>
+              <Form.Item name="def_associada_fisica" valuePropName="checked" style={{ marginBottom: 0 }}>
+                <Checkbox>Física</Checkbox>
+              </Form.Item>
+              <Form.Item name="def_associada_auditiva" valuePropName="checked" style={{ marginBottom: 0 }}>
+                <Checkbox>Auditiva</Checkbox>
+              </Form.Item>
+            </Space>
+          </fieldset>
         </Card>
 
         {/* ── SEÇÃO 7: Condições do Paciente ── */}
         <Card
-          title={
-            <div style={{ background: '#d9d9d9', margin: '-12px -24px', padding: '10px 24px', borderRadius: '8px 8px 0 0' }}>
-              <Text strong>Condições do Paciente</Text>
-            </div>
-          }
+          role="region"
+          aria-labelledby="sec-condicoes"
+          title={<SectionHeader title="07. Condições Gerais do Paciente" id="sec-condicoes" />}
           style={{ marginBottom: 16 }}
         >
           <Row gutter={[24, 8]}>
@@ -618,11 +653,9 @@ export default function PTSPage() {
 
         {/* ── SEÇÃO 8: Uso de OPME ── */}
         <Card
-          title={
-            <div style={{ background: '#d9d9d9', margin: '-12px -24px', padding: '10px 24px', borderRadius: '8px 8px 0 0' }}>
-              <Text strong>Uso de OPME (órtese, prótese e materiais especiais)</Text>
-            </div>
-          }
+          role="region"
+          aria-labelledby="sec-opme"
+          title={<SectionHeader title="08. Uso de Órteses, Próteses e Materiais Especiais (OPME)" id="sec-opme" />}
           style={{ marginBottom: 16 }}
         >
           <Row gutter={[24, 8]}>
@@ -652,11 +685,9 @@ export default function PTSPage() {
 
         {/* ── SEÇÃO 9: Faz outras terapias no CER IV ── */}
         <Card
-          title={
-            <div style={{ background: '#d9d9d9', margin: '-12px -24px', padding: '10px 24px', borderRadius: '8px 8px 0 0' }}>
-              <Text strong>Faz outras terapias no CER IV</Text>
-            </div>
-          }
+          role="region"
+          aria-labelledby="sec-cer-terapias"
+          title={<SectionHeader title="09. Terapias em Andamento no CER IV" id="sec-cer-terapias" />}
           style={{ marginBottom: 16 }}
         >
           <Form.Item name="cer_terapias_texto" style={{ marginBottom: 0 }}>
@@ -670,11 +701,9 @@ export default function PTSPage() {
 
         {/* ── SEÇÃO 10: Faz outras terapias em serviços externos ── */}
         <Card
-          title={
-            <div style={{ background: '#d9d9d9', margin: '-12px -24px', padding: '10px 24px', borderRadius: '8px 8px 0 0' }}>
-              <Text strong>Faz outras terapias em serviços externos</Text>
-            </div>
-          }
+          role="region"
+          aria-labelledby="sec-ext-terapias"
+          title={<SectionHeader title="10. Terapias em Serviços Externos" id="sec-ext-terapias" />}
           style={{ marginBottom: 16 }}
         >
           <Row gutter={[12, 12]}>
@@ -683,7 +712,7 @@ export default function PTSPage() {
                 <Card
                   size="small"
                   style={{ border: '1px solid #d9d9d9', height: '100%' }}
-                  bodyStyle={{ padding: 0 }}
+                  styles={{ body: { padding: 0 } }}
                   title={
                     <Row justify="space-between" align="middle">
                       <Text strong>{CER_GRUPO_LABEL[grupo]}</Text>
@@ -767,24 +796,23 @@ export default function PTSPage() {
         <Row gutter={16} style={{ marginBottom: 16 }}>
           <Col span={12}>
             <Card
+              role="region"
+              aria-labelledby="sec-conduta-medica"
               title={
-                <div style={{ background: '#d9d9d9', margin: '-12px -24px', padding: '10px 24px', borderRadius: '8px 8px 0 0' }}>
-                  <Row justify="space-between" align="middle">
-                    <Text strong>Conduta: Avaliação Médica</Text>
-                    <Button
-                      size="small"
-                      icon={<PlusOutlined />}
-                      onClick={() =>
-                        setConductaRows((prev) => [...prev, { key: Date.now(), diagnostico: undefined }])
-                      }
-                    >
-                      Adicionar
-                    </Button>
-                  </Row>
-                </div>
+                <SectionHeader title="11. Conduta: Avaliação Médica" id="sec-conduta-medica">
+                  <Button
+                    size="small"
+                    icon={<PlusOutlined />}
+                    onClick={() =>
+                      setConductaRows((prev) => [...prev, { key: Date.now(), diagnostico: undefined }])
+                    }
+                  >
+                    Adicionar
+                  </Button>
+                </SectionHeader>
               }
               style={{ height: '100%' }}
-              bodyStyle={{ padding: 0 }}
+              styles={{ body: { padding: 0 } }}
             >
               <Table<DiagPrincipalRow>
                 dataSource={conductaRows}
@@ -837,24 +865,23 @@ export default function PTSPage() {
 
           <Col span={12}>
             <Card
+              role="region"
+              aria-labelledby="sec-conduta-multi"
               title={
-                <div style={{ background: '#d9d9d9', margin: '-12px -24px', padding: '10px 24px', borderRadius: '8px 8px 0 0' }}>
-                  <Row justify="space-between" align="middle">
-                    <Text strong>Conduta: Atendimento Multidisciplinar</Text>
-                    <Button
-                      size="small"
-                      icon={<PlusOutlined />}
-                      onClick={() =>
-                        setMultidisciplinarRows((prev) => [...prev, { key: Date.now(), diagnostico: undefined }])
-                      }
-                    >
-                      Adicionar
-                    </Button>
-                  </Row>
-                </div>
+                <SectionHeader title="12. Conduta: Atendimento Multidisciplinar" id="sec-conduta-multi">
+                  <Button
+                    size="small"
+                    icon={<PlusOutlined />}
+                    onClick={() =>
+                      setMultidisciplinarRows((prev) => [...prev, { key: Date.now(), diagnostico: undefined }])
+                    }
+                  >
+                    Adicionar
+                  </Button>
+                </SectionHeader>
               }
               style={{ height: '100%' }}
-              bodyStyle={{ padding: 0 }}
+              styles={{ body: { padding: 0 } }}
             >
               <Table<DiagPrincipalRow>
                 dataSource={multidisciplinarRows}
@@ -908,13 +935,12 @@ export default function PTSPage() {
 
         {/* ── SEÇÃO 13: Objetivos por Especialidade ── */}
         <Card
+          role="region"
+          aria-labelledby="sec-objetivos"
           title={
-            <div style={{ background: '#d9d9d9', margin: '-12px -24px', padding: '10px 24px', borderRadius: '8px 8px 0 0' }}>
-              <Space>
-                <Text strong>Objetivos por Especialidade</Text>
-                <Tag color="purple" style={{ fontSize: 11 }}>Anterior + Atual</Tag>
-              </Space>
-            </div>
+            <SectionHeader title="13. Plano de Metas e Objetivos por Especialidade" id="sec-objetivos">
+              <Tag color="purple" style={{ fontSize: 11, margin: 0 }}>Anterior + Atual</Tag>
+            </SectionHeader>
           }
           style={{ marginBottom: 16 }}
         >
@@ -929,11 +955,9 @@ export default function PTSPage() {
 
         {/* ── SEÇÃO 14: Observações Gerais ── */}
         <Card
-          title={
-            <div style={{ background: '#d9d9d9', margin: '-12px -24px', padding: '10px 24px', borderRadius: '8px 8px 0 0' }}>
-              <Text strong>Observações</Text>
-            </div>
-          }
+          role="region"
+          aria-labelledby="sec-obs"
+          title={<SectionHeader title="14. Observações Complementares" id="sec-obs" />}
           style={{ marginBottom: 16 }}
         >
           <Form.Item name="observacoes_gerais" style={{ marginBottom: 0 }}>
@@ -943,11 +967,9 @@ export default function PTSPage() {
 
         {/* ── SEÇÃO 15: Conduta Interdisciplinar ── */}
         <Card
-          title={
-            <div style={{ background: '#d9d9d9', margin: '-12px -24px', padding: '10px 24px', borderRadius: '8px 8px 0 0' }}>
-              <Text strong>Conduta Interdisciplinar</Text>
-            </div>
-          }
+          role="region"
+          aria-labelledby="sec-conduta-inter"
+          title={<SectionHeader title="15. Conduta Interdisciplinar e Articulação" id="sec-conduta-inter" />}
           style={{ marginBottom: 16 }}
         >
           <Form.Item name="conduta_interdisciplinar" style={{ marginBottom: 0 }}>
@@ -957,11 +979,9 @@ export default function PTSPage() {
 
         {/* ── SEÇÃO 16: Intervenção ── */}
         <Card
-          title={
-            <div style={{ background: '#d9d9d9', margin: '-12px -24px', padding: '10px 24px', borderRadius: '8px 8px 0 0' }}>
-              <Text strong>Intervenção</Text>
-            </div>
-          }
+          role="region"
+          aria-labelledby="sec-intervencao"
+          title={<SectionHeader title="16. Intervenção e Prazo Estimado" id="sec-intervencao" />}
           style={{ marginBottom: 16 }}
         >
           <Row gutter={[16, 8]} align="middle" style={{ marginBottom: 12 }}>
@@ -981,24 +1001,23 @@ export default function PTSPage() {
 
         {/* ── SEÇÃO 17: Instrumentos usados na avaliação ── */}
         <Card
+          role="region"
+          aria-labelledby="sec-instrumentos"
           title={
-            <div style={{ background: '#d9d9d9', margin: '-12px -24px', padding: '10px 24px', borderRadius: '8px 8px 0 0' }}>
-              <Row justify="space-between" align="middle">
-                <Text strong>Instrumentos usados na avaliação</Text>
-                <Button
-                  size="small"
-                  icon={<PlusOutlined />}
-                  onClick={() =>
-                    setInstrumentoRows((prev) => [...prev, { key: Date.now(), diagnostico: undefined }])
-                  }
-                >
-                  Adicionar
-                </Button>
-              </Row>
-            </div>
+            <SectionHeader title="17. Instrumentos e Escalas de Avaliação" id="sec-instrumentos">
+              <Button
+                size="small"
+                icon={<PlusOutlined />}
+                onClick={() =>
+                  setInstrumentoRows((prev) => [...prev, { key: Date.now(), diagnostico: undefined }])
+                }
+              >
+                Adicionar
+              </Button>
+            </SectionHeader>
           }
           style={{ marginBottom: 16 }}
-          bodyStyle={{ padding: 0 }}
+          styles={{ body: { padding: 0 } }}
         >
           <Table<DiagPrincipalRow>
             dataSource={instrumentoRows}
@@ -1018,7 +1037,7 @@ export default function PTSPage() {
                     allowClear
                     showSearch
                     optionFilterProp="label"
-                    options={[]}  // TODO: preencher via API quando lista disponível
+                    options={opcoesInstrumentos.map((i) => ({ label: i.ds, value: i.ds }))}
                     value={row.diagnostico}
                     onChange={(v) =>
                       setInstrumentoRows((prev) =>
@@ -1049,7 +1068,12 @@ export default function PTSPage() {
         </Card>
 
         {/* ── SEÇÃO 18: Programa Específico ── */}
-        <Card style={{ marginBottom: 16 }}>
+        <Card 
+          role="region" 
+          aria-labelledby="sec-prog-especifico"
+          title={<SectionHeader title="18. Programas Específicos de Acompanhamento" id="sec-prog-especifico" />}
+          style={{ marginBottom: 16 }}
+        >
           <Row gutter={[0, 0]} align="top">
             <Col flex="160px">
               <Text strong>Programa Específico:</Text>
@@ -1082,27 +1106,26 @@ export default function PTSPage() {
 
         {/* ── SEÇÃO 19: Terapia Indicada ── */}
         <Card
+          role="region"
+          aria-labelledby="sec-terapias-indicadas"
           title={
-            <div style={{ background: '#d9d9d9', margin: '-12px -24px', padding: '10px 24px', borderRadius: '8px 8px 0 0' }}>
-              <Row justify="space-between" align="middle">
-                <Text strong>Terapia Indicada</Text>
-                <Button
-                  size="small"
-                  icon={<PlusOutlined />}
-                  onClick={() =>
-                    setTerapias((prev) => [
-                      ...prev,
-                      { key: Date.now(), terapia: undefined, tipo_atendimento: undefined, periodicidade: undefined, qtde_sessoes: undefined },
-                    ])
-                  }
-                >
-                  Adicionar linha
-                </Button>
-              </Row>
-            </div>
+            <SectionHeader title="19. Prescrição de Terapias Indicadas" id="sec-terapias-indicadas">
+              <Button
+                size="small"
+                icon={<PlusOutlined />}
+                onClick={() =>
+                  setTerapias((prev) => [
+                    ...prev,
+                    { key: Date.now(), terapia: undefined, tipo_atendimento: undefined, periodicidade: undefined, qtde_sessoes: undefined },
+                  ])
+                }
+              >
+                Adicionar linha
+              </Button>
+            </SectionHeader>
           }
           style={{ marginBottom: 16 }}
-          bodyStyle={{ padding: 0 }}
+          styles={{ body: { padding: 0 } }}
         >
           <Table<TerapiaRow>
             dataSource={terapias}
@@ -1195,7 +1218,12 @@ export default function PTSPage() {
         </Card>
 
         {/* ── SEÇÃO 20: Rodapé do documento ── */}
-        <Card style={{ marginBottom: 16 }}>
+        <Card 
+          role="region" 
+          aria-labelledby="sec-vigencia"
+          title={<SectionHeader title="20. Vigência e Responsabilidade Técnica" id="sec-vigencia" />}
+          style={{ marginBottom: 16 }}
+        >
           <Space direction="vertical" style={{ width: '100%' }} size={12}>
             {/* Não concluído */}
             <Form.Item name="pts_nao_concluido" valuePropName="checked" style={{ marginBottom: 0 }}>
@@ -1251,7 +1279,7 @@ export default function PTSPage() {
         {/* ── LGPD ── */}
         <Card
           style={{ marginBottom: 16, background: '#f5f5f5', border: '1px solid #d9d9d9' }}
-          bodyStyle={{ padding: '12px 16px' }}
+          styles={{ body: { padding: '12px 16px' } }}
         >
           <Text strong>LGPD — Lei Geral de Proteção de Dados</Text>
           <br />

@@ -20,7 +20,7 @@ export default function DashboardPage() {
       <Title level={1}>Dashboard</Title>
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={8}>
-          <Card bordered={false}>
+          <Card variant="borderless">
             <Statistic
               title="Audiometrias"
               value={stats.audiometrias}
@@ -31,7 +31,7 @@ export default function DashboardPage() {
           </Card>
         </Col>
         <Col xs={24} sm={8}>
-          <Card bordered={false}>
+          <Card variant="borderless">
             <Statistic
               title="Imitanciometrias"
               value={stats.imitanciometrias}
@@ -42,7 +42,7 @@ export default function DashboardPage() {
           </Card>
         </Col>
         <Col xs={24} sm={8}>
-          <Card bordered={false}>
+          <Card variant="borderless">
             <Statistic
               title="Laudos Gerados"
               value={stats.laudos_gerados}
