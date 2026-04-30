@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import text
 
-from app.db.models import User
-from app.schemas.user import UserCreate
+from app.db.models import User, UsuarioPrestador
+from app.schemas.user import UserCreate, PrestadorMVInfo
 from app.core.security import hash_password
 
 
@@ -21,34 +21,62 @@ def get_by_id(db: Session, id_user: int) -> User | None:
     ).first()
 
 
-def verify_mv_user_validity(db: Session, cd_usuario: str) -> bool:
+def buscar_prestador_mv(db: Session, cd_usuario: str) -> PrestadorMVInfo | None:
+    """Busca dados do prestador no MV a partir do cd_usuario (login MV)."""
     query = text("""
-        SELECT 1 
-        FROM dbasgu.usuarios u, prestador p 
-        WHERE u.cd_prestador = p.cd_prestador
-        AND UPPER(u.cd_usuario) = UPPER(:cd_usuario)
-        AND p.cd_tip_presta = 6
-        AND u.sn_ativo = 'S'
+        SELECT
+            p.cd_prestador,
+            p.nm_prestador,
+            c.ds_conselho,
+            p.ds_codigo_conselho,
+            tp.nm_tip_presta
+        FROM
+            tip_presta      tp,
+            conselho        c,
+            prestador       p,
+            dbasgu.usuarios u
+        WHERE c.cd_conselho    = tp.cd_conselho
+          AND p.cd_tip_presta  = tp.cd_tip_presta
+          AND u.cd_prestador   = p.cd_prestador
+          AND UPPER(u.cd_usuario) = UPPER(:cd_usuario)
+          AND u.sn_ativo       = 'S'
     """)
-    result = db.execute(query, {"cd_usuario": cd_usuario}).first()
-    return result is not None
+    row = db.execute(query, {"cd_usuario": cd_usuario}).first()
+    if row is None:
+        return None
+    return PrestadorMVInfo(
+        cd_prestador       = row.cd_prestador,
+        nm_prestador       = row.nm_prestador,
+        ds_conselho        = row.ds_conselho,
+        ds_codigo_conselho = row.ds_codigo_conselho,
+        nm_tip_presta      = row.nm_tip_presta,
+    )
 
 
-def create_user(db: Session, payload: UserCreate) -> User:
-    # Gera email padrão se não fornecido (baseado no nm_login)
-    email = payload.ds_email or f"{payload.nm_login}@audiometria.local"
-    
+def create_user(db: Session, payload: UserCreate, prestador: PrestadorMVInfo) -> User:
+    """Cria usuário local + perfil profissional a partir dos dados do MV."""
+    email = payload.ds_email or f"{payload.cd_usuario_mv.lower()}@sistema.local"
+
     new_user = User(
-        nm_login         = payload.nm_login,
-        nm_usuario       = payload.nm_usuario,
-        ds_email         = email,
-        ds_senha_hash    = hash_password(payload.ds_senha),
-        nr_conselho      = payload.nr_conselho,
-        ds_especialidade = payload.ds_especialidade,
-        ds_perfil        = payload.ds_perfil,
-        cd_usuario_mv    = payload.cd_usuario_mv,
+        nm_login      = payload.cd_usuario_mv.lower(),
+        nm_usuario    = prestador.nm_prestador,
+        ds_email      = email,
+        ds_senha_hash = hash_password(payload.ds_senha),
+        ds_perfil     = payload.ds_perfil,
+        cd_usuario_mv = payload.cd_usuario_mv,
     )
     db.add(new_user)
+    db.flush()  # gera ID_USUARIO sem commit
+
+    new_prestador = UsuarioPrestador(
+        id_usuario         = new_user.id_usuario,
+        cd_prestador       = prestador.cd_prestador,
+        nm_prestador       = prestador.nm_prestador,
+        ds_conselho        = prestador.ds_conselho,
+        ds_codigo_conselho = prestador.ds_codigo_conselho,
+        nm_tip_presta      = prestador.nm_tip_presta,
+    )
+    db.add(new_prestador)
     db.commit()
     db.refresh(new_user)
     return new_user

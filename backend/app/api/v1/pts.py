@@ -120,6 +120,56 @@ def listar_terapias_indicadas(
     ).fetchall()
     return [{'cd_item': str(r[0]), 'ds_item': r[1]} for r in rows]
 
+
+class PTSFinalizarResponse(BaseModel):
+    status: str
+    mensagem: str
+
+
+@router.post(
+    '/{id_pts}/finalizar',
+    response_model=PTSFinalizarResponse,
+    summary='Finaliza o PTS e insere as terapias indicadas na fila de espera (FAV_LISTA_ESPERA)',
+)
+def finalizar_pts(
+    id_pts: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # CD_USUARIO_MV é o login utilizado em DBASGU.USUARIOS.CD_USUARIO
+    nm_usuario = current_user.cd_usuario_mv or current_user.nm_login
+    db.execute(
+        text('BEGIN FAV_PRC_PTS_INSERE_FILA(:id_pts, :nm_usuario); END;'),
+        {'id_pts': id_pts, 'nm_usuario': nm_usuario},
+    )
+    db.commit()
+    return {
+        'status': 'ok',
+        'mensagem': f'PTS {id_pts} finalizado. Terapias inseridas na fila de espera.',
+    }
+
+
+@router.post(
+    '/{id_pts}/cancelar',
+    response_model=PTSFinalizarResponse,
+    summary='Cancela o PTS e remove as terapias da fila de espera (FAV_LISTA_ESPERA)',
+)
+def cancelar_pts(
+    id_pts: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    db.execute(
+        text("BEGIN FAV_PRC_PTS_CANCELA_FILA(:id_pts, 'Cancelado via PTS'); END;"),
+        {'id_pts': id_pts},
+    )
+    db.commit()
+    return {
+        'status': 'ok',
+        'mensagem': f'PTS {id_pts} cancelado. Itens removidos da fila de espera.',
+    }
+
+
 @router.get(
     "/diagnosticos-area",
     response_model=list[DiagnosticoPrincipalOut],

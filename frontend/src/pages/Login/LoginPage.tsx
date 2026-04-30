@@ -3,7 +3,7 @@ import { Form, Input, Button, Card, Typography, Alert, Space } from 'antd'
 import { UserOutlined, LockOutlined, AudioOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts'
-import { checkMvCode, registerUser } from '@/api/authService'
+import { checkMvCode, registerUser, type PrestadorMVInfo } from '@/api/authService'
 
 const { Title, Text } = Typography
 
@@ -23,6 +23,7 @@ export default function LoginPage() {
 
   const [step, setStep] = useState<Step>('USER_CHECK')
   const [username, setUsername] = useState('')
+  const [prestadorMV, setPrestadorMV] = useState<PrestadorMVInfo | null>(null)
   const [form] = Form.useForm<LoginForm>()
 
   const handleCheckUser = async () => {
@@ -35,7 +36,8 @@ export default function LoginPage() {
       
       if (data.existe_local) {
         setStep('LOGIN')
-      } else if (data.valido_mv) {
+      } else if (data.prestador) {
+        setPrestadorMV(data.prestador)
         setStep('REGISTER')
       } else {
         setError('Usuário não encontrado na base, ou não possui qualificação registrada no MV.')
@@ -83,14 +85,7 @@ export default function LoginPage() {
         return
       }
 
-      await registerUser({
-        nm_login: username,
-        nm_usuario: username, // Usando o proprio login como nome padrão temporario
-        ds_email: `${username}@hospital.local`, // E-mail mockado momentaneo
-        ds_senha: values.password!,
-        cd_usuario_mv: username,
-        ds_perfil: 'OPERADOR'
-      })
+      await registerUser(username, values.password!)
 
       // Após cadastro ocorre login automático
       await login(username, values.password!)
@@ -111,6 +106,7 @@ export default function LoginPage() {
   const resetStep = () => {
     setStep('USER_CHECK')
     setUsername('')
+    setPrestadorMV(null)
     form.resetFields(['password', 'confirmPassword'])
     setError(null)
   }
@@ -199,6 +195,20 @@ export default function LoginPage() {
                    showIcon
                    style={{ marginBottom: 16, textAlign: 'left' }}
                 />
+                {prestadorMV && (
+                  <Alert
+                    type="success"
+                    showIcon
+                    style={{ marginBottom: 16, textAlign: 'left' }}
+                    message={prestadorMV.nm_prestador}
+                    description={[
+                      prestadorMV.nm_tip_presta,
+                      prestadorMV.ds_conselho && prestadorMV.ds_codigo_conselho
+                        ? `${prestadorMV.ds_conselho} ${prestadorMV.ds_codigo_conselho}`
+                        : prestadorMV.ds_conselho || prestadorMV.ds_codigo_conselho,
+                    ].filter(Boolean).join(' · ')}
+                  />
+                )}
                 <Form.Item
                   name="password"
                   rules={[{ required: true, message: 'Crie uma senha' }, { min: 8, message: 'Mínimo 8 caracteres'}]}

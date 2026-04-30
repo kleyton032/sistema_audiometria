@@ -3,12 +3,31 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
-from app.schemas.user import UserCreate, UserResponse
-from app.db.repositories.user import create_user, get_by_id, verify_mv_user_validity
+from app.schemas.user import UserResponse
+from app.db.repositories.user import get_by_id
 from app.dependencies import get_db, get_current_user
 from app.db.models import User
 
 router = APIRouter(prefix="/users", tags=["Usuários"])
+
+
+def _user_to_response(user: User) -> UserResponse:
+    """Converte modelo User + relacionamento prestador para UserResponse."""
+    p = user.prestador
+    return UserResponse(
+        id_usuario         = user.id_usuario,
+        cd_usuario_mv      = user.cd_usuario_mv,
+        nm_login           = user.nm_login,
+        nm_usuario         = user.nm_usuario,
+        ds_email           = user.ds_email,
+        ds_perfil          = user.ds_perfil,
+        dt_criacao         = user.dt_criacao,
+        fl_ativo           = user.fl_ativo,
+        cd_prestador       = p.cd_prestador       if p else None,
+        ds_conselho        = p.ds_conselho        if p else None,
+        ds_codigo_conselho = p.ds_codigo_conselho if p else None,
+        nm_tip_presta      = p.nm_tip_presta      if p else None,
+    )
 
 
 @router.get(
@@ -20,58 +39,7 @@ def get_me(
     current_user: User = Depends(get_current_user),
 ):
     """Retorna os dados do usuário logado (extraídos do JWT)."""
-    return current_user
-
-
-@router.post(
-    "/",
-    response_model=UserResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Criar novo usuário",
-)
-def create_new_user(
-    payload: UserCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """
-    Cria um usuário na **FAV_TB_SILA_USUARIOS**.
-
-    - Requer um token JWT válido (apenas ADMINs deveriam chamar este endpoint em produção).
-    - O ID é gerado automaticamente pelo trigger Oracle.
-    - A senha é armazenada como bcrypt hash.
-    """
-    if current_user.ds_perfil != "ADMIN":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Apenas administradores podem criar usuários",
-        )    
-    
-    """ Ignora Validação para esse usuario """
-    if payload.nm_login.lower() != "kleyton.bomfim":
-        if not payload.cd_usuario_mv:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="O código do usuário MV (cd_usuario_mv) é obrigatório."
-            )
-        
-        is_valid_mv = verify_mv_user_validity(db, payload.cd_usuario_mv)
-        if not is_valid_mv:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Usuário MV inválido. Certifique-se de que ele existe, está ativo e é um fonoaudiólogo (tipo 6)."
-            )
-
-    try:
-        user = create_user(db, payload)
-    except IntegrityError as exc:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Login ou e-mail já cadastrado",
-        ) from exc
-
-    return user
+    return _user_to_response(current_user)
 
 
 @router.get(
@@ -82,10 +50,9 @@ def create_new_user(
 def get_user(
     id_usuario: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    _: User = Depends(get_current_user),
 ):
-
     user = get_by_id(db, id_usuario)
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
-    return user
+    return _user_to_response(user)

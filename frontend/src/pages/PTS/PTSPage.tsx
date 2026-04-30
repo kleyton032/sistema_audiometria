@@ -16,8 +16,9 @@ import {
   Alert,
   InputNumber,
   DatePicker,
+  Popconfirm,
 } from 'antd'
-import { SaveOutlined, FileTextOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons'
+import { SaveOutlined, FileTextOutlined, PlusOutlined, DeleteOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import 'dayjs/locale/pt-br'
 import ObjetivosEspecialidades, {
@@ -42,7 +43,7 @@ import {
   type CerGrupo,
   type Area,
 } from './data/listas'
-import { getMe, getPTSDiagnosticosPrincipais, getPTSDiagnosticosArea, getPTSDiagnosticosTerapeuticos, getPTSEspecialidades, getPTSItensMultidisciplinar, getPTSTerapiasIndicadas } from '@/api'
+import { getMe, getPTSDiagnosticosPrincipais, getPTSDiagnosticosArea, getPTSDiagnosticosTerapeuticos, getPTSEspecialidades, getPTSItensMultidisciplinar, getPTSTerapiasIndicadas, finalizarPTS, cancelarPTS } from '@/api'
 import type { User } from '@/types'
 
 const { Title, Text } = Typography
@@ -119,12 +120,7 @@ interface PTSFormValues {
   conduta_interdisciplinar: string | undefined
   intervencao_prazo: string | undefined
   intervencao_descricao: string | undefined
-  // Instrumentos
-  instrumento_1: string | undefined
-  instrumento_2: string | undefined
-  instrumento_3: string | undefined
-  instrumento_4: string | undefined
-  instrumento_outros: string | undefined
+  // Instrumentos — gerenciados por estado (instrumentoRows)
   // Programa Específico
   prog_nao_se_aplica: boolean
   prog_glaucoma: boolean
@@ -166,6 +162,11 @@ export default function PTSPage() {
   const [multidisciplinarRows, setMultidisciplinarRows] = useState<DiagPrincipalRow[]>([{ key: 1, diagnostico: undefined }])
   const [opcoesMultidisciplinar, setOpcoesMultidisciplinar] = useState<{ cd: string; ds: string }[]>([])
   const [opcoesTerapiasIndicadas, setOpcoesTerapiasIndicadas] = useState<{ cd: string; ds: string }[]>([])
+  const [instrumentoRows, setInstrumentoRows] = useState<DiagPrincipalRow[]>([{ key: 1, diagnostico: undefined }])
+  const [salvandoPTS, setSalvandoPTS] = useState(false)
+  const [finalizandoPTS, setFinalizandoPTS] = useState(false)
+  const [cancelandoPTS, setCancelandoPTS] = useState(false)
+  const [idPtsSalvo, setIdPtsSalvo] = useState<number | null>(null)
   const [opcoesDiagArea, setOpcoesDiagArea] = useState<Record<Area, string[]>>({
     visual: [],
     intelectual: [],
@@ -245,6 +246,7 @@ export default function PTSPage() {
 
   // ── submit ────────────────────────────────────────────────────────────────
   const handleSave = (values: PTSFormValues) => {
+    setSalvandoPTS(true)
     const payload = {
       ...values,
       diagnosticos_principais: diagPrincipais.map((r) => r.diagnostico).filter(Boolean),
@@ -254,6 +256,7 @@ export default function PTSPage() {
       ),
       conduta_avaliacao_medica: conductaRows.map((r) => r.diagnostico).filter(Boolean),
       conduta_multidisciplinar: multidisciplinarRows.map((r) => r.diagnostico).filter(Boolean),
+      instrumentos: instrumentoRows.map((r) => r.diagnostico).filter(Boolean),
       diagnosticos_area: diagnosticosArea,
       grau_area: grauArea,
       objetivos,
@@ -266,6 +269,36 @@ export default function PTSPage() {
     }
     // TODO: chamar endpoint PTS quando disponível
     console.log('PTS payload:', payload)
+    // Simulação: quando o save retornar o id_pts real, chamar setIdPtsSalvo(id)
+    setSalvandoPTS(false)
+  }
+
+  const handleFinalizar = async () => {
+    if (idPtsSalvo === null) {
+      // Se ainda não foi salvo, salva primeiro
+      form.submit()
+      return
+    }
+    setFinalizandoPTS(true)
+    try {
+      await finalizarPTS(idPtsSalvo)
+      // TODO: feedback de sucesso (notification)
+    } finally {
+      setFinalizandoPTS(false)
+    }
+  }
+
+  const handleCancelar = async () => {
+    if (idPtsSalvo === null) return
+    setCancelandoPTS(true)
+    try {
+      await cancelarPTS(idPtsSalvo)
+      setIdPtsSalvo(null)
+      form.resetFields()
+      // TODO: feedback de sucesso (notification)
+    } finally {
+      setCancelandoPTS(false)
+    }
   }
 
   return (
@@ -885,34 +918,67 @@ export default function PTSPage() {
         <Card
           title={
             <div style={{ background: '#d9d9d9', margin: '-12px -24px', padding: '10px 24px', borderRadius: '8px 8px 0 0' }}>
-              <Text strong>Instrumentos usados na avaliação</Text>
+              <Row justify="space-between" align="middle">
+                <Text strong>Instrumentos usados na avaliação</Text>
+                <Button
+                  size="small"
+                  icon={<PlusOutlined />}
+                  onClick={() =>
+                    setInstrumentoRows((prev) => [...prev, { key: Date.now(), diagnostico: undefined }])
+                  }
+                >
+                  Adicionar
+                </Button>
+              </Row>
             </div>
           }
           style={{ marginBottom: 16 }}
+          bodyStyle={{ padding: 0 }}
         >
-          <Row gutter={[16, 8]}>
-            {[1, 2, 3, 4].map((n) => (
-              <Col xs={24} sm={12} key={n}>
-                <Form.Item name={`instrumento_${n}` as keyof PTSFormValues} style={{ marginBottom: 8 }}>
+          <Table<DiagPrincipalRow>
+            dataSource={instrumentoRows}
+            rowKey="key"
+            pagination={false}
+            size="small"
+            bordered
+            showHeader={false}
+            columns={[
+              {
+                dataIndex: 'diagnostico',
+                render: (_: unknown, row) => (
                   <Select
-                    placeholder="Selecione..."
+                    style={{ width: '100%' }}
+                    placeholder="Selecione o instrumento..."
                     allowClear
                     showSearch
                     optionFilterProp="label"
-                    options={INSTRUMENTOS_AVALIACAO.map((v) => ({ label: v, value: v }))}
+                    options={[]}  // TODO: preencher via API quando lista disponível
+                    value={row.diagnostico}
+                    onChange={(v) =>
+                      setInstrumentoRows((prev) =>
+                        prev.map((r) => (r.key === row.key ? { ...r, diagnostico: v } : r))
+                      )
+                    }
                   />
-                </Form.Item>
-              </Col>
-            ))}
-          </Row>
-          <Row align="middle" gutter={8}>
-            <Col flex="none"><Text strong>Outros:</Text></Col>
-            <Col flex="1">
-              <Form.Item name="instrumento_outros" style={{ marginBottom: 0 }}>
-                <Input placeholder="Outros instrumentos..." />
-              </Form.Item>
-            </Col>
-          </Row>
+                ),
+              },
+              {
+                width: 48,
+                render: (_: unknown, row) =>
+                  instrumentoRows.length > 1 ? (
+                    <Button
+                      type="text"
+                      danger
+                      size="small"
+                      icon={<DeleteOutlined />}
+                      onClick={() =>
+                        setInstrumentoRows((prev) => prev.filter((r) => r.key !== row.key))
+                      }
+                    />
+                  ) : null,
+              },
+            ]}
+          />
         </Card>
 
         {/* ── SEÇÃO 18: Programa Específico ── */}
@@ -1124,8 +1190,42 @@ export default function PTSPage() {
           <Col>
             <Space>
               <Button onClick={() => form.resetFields()}>Limpar</Button>
-              <Button type="primary" htmlType="submit" icon={<SaveOutlined />}>
+              <Popconfirm
+                title="Cancelar PTS"
+                description="Todos os itens inseridos na fila de espera serão removidos. Confirma?"
+                okText="Sim, cancelar"
+                cancelText="Não"
+                okButtonProps={{ danger: true }}
+                disabled={idPtsSalvo === null}
+                onConfirm={handleCancelar}
+              >
+                <Button
+                  danger
+                  icon={<CloseCircleOutlined />}
+                  loading={cancelandoPTS}
+                  disabled={idPtsSalvo === null}
+                  title={idPtsSalvo === null ? 'Salve o PTS antes de cancelar' : 'Cancela o PTS e remove itens da fila de espera'}
+                >
+                  Cancelar PTS
+                </Button>
+              </Popconfirm>
+              <Button
+                type="primary"
+                htmlType="submit"
+                icon={<SaveOutlined />}
+                loading={salvandoPTS}
+              >
                 Salvar PTS
+              </Button>
+              <Button
+                type="primary"
+                danger
+                icon={<CheckCircleOutlined />}
+                loading={finalizandoPTS}
+                onClick={handleFinalizar}
+                title="Salva o PTS e insere as terapias na fila de espera"
+              >
+                Finalizar PTS
               </Button>
             </Space>
           </Col>

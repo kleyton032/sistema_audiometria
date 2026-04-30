@@ -21,8 +21,28 @@ class User(Base):
     dt_ultimo_acesso = Column("DT_ULTIMO_ACESSO", DateTime(timezone=True))
     fl_ativo         = Column("FL_ATIVO",         Integer,              default=1, nullable=False)
 
+    prestador = relationship("UsuarioPrestador", back_populates="usuario", uselist=False)
+
     def __repr__(self):
         return f"<User login={self.nm_login} profile={self.ds_perfil}>"
+
+
+class UsuarioPrestador(Base):
+    """Dados profissionais sincronizados do MV no momento do cadastro."""
+    __tablename__ = "FAV_TB_USUARIO_PRESTADOR"
+
+    id_usuario         = Column("ID_USUARIO",         Integer, ForeignKey("FAV_TB_SILA_USUARIOS.ID_USUARIO", ondelete="CASCADE"), primary_key=True)
+    cd_prestador       = Column("CD_PRESTADOR",       Integer, unique=True, nullable=False)
+    nm_prestador       = Column("NM_PRESTADOR",       String(200), nullable=False)
+    ds_conselho        = Column("DS_CONSELHO",        String(50))   # CREFONO, CREFITO, CRM...
+    ds_codigo_conselho = Column("DS_CODIGO_CONSELHO", String(30))   # número do registro
+    nm_tip_presta      = Column("NM_TIP_PRESTA",      String(100))  # Fonoaudiólogo, Fisioterapeuta...
+    dt_sincronizacao   = Column("DT_SINCRONIZACAO",   DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    usuario = relationship("User", back_populates="prestador")
+
+    def __repr__(self):
+        return f"<UsuarioPrestador cd={self.cd_prestador} nm={self.nm_prestador}>"
 
 
 class Exame(Base):

@@ -12,9 +12,17 @@ export async function login(username: string, password: string): Promise<TokenRe
   return data
 }
 
+export interface PrestadorMVInfo {
+  cd_prestador:       number
+  nm_prestador:       string
+  ds_conselho:        string | null
+  ds_codigo_conselho: string | null
+  nm_tip_presta:      string | null
+}
+
 export interface CheckMvResponse {
   existe_local: boolean
-  valido_mv: boolean
+  prestador:    PrestadorMVInfo | null
 }
 
 export async function checkMvCode(codigoMv: string): Promise<CheckMvResponse> {
@@ -22,7 +30,11 @@ export async function checkMvCode(codigoMv: string): Promise<CheckMvResponse> {
   return data
 }
 
-export async function registerUser(payload: any): Promise<any> {
-  const { data } = await api.post('/auth/register', payload)
+export async function registerUser(cdUsuarioMv: string, dsSenha: string, dsEmail?: string): Promise<any> {
+  const { data } = await api.post('/auth/register', {
+    cd_usuario_mv: cdUsuarioMv,
+    ds_senha:      dsSenha,
+    ds_email:      dsEmail,
+  })
   return data
 }
