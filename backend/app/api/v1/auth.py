@@ -5,7 +5,12 @@ from sqlalchemy.orm import Session
 from app.schemas.auth import TokenResponse
 from app.schemas.user import UserCreate, UserResponse, CheckMVResponse
 from app.core.security import verify_password, create_access_token
-from app.db.repositories.user import get_by_login, buscar_prestador_mv, create_user
+from app.db.repositories.user import (
+    get_by_login,
+    buscar_prestador_mv,
+    create_user,
+    sync_existing_user_from_mv,
+)
 from app.dependencies import get_db
 
 router = APIRouter(prefix="/auth", tags=["Autenticação"])
@@ -24,6 +29,9 @@ def login(
             detail="Login ou senha incorretos",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    if usuario.cd_usuario_mv and usuario.prestador is None:
+        usuario = sync_existing_user_from_mv(db, usuario)
 
     token = create_access_token({"sub": usuario.nm_login})
     return TokenResponse(access_token=token)

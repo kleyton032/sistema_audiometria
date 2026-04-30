@@ -1,63 +1,85 @@
 import { useState } from 'react'
-import { Layout as AntLayout, Menu, Button, theme } from 'antd'
+import { Layout as AntLayout, Menu, Button, theme, Avatar, Typography, Tooltip } from 'antd'
 import {
   DashboardOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  TeamOutlined,
   SearchOutlined,
   FileProtectOutlined,
+  SoundOutlined,
+  TeamOutlined,
+  UserOutlined,
 } from '@ant-design/icons'
 import { useNavigate, useLocation, Outlet } from 'react-router-dom'
 import { useAuth } from '@/contexts'
 
 const { Header, Sider, Content } = AntLayout
+const { Text } = Typography
 
-const PTS_ALLOWED_USERS = ['kleyton.bomfim']
+// nm_tip_presta do MV para Fonoaudiólogo (cd_tip_presta = 6)
+const NM_TIP_FONOAUDIOLOGO = 'FONOAUDIOLOGO(A)'
 
 export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
-  const { logout, nm_login } = useAuth()
+  const { logout, usuario } = useAuth()
   const { token: themeToken } = theme.useToken()
+
+  const isFonoaudiologo = usuario?.nm_tip_presta === NM_TIP_FONOAUDIOLOGO
+
+  const menuItems = [
+    // ── Dashboard (todos) ──────────────────────────────────────
+    {
+      key: '/dashboard',
+      icon: <DashboardOutlined />,
+      label: 'Dashboard',
+    },
+
+    // ── Exames Auditivos (apenas Fonoaudiólogo) ─────────────────
+    ...(isFonoaudiologo ? [{
+      key: 'grupo-exames',
+      icon: <SoundOutlined />,
+      label: 'Exames Auditivos',
+      children: [
+        { key: '/pacientes', icon: <TeamOutlined />, label: 'Pacientes' },
+      ],
+    }] : []),
+
+    // ── PTS (todos os usuários) ─────────────────────────────────
+    {
+      key: 'grupo-pts',
+      icon: <FileProtectOutlined />,
+      label: 'PTS',
+      children: [
+        { key: '/pts/pacientes', icon: <TeamOutlined />, label: 'Pacientes' },
+      ],
+    },
+
+    // ── Histórico de Exames (todos) ─────────────────────────────
+    {
+      key: '/consulta',
+      icon: <SearchOutlined />,
+      label: 'Histórico de Exames',
+    },
+  ]
 
   const handleLogout = () => {
     logout()
     navigate('/login')
   }
 
-  const menuItems = [
-    {
-      key: '/dashboard',
-      icon: <DashboardOutlined />,
-      label: 'Dashboard',
-    },
-    {
-      key: '/pacientes',
-      icon: <TeamOutlined />,
-      label: 'Pacientes',
-    },
-    {
-      key: '/consulta',
-      icon: <SearchOutlined />,
-      label: 'Consulta de Exames',
-    },
-    ...(nm_login && PTS_ALLOWED_USERS.includes(nm_login)
-      ? [
-          {
-            key: '/pts',
-            icon: <FileProtectOutlined />,
-            label: 'PTS',
-          },
-        ]
-      : []),
-  ]
-
   return (
     <AntLayout style={{ minHeight: '100vh' }}>
-      <Sider trigger={null} collapsible collapsed={collapsed} theme="dark">
+      <Sider
+        trigger={null}
+        collapsible
+        collapsed={collapsed}
+        theme="dark"
+        width={220}
+      >
+        {/* Logo */}
         <div
           style={{
             height: 64,
@@ -65,21 +87,68 @@ export default function AppLayout() {
             alignItems: 'center',
             justifyContent: 'center',
             color: '#fff',
-            fontSize: collapsed ? 14 : 18,
+            fontSize: collapsed ? 13 : 16,
             fontWeight: 'bold',
             borderBottom: '1px solid rgba(255,255,255,0.1)',
+            padding: '0 12px',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
           }}
         >
-          {collapsed ? 'SA' : 'Audiometria'}
+          {collapsed ? 'SA' : 'Sistema Audiometria'}
         </div>
+
         <Menu
           theme="dark"
           mode="inline"
           selectedKeys={[location.pathname]}
+          defaultOpenKeys={['grupo-exames', 'grupo-pts']}
           items={menuItems}
-          onClick={({ key }) => navigate(key)}
+          onClick={({ key }) => {
+            if (!key.startsWith('grupo-')) navigate(key)
+          }}
         />
+
+        {/* Rodapé com dados do usuário */}
+        {!collapsed && usuario && (
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              padding: '12px 16px',
+              borderTop: '1px solid rgba(255,255,255,0.1)',
+              background: 'rgba(0,0,0,0.2)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Avatar size={28} icon={<UserOutlined />} style={{ background: '#667eea', flexShrink: 0 }} />
+              <div style={{ overflow: 'hidden' }}>
+                <Text style={{ color: '#fff', fontSize: 12, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {usuario.nm_usuario}
+                </Text>
+                {usuario.nm_tip_presta && (
+                  <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {usuario.nm_tip_presta}
+                    {usuario.ds_conselho && usuario.ds_codigo_conselho
+                      ? ` · ${usuario.ds_conselho} ${usuario.ds_codigo_conselho}`
+                      : ''}
+                  </Text>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        {collapsed && usuario && (
+          <div style={{ position: 'absolute', bottom: 12, left: 0, right: 0, display: 'flex', justifyContent: 'center' }}>
+            <Tooltip title={usuario.nm_usuario} placement="right">
+              <Avatar size={28} icon={<UserOutlined />} style={{ background: '#667eea', cursor: 'default' }} />
+            </Tooltip>
+          </div>
+        )}
       </Sider>
+
       <AntLayout>
         <Header
           style={{
@@ -95,8 +164,10 @@ export default function AppLayout() {
             type="text"
             icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
             onClick={() => setCollapsed(!collapsed)}
+            aria-label={collapsed ? 'Expandir menu lateral' : 'Recolher menu lateral'}
+            aria-expanded={!collapsed}
           />
-          <Button type="text" icon={<LogoutOutlined />} onClick={handleLogout}>
+          <Button type="text" icon={<LogoutOutlined />} onClick={handleLogout} aria-label="Sair do sistema">
             Sair
           </Button>
         </Header>

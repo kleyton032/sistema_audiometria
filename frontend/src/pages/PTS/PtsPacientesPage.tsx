@@ -15,14 +15,13 @@ import {
   UserOutlined,
   PhoneOutlined,
   CalendarOutlined,
-  ExperimentOutlined,
+  FileProtectOutlined,
 } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs, { type Dayjs } from 'dayjs'
 import 'dayjs/locale/pt-br'
+import { useNavigate } from 'react-router-dom'
 import { getAgendaDoPacientes, type AgendaItem } from '@/api/agendaService'
-import { buscarStatusAtendimentos, type ExameStatusItem } from '@/api/exameService'
-import ExameModal, { type TipoExame } from '@/components/ExameModal'
 
 dayjs.locale('pt-br')
 
@@ -47,39 +46,22 @@ function encaixeBadge(sn: string | null) {
   return sn === 'S' ? <Badge status="warning" text="Encaixe" /> : null
 }
 
-// Códigos de item que abrem exames
-const CD_AUDIOMETRIA = 2766
-const CD_IMITANCIOMETRIA = 2767
+export default function PtsPacientesPage() {
+  const navigate = useNavigate()
+  const [loading, setLoading]   = useState(false)
+  const [error, setError]       = useState<string | null>(null)
+  const [data, setData]         = useState<AgendaItem[]>([])
+  const [total, setTotal]       = useState(0)
+  const [dataRef, setDataRef]   = useState<Dayjs>(dayjs())
 
-function tipoExamePorItem(cdItem: number | null): TipoExame | null {
-  if (cdItem === CD_AUDIOMETRIA) return 'audiometria'
-  if (cdItem === CD_IMITANCIOMETRIA) return 'imitanciometria'
-  return null
-}
-
-export default function PacientesPage() {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [data, setData] = useState<AgendaItem[]>([])
-  const [total, setTotal] = useState(0)
-  const [dataRef, setDataRef] = useState<Dayjs>(dayjs())
-  const [statusExames, setStatusExames] = useState<Record<string, ExameStatusItem>>({})
-
-  // Estado do modal de exame
-  const [modalOpen, setModalOpen] = useState(false)
-  const [modalTipo, setModalTipo] = useState<TipoExame | null>(null)
-  const [modalPaciente, setModalPaciente] = useState<string | null>(null)
-  const [modalCdPaciente, setModalCdPaciente] = useState<number | null>(null)
-  const [modalAtendimento, setModalAtendimento] = useState<number | null>(null)
-
-  function abrirExame(record: AgendaItem) {
-    const tipo = tipoExamePorItem(record.cd_item_agendamento)
-    if (!tipo) return
-    setModalTipo(tipo)
-    setModalPaciente(record.nm_paciente)
-    setModalCdPaciente(record.cd_paciente)
-    setModalAtendimento(record.cd_atendimento)
-    setModalOpen(true)
+  function abrirPTS(record: AgendaItem) {
+    navigate('/pts', {
+      state: {
+        nm_paciente:    record.nm_paciente,
+        cd_paciente:    record.cd_paciente,
+        cd_atendimento: record.cd_atendimento,
+      },
+    })
   }
 
   const columns: ColumnsType<AgendaItem> = [
@@ -148,53 +130,32 @@ export default function PacientesPage() {
       key: 'tp_situacao',
       width: 140,
       filters: [
-        { text: 'Marcado', value: 'M' },
-        { text: 'Atendido', value: 'A' },
-        { text: 'Falta', value: 'F' },
-        { text: 'Cancelado', value: 'C' },
-        { text: 'Em Atendimento', value: 'R' },
+        { text: 'Marcado',          value: 'M' },
+        { text: 'Atendido',         value: 'A' },
+        { text: 'Falta',            value: 'F' },
+        { text: 'Cancelado',        value: 'C' },
+        { text: 'Em Atendimento',   value: 'R' },
       ],
       onFilter: (value, record) =>
         (record.tp_situacao ?? '').toUpperCase() === value,
       render: (v) => situacaoTag(v),
     },
     {
-      title: 'Exame',
-      key: 'realizar_exame',
-      width: 160,
+      title: 'PTS',
+      key: 'preencher_pts',
+      width: 150,
       fixed: 'right',
-      render: (_, record) => {
-        const tipo = tipoExamePorItem(record.cd_item_agendamento)
-        if (!tipo) return <Text type="secondary">—</Text>
-        const isAudio = tipo === 'audiometria'
-        const exameStatus = record.cd_atendimento
-          ? statusExames[String(record.cd_atendimento)]
-          : undefined
-        const isFinalizado = exameStatus?.ds_status === 'FINALIZADO'
-        const isRascunho   = exameStatus?.ds_status === 'RASCUNHO'
-        return (
-          <Space direction="vertical" size={4}>
-            {isFinalizado && (
-              <Tag color="success" style={{ margin: 0 }}>✓ Finalizado</Tag>
-            )}
-            {isRascunho && (
-              <Tag color="processing" style={{ margin: 0 }}>✎ Rascunho</Tag>
-            )}
-            <Button
-              type="primary"
-              size="small"
-              icon={<ExperimentOutlined />}
-              onClick={() => abrirExame(record)}
-              style={{
-                background: isAudio ? '#7c3aed' : '#10b981',
-                borderColor: isAudio ? '#7c3aed' : '#10b981',
-              }}
-            >
-              {isAudio ? 'Audiometria' : 'Imitanciometria'}
-            </Button>
-          </Space>
-        )
-      },
+      render: (_, record) => (
+        <Button
+          type="primary"
+          size="small"
+          icon={<FileProtectOutlined />}
+          onClick={() => abrirPTS(record)}
+          style={{ background: '#667eea', borderColor: '#667eea' }}
+        >
+          Preencher PTS
+        </Button>
+      ),
     },
   ]
 
@@ -205,16 +166,6 @@ export default function PacientesPage() {
       const result = await getAgendaDoPacientes(d.format('YYYY-MM-DD'))
       setData(result.items)
       setTotal(result.total)
-      // Busca status de exame para todos os atendimentos da agenda
-      const ids = result.items
-        .map((i) => i.cd_atendimento)
-        .filter((id): id is number => id != null)
-      if (ids.length > 0) {
-        const status = await buscarStatusAtendimentos(ids)
-        setStatusExames(status)
-      } else {
-        setStatusExames({})
-      }
     } catch (err: unknown) {
       const msg =
         (err as any)?.response?.data?.detail ?? 'Erro ao buscar agenda do MV.'
@@ -223,20 +174,6 @@ export default function PacientesPage() {
       setTotal(0)
     } finally {
       setLoading(false)
-    }
-  }
-
-  /** Re-busca apenas o status dos exames (sem recarregar a lista completa) */
-  const atualizarStatus = async (items: AgendaItem[]) => {
-    const ids = items
-      .map((i) => i.cd_atendimento)
-      .filter((id): id is number => id != null)
-    if (ids.length === 0) return
-    try {
-      const status = await buscarStatusAtendimentos(ids)
-      setStatusExames(status)
-    } catch {
-      // falha silenciosa — status desatualizado é melhor que erro na tela
     }
   }
 
@@ -253,11 +190,9 @@ export default function PacientesPage() {
 
   return (
     <div style={{ padding: '0 8px' }}>
-      <Title level={3}>Pacientes Agendados</Title>
+      <Title level={3}>Pacientes — PTS</Title>
 
-      <Card
-        style={{ marginBottom: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
-      >
+      <Card style={{ marginBottom: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
         <Space wrap style={{ marginBottom: 16 }}>
           <CalendarOutlined style={{ fontSize: 16, color: '#667eea' }} />
           <Text strong>Data de referência:</Text>
@@ -305,18 +240,6 @@ export default function PacientesPage() {
           scroll={{ x: 'max-content' }}
         />
       </Card>
-
-      <ExameModal
-        open={modalOpen}
-        tipo={modalTipo}
-        nmPaciente={modalPaciente}
-        cdPaciente={modalCdPaciente}
-        cdAtendimento={modalAtendimento}
-        onClose={() => {
-          setModalOpen(false)
-          atualizarStatus(data)
-        }}
-      />
     </div>
   )
 }

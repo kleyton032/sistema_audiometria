@@ -3,15 +3,19 @@
 // ============================
 
 export interface User {
-  id_usuario: number
-  nm_login: string
-  nm_usuario: string
-  ds_email: string
-  nr_conselho: string | null
-  ds_especialidade: string | null
-  ds_perfil: 'ADMIN' | 'AUDIÓLOGO' | 'OPERADOR'
-  dt_criacao: string | null
-  fl_ativo: number
+  id_usuario:         number
+  nm_login:           string
+  nm_usuario:         string
+  ds_email:           string
+  cd_usuario_mv:      string | null
+  ds_perfil:          'ADMIN' | 'AUDÍOLOGO' | 'OPERADOR'
+  dt_criacao:         string | null
+  fl_ativo:           number
+  // dados do prestador MV
+  cd_prestador:       number | null
+  ds_conselho:        string | null
+  ds_codigo_conselho: string | null
+  nm_tip_presta:      string | null
 }
 
 export interface LoginPayload {

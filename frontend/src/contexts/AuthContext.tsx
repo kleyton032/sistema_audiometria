@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import type { ReactNode } from 'react'
-import { login as loginService } from '@/api'
+import { login as loginService, getMe } from '@/api'
+import type { User } from '@/types'
 
 function decodeJwtLogin(token: string): string | null {
   try {
@@ -12,41 +13,58 @@ function decodeJwtLogin(token: string): string | null {
 }
 
 interface AuthContextType {
-  token: string | null
-  nm_login: string | null
+  token:           string | null
+  nm_login:        string | null
+  usuario:         User | null
   isAuthenticated: boolean
-  loading: boolean
-  login: (username: string, password: string) => Promise<void>
+  loading:         boolean
+  login:  (username: string, password: string) => Promise<void>
   logout: () => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(null)
+  const [token,   setToken]   = useState<string | null>(null)
   const [nm_login, setNmLogin] = useState<string | null>(null)
+  const [usuario, setUsuario] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+
+  // Busca /users/me assim que tiver token
+  const fetchMe = useCallback(async (tkn: string) => {
+    try {
+      // Garante que o client já tem o token antes de chamar
+      localStorage.setItem('access_token', tkn)
+      const me = await getMe()
+      setUsuario(me)
+    } catch {
+      setUsuario(null)
+    }
+  }, [])
 
   useEffect(() => {
     const saved = localStorage.getItem('access_token')
     if (saved) {
       setToken(saved)
       setNmLogin(decodeJwtLogin(saved))
+      fetchMe(saved).finally(() => setLoading(false))
+    } else {
+      setLoading(false)
     }
-    setLoading(false)
-  }, [])
+  }, [fetchMe])
 
   const login = useCallback(async (username: string, password: string) => {
     const data = await loginService(username, password)
-    localStorage.setItem('access_token', data.access_token)
     setToken(data.access_token)
     setNmLogin(decodeJwtLogin(data.access_token))
-  }, [])
+    await fetchMe(data.access_token)
+  }, [fetchMe])
 
   const logout = useCallback(() => {
     localStorage.removeItem('access_token')
     setToken(null)
     setNmLogin(null)
+    setUsuario(null)
   }, [])
 
   return (
@@ -54,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         token,
         nm_login,
+        usuario,
         isAuthenticated: !!token,
         loading,
         login,

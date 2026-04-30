@@ -53,6 +53,42 @@ def buscar_prestador_mv(db: Session, cd_usuario: str) -> PrestadorMVInfo | None:
     )
 
 
+def sync_user_prestador(db: Session, user: User, prestador: PrestadorMVInfo) -> User:
+    """Sincroniza dados profissionais do MV para um usuário local existente."""
+    user.nm_usuario = prestador.nm_prestador
+
+    if user.prestador:
+        user.prestador.cd_prestador = prestador.cd_prestador
+        user.prestador.nm_prestador = prestador.nm_prestador
+        user.prestador.ds_conselho = prestador.ds_conselho
+        user.prestador.ds_codigo_conselho = prestador.ds_codigo_conselho
+        user.prestador.nm_tip_presta = prestador.nm_tip_presta
+    else:
+        db.add(
+            UsuarioPrestador(
+                id_usuario=user.id_usuario,
+                cd_prestador=prestador.cd_prestador,
+                nm_prestador=prestador.nm_prestador,
+                ds_conselho=prestador.ds_conselho,
+                ds_codigo_conselho=prestador.ds_codigo_conselho,
+                nm_tip_presta=prestador.nm_tip_presta,
+            )
+        )
+
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def sync_existing_user_from_mv(db: Session, user: User) -> User:
+    """Completa o vínculo profissional para usuários antigos que ainda não foram sincronizados."""
+    cd_usuario = user.cd_usuario_mv or user.nm_login
+    prestador = buscar_prestador_mv(db, cd_usuario)
+    if prestador is None:
+        return user
+    return sync_user_prestador(db, user, prestador)
+
+
 def create_user(db: Session, payload: UserCreate, prestador: PrestadorMVInfo) -> User:
     """Cria usuário local + perfil profissional a partir dos dados do MV."""
     email = payload.ds_email or f"{payload.cd_usuario_mv.lower()}@sistema.local"

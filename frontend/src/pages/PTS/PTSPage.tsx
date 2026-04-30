@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   Card,
   Form,
@@ -18,7 +19,7 @@ import {
   DatePicker,
   Popconfirm,
 } from 'antd'
-import { SaveOutlined, FileTextOutlined, PlusOutlined, DeleteOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons'
+import { SaveOutlined, FileTextOutlined, PlusOutlined, DeleteOutlined, CheckCircleOutlined, CloseCircleOutlined, ArrowLeftOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import 'dayjs/locale/pt-br'
 import ObjetivosEspecialidades, {
@@ -139,7 +140,17 @@ interface PTSFormValues {
 }
 
 // ── componente principal ─────────────────────────────────────────────────────
+interface PacienteState {
+  nm_paciente:    string | null
+  cd_paciente:    number | null
+  cd_atendimento: number | null
+}
+
 export default function PTSPage() {
+  const location  = useLocation()
+  const navigate   = useNavigate()
+  const paciente  = (location.state ?? {}) as Partial<PacienteState>
+
   const [form] = Form.useForm<PTSFormValues>()
   const [diagnosticosArea, setDiagnosticosArea] = useState<Record<Area, string | undefined>>(
     () => Object.fromEntries(AREAS.map((a) => [a, undefined])) as Record<Area, string | undefined>
@@ -309,20 +320,60 @@ export default function PTSPage() {
         style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
         bodyStyle={{ padding: '20px 24px' }}
       >
-        <Space>
-          <FileTextOutlined style={{ fontSize: 28, color: '#fff' }} />
-          <div>
-            <Title level={4} style={{ color: '#fff', margin: 0 }}>
-              PTS — Programa Terapêutico Singular
-            </Title>
-            <Text style={{ color: 'rgba(255,255,255,0.85)' }}>
-              Preenchimento do Programa Terapêutico Singular do paciente
-            </Text>
-          </div>
+        <Space style={{ width: '100%', justifyContent: 'space-between' }} align="start">
+          <Space>
+            <FileTextOutlined style={{ fontSize: 28, color: '#fff' }} />
+            <div>
+              <Title level={4} style={{ color: '#fff', margin: 0 }}>
+                PTS — Programa Terapêutico Singular
+              </Title>
+              <Text style={{ color: 'rgba(255,255,255,0.85)' }}>
+                Preenchimento do Programa Terapêutico Singular do paciente
+              </Text>
+            </div>
+          </Space>
+          <Button
+            icon={<ArrowLeftOutlined />}
+            onClick={() => navigate('/pts/pacientes')}
+            style={{ background: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.4)', color: '#fff' }}
+          >
+            Voltar para lista
+          </Button>
         </Space>
       </Card>
 
+      {/* Card do paciente (quando vem da lista) */}
+      {paciente.nm_paciente && (
+        <Card
+          role="region"
+          aria-label={`Paciente: ${paciente.nm_paciente}`}
+          bordered={false}
+          style={{ background: '#f0f5ff', borderLeft: '4px solid #667eea' }}
+          bodyStyle={{ padding: '12px 20px' }}
+        >
+          <Space size="large">
+            <Space direction="vertical" size={0}>
+              <Text type="secondary" style={{ fontSize: 12 }}>Paciente</Text>
+              <Text strong style={{ fontSize: 16 }}>{paciente.nm_paciente}</Text>
+            </Space>
+            {paciente.cd_paciente && (
+              <Space direction="vertical" size={0}>
+                <Text type="secondary" style={{ fontSize: 12 }}>Cód. Paciente</Text>
+                <Text strong>{paciente.cd_paciente}</Text>
+              </Space>
+            )}
+            {paciente.cd_atendimento && (
+              <Space direction="vertical" size={0}>
+                <Text type="secondary" style={{ fontSize: 12 }}>Cód. Atendimento</Text>
+                <Text strong>{paciente.cd_atendimento}</Text>
+              </Space>
+            )}
+          </Space>
+        </Card>
+      )}
+
       <Alert
+        role="status"
         type="info"
         showIcon
         message="Módulo em implantação — fase de testes"
@@ -370,6 +421,7 @@ export default function PTSPage() {
                   <Select
                     style={{ width: '100%' }}
                     placeholder="Selecione o diagnóstico..."
+                    aria-label="Diagnóstico médico principal"
                     allowClear
                     showSearch
                     optionFilterProp="label"
@@ -392,6 +444,7 @@ export default function PTSPage() {
                       danger
                       size="small"
                       icon={<DeleteOutlined />}
+                      aria-label="Remover diagnóstico médico principal"
                       onClick={() =>
                         setDiagPrincipais((prev) => prev.filter((r) => r.key !== row.key))
                       }
@@ -471,6 +524,7 @@ export default function PTSPage() {
                   <Select
                     style={{ width: '100%' }}
                     placeholder="Selecione o diagnóstico terapêutico..."
+                    aria-label="Diagnóstico terapêutico"
                     allowClear
                     showSearch
                     optionFilterProp="label"
@@ -493,6 +547,7 @@ export default function PTSPage() {
                       danger
                       size="small"
                       icon={<DeleteOutlined />}
+                      aria-label="Remover diagnóstico terapêutico"
                       onClick={() =>
                         setDiagTerapeuticos((prev) => prev.filter((r) => r.key !== row.key))
                       }
@@ -681,6 +736,7 @@ export default function PTSPage() {
                             danger
                             size="small"
                             icon={<DeleteOutlined />}
+                            aria-label={`Remover item de ${CER_GRUPO_LABEL[grupo]}`}
                             onClick={() =>
                               setCerTerapias((prev) => ({
                                 ...prev,
@@ -761,6 +817,7 @@ export default function PTSPage() {
                           danger
                           size="small"
                           icon={<DeleteOutlined />}
+                          aria-label="Remover avaliação médica"
                           onClick={() =>
                             setConductaRows((prev) => prev.filter((r) => r.key !== row.key))
                           }
@@ -829,6 +886,7 @@ export default function PTSPage() {
                           danger
                           size="small"
                           icon={<DeleteOutlined />}
+                          aria-label="Remover item multidisciplinar"
                           onClick={() =>
                             setMultidisciplinarRows((prev) => prev.filter((r) => r.key !== row.key))
                           }
@@ -971,6 +1029,7 @@ export default function PTSPage() {
                       danger
                       size="small"
                       icon={<DeleteOutlined />}
+                      aria-label="Remover instrumento de avaliação"
                       onClick={() =>
                         setInstrumentoRows((prev) => prev.filter((r) => r.key !== row.key))
                       }
@@ -1114,6 +1173,7 @@ export default function PTSPage() {
                       danger
                       size="small"
                       icon={<DeleteOutlined />}
+                      aria-label="Remover terapia indicada"
                       onClick={() => setTerapias((prev) => prev.filter((r) => r.key !== row.key))}
                     />
                   ) : null
