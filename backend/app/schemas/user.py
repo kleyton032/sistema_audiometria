@@ -52,5 +52,8 @@ class UserResponse(BaseModel):
     ds_conselho:        Optional[str]   = None
     ds_codigo_conselho: Optional[str]   = None
     nm_tip_presta:      Optional[str]   = None
+    # dados do cadastro local (SILA)
+    nr_conselho:        Optional[str]   = None
+    ds_especialidade:   Optional[str]   = None
 
     model_config = {"from_attributes": True}

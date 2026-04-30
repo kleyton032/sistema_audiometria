@@ -9,6 +9,7 @@ import {
   Button,
   Badge,
   Alert,
+  Tooltip,
 } from 'antd'
 import {
   ReloadOutlined,
@@ -180,18 +181,21 @@ export default function PacientesPage() {
             {isRascunho && (
               <Tag color="processing" style={{ margin: 0 }}>✎ Rascunho</Tag>
             )}
-            <Button
-              type="primary"
-              size="small"
-              icon={<ExperimentOutlined />}
-              onClick={() => abrirExame(record)}
-              style={{
-                background: isAudio ? '#7c3aed' : '#10b981',
-                borderColor: isAudio ? '#7c3aed' : '#10b981',
-              }}
-            >
-              {isAudio ? 'Audiometria' : 'Imitanciometria'}
-            </Button>
+            <Tooltip title={!record.cd_atendimento ? "Aguardando recepção (sem código de atendimento)" : undefined}>
+              <Button
+                type="primary"
+                size="small"
+                icon={<ExperimentOutlined />}
+                disabled={!record.cd_atendimento}
+                onClick={() => abrirExame(record)}
+                style={{
+                  background: !record.cd_atendimento ? undefined : (isAudio ? '#7c3aed' : '#10b981'),
+                  borderColor: !record.cd_atendimento ? undefined : (isAudio ? '#7c3aed' : '#10b981'),
+                }}
+              >
+                {isAudio ? 'Audiometria' : 'Imitanciometria'}
+              </Button>
+            </Tooltip>
           </Space>
         )
       },

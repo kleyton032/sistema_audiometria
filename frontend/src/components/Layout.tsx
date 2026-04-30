@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Layout as AntLayout, Menu, Button, theme, Avatar, Typography, Tooltip } from 'antd'
+import { Layout as AntLayout, Menu, Button, theme, Avatar, Typography, Tooltip, Space } from 'antd'
 import {
   DashboardOutlined,
   LogoutOutlined,
@@ -44,6 +44,7 @@ export default function AppLayout() {
       label: 'Exames Auditivos',
       children: [
         { key: '/pacientes', icon: <TeamOutlined />, label: 'Pacientes' },
+        { key: '/consulta', icon: <SearchOutlined />, label: 'Laudos' },
       ],
     }] : []),
 
@@ -55,13 +56,6 @@ export default function AppLayout() {
       children: [
         { key: '/pts/pacientes', icon: <TeamOutlined />, label: 'Pacientes' },
       ],
-    },
-
-    // ── Histórico de Exames (todos) ─────────────────────────────
-    {
-      key: '/consulta',
-      icon: <SearchOutlined />,
-      label: 'Histórico de Exames',
     },
   ]
 
@@ -85,17 +79,39 @@ export default function AppLayout() {
             height: 64,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            padding: collapsed ? '0' : '0 20px',
+            background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
             color: '#fff',
-            fontSize: collapsed ? 13 : 16,
-            fontWeight: 'bold',
             borderBottom: '1px solid rgba(255,255,255,0.1)',
-            padding: '0 12px',
-            whiteSpace: 'nowrap',
             overflow: 'hidden',
+            transition: 'all 0.2s',
           }}
         >
-          {collapsed ? 'SA' : 'Sistema Audiometria'}
+          <Space size={12}>
+            <div style={{
+              width: 32,
+              height: 32,
+              borderRadius: 6,
+              background: 'rgba(255,255,255,0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              <FileProtectOutlined style={{ fontSize: 18 }} />
+            </div>
+            {!collapsed && (
+              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
+                <Text style={{ color: '#fff', fontSize: 16, fontWeight: 800, letterSpacing: 0.5 }}>
+                  CDM
+                </Text>
+                <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 9, fontWeight: 500, textTransform: 'uppercase' }}>
+                  Documentação Multidisciplinar
+                </Text>
+              </div>
+            )}
+          </Space>
         </div>
 
         <Menu
@@ -104,6 +120,11 @@ export default function AppLayout() {
           selectedKeys={[location.pathname]}
           defaultOpenKeys={['grupo-exames', 'grupo-pts']}
           items={menuItems}
+          style={{
+            background: 'transparent',
+            paddingTop: 12,
+            borderRight: 0,
+          }}
           onClick={({ key }) => {
             if (!key.startsWith('grupo-')) navigate(key)
           }}

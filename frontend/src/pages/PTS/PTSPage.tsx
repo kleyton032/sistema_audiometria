@@ -213,6 +213,7 @@ export default function PTSPage() {
         <Select
           style={{ width: '100%' }}
           placeholder="Selecione..."
+          aria-label={`Diagnóstico médico específico para a área ${AREA_LABEL[row.area]}`}
           allowClear
           showSearch
           optionFilterProp="label"
@@ -238,6 +239,7 @@ export default function PTSPage() {
         <Select
           style={{ width: '100%' }}
           placeholder="Selecione..."
+          aria-label={`Classificação do grau de deficiência para a área ${AREA_LABEL[row.area]}`}
           allowClear
           showSearch
           optionFilterProp="label"
@@ -274,8 +276,10 @@ export default function PTSPage() {
       terapias_indicadas: terapias,
       prestador: usuarioMe?.nm_usuario,
       especialidade_conselho: [
-        usuarioMe?.ds_especialidade,
-        usuarioMe?.nr_conselho ? `Conselho: ${usuarioMe.nr_conselho}` : undefined,
+        usuarioMe?.nm_tip_presta || usuarioMe?.ds_especialidade,
+        (usuarioMe?.ds_codigo_conselho || usuarioMe?.nr_conselho)
+          ? `${usuarioMe?.ds_conselho || 'Conselho'}: ${usuarioMe?.ds_codigo_conselho || usuarioMe?.nr_conselho}`
+          : undefined,
       ].filter(Boolean).join('/'),
     }
     // TODO: chamar endpoint PTS quando disponível
@@ -324,7 +328,7 @@ export default function PTSPage() {
           <Space>
             <FileTextOutlined style={{ fontSize: 28, color: '#fff' }} />
             <div>
-              <Title level={4} style={{ color: '#fff', margin: 0 }}>
+              <Title level={1} style={{ color: '#fff', margin: 0 }}>
                 PTS — Programa Terapêutico Singular
               </Title>
               <Text style={{ color: 'rgba(255,255,255,0.85)' }}>
@@ -711,6 +715,7 @@ export default function PTSPage() {
                         <Select
                           style={{ width: '100%' }}
                           placeholder="Selecione..."
+                          aria-label={`Serviço externo para ${CER_GRUPO_LABEL[grupo]}`}
                           allowClear
                           showSearch
                           optionFilterProp="label"
@@ -795,6 +800,7 @@ export default function PTSPage() {
                       <Select
                         style={{ width: '100%' }}
                         placeholder="Selecione a especialidade / conduta..."
+                        aria-label="Conduta: Avaliação Médica"
                         allowClear
                         showSearch
                         optionFilterProp="label"
@@ -864,6 +870,7 @@ export default function PTSPage() {
                       <Select
                         style={{ width: '100%' }}
                         placeholder="Selecione o item de avaliação/rastreio..."
+                        aria-label="Conduta: Atendimento Multidisciplinar"
                         allowClear
                         showSearch
                         optionFilterProp="label"
@@ -1007,6 +1014,7 @@ export default function PTSPage() {
                   <Select
                     style={{ width: '100%' }}
                     placeholder="Selecione o instrumento..."
+                    aria-label="Instrumento usado na avaliação"
                     allowClear
                     showSearch
                     optionFilterProp="label"
@@ -1110,6 +1118,7 @@ export default function PTSPage() {
                   <Select
                     style={{ width: '100%' }}
                     placeholder="Selecione..."
+                    aria-label="Terapia indicada"
                     allowClear
                     showSearch
                     optionFilterProp="label"
@@ -1127,6 +1136,7 @@ export default function PTSPage() {
                   <Select
                     style={{ width: '100%' }}
                     placeholder="Selecione..."
+                    aria-label="Tipo de atendimento da terapia"
                     allowClear
                     options={TIPOS_ATENDIMENTO}
                     value={row.tipo_atendimento}
@@ -1142,6 +1152,7 @@ export default function PTSPage() {
                   <Select
                     style={{ width: '100%' }}
                     placeholder="Selecione..."
+                    aria-label="Periodicidade da terapia"
                     allowClear
                     options={PERIODICIDADES}
                     value={row.periodicidade}
@@ -1221,7 +1232,12 @@ export default function PTSPage() {
               <Col flex="1">
                 <Input
                   value={
-                    [usuarioMe?.ds_especialidade, usuarioMe?.nr_conselho ? `Conselho: ${usuarioMe.nr_conselho}` : undefined]
+                    [
+                      usuarioMe?.nm_tip_presta || usuarioMe?.ds_especialidade,
+                      (usuarioMe?.ds_codigo_conselho || usuarioMe?.nr_conselho)
+                        ? `${usuarioMe?.ds_conselho || 'Conselho'}: ${usuarioMe?.ds_codigo_conselho || usuarioMe?.nr_conselho}`
+                        : undefined
+                    ]
                       .filter(Boolean).join('/') || '—'
                   }
                   disabled

@@ -17,7 +17,7 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <Title level={3}>Dashboard</Title>
+      <Title level={1}>Dashboard</Title>
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={8}>
           <Card bordered={false}>

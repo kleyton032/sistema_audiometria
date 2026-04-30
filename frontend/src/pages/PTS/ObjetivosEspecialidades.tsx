@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import {
   Collapse,
   Segmented,
@@ -26,12 +26,12 @@ import type { ReactNode } from 'react'
 
 const { Text } = Typography
 
-// â”€â”€ tipos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── tipos ────────────────────────────────────────────────────────────────────
 export interface ObjetivoItem {
   objetivo: string | undefined
   descricao: string | undefined
   status: string | undefined   // usado apenas em "anterior"
-  motivo: string | undefined   // usado apenas em "anterior", quando status â‰  AlcanÃ§ado
+  motivo: string | undefined   // usado apenas em "anterior", quando status ≠ Alcançado
 }
 
 export type MomentoObjetivos = 'anterior' | 'atual'
@@ -43,18 +43,18 @@ export interface ObjetivosEspecialidade {
 
 export type ObjetivosState = Record<string, ObjetivosEspecialidade>
 
-// â”€â”€ listas de opÃ§Ãµes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── listas de opções ─────────────────────────────────────────────────────────
 const STATUS_EVOLUCAO = [
-  { value: 'ALCANCADO',    label: 'AlcanÃ§ado' },
-  { value: 'PARCIAL',      label: 'Parcialmente AlcanÃ§ado' },
-  { value: 'NAO_ALCANCADO',label: 'NÃ£o AlcanÃ§ado' },
-  { value: 'NAO_SE_APLICA',label: 'NÃ£o se Aplica' },
+  { value: 'ALCANCADO',    label: 'Alcançado' },
+  { value: 'PARCIAL',      label: 'Parcialmente Alcançado' },
+  { value: 'NAO_ALCANCADO',label: 'Não Alcançado' },
+  { value: 'NAO_SE_APLICA',label: 'Não se Aplica' },
 ]
 
 const MOTIVOS_NAO_ALCANCADO = [
   { value: 'ALTA_FALTAS',          label: 'Alta quantidade de faltas' },
-  { value: 'INTERCORRENCIA_SAUDE', label: 'IntercorrÃªncia de saÃºde' },
-  { value: 'BAIXA_ADESAO',         label: 'Baixa adesÃ£o do paciente/famÃ­lia' },
+  { value: 'INTERCORRENCIA_SAUDE', label: 'Intercorrência de saúde' },
+  { value: 'BAIXA_ADESAO',         label: 'Baixa adesão do paciente/família' },
   { value: 'COMPLEXIDADE_CASO',    label: 'Complexidade do caso' },
   { value: 'TEMPO_INSUFICIENTE',   label: 'Tempo insuficiente de tratamento' },
   { value: 'FALTA_RECURSO',        label: 'Falta de recurso/equipamento' },
@@ -79,7 +79,7 @@ const OBJETIVOS_POR_ESPECIALIDADE: Record<string, string[]> = {
   prof_braille:        [],
 }
 
-// â”€â”€ especialidades â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── especialidades ────────────────────────────────────────────────────────────
 interface Especialidade {
   key: string
   label: string
@@ -89,17 +89,17 @@ interface Especialidade {
 
 const ESPECIALIDADES: Especialidade[] = [
   { key: 'fisioterapia',        label: 'Fisioterapia',                icon: <HeartOutlined />,      color: '#52c41a' },
-  { key: 'fisio_aquatica',      label: 'Fisioterapia AquÃ¡tica',       icon: <ExperimentOutlined />, color: '#13c2c2' },
+  { key: 'fisio_aquatica',      label: 'Fisioterapia Aquática',       icon: <ExperimentOutlined />, color: '#13c2c2' },
   { key: 'fonoaudiologia',      label: 'Fonoaudiologia',              icon: <SoundOutlined />,      color: '#1677ff' },
   { key: 'terapia_ocupacional', label: 'Terapia Ocupacional',         icon: <MedicineBoxOutlined />,color: '#722ed1' },
-  { key: 'ed_fisica',           label: 'Prof. EducaÃ§Ã£o FÃ­sica',       icon: <UserOutlined />,       color: '#fa8c16' },
+  { key: 'ed_fisica',           label: 'Prof. Educação Física',       icon: <UserOutlined />,       color: '#fa8c16' },
   { key: 'psicologia',          label: 'Psicologia',                  icon: <TeamOutlined />,       color: '#eb2f96' },
   { key: 'psicologia_musical',  label: 'Psicologia Sonoro Musical',   icon: <RobotOutlined />,      color: '#f5222d' },
   { key: 'psicopedagogia',      label: 'Psicopedagogia',              icon: <BookOutlined />,       color: '#faad14' },
   { key: 'prof_braille',        label: 'Professor de Braille',        icon: <ReadOutlined />,       color: '#08979c' },
 ]
 
-// â”€â”€ valor inicial de um objetivo vazio â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── valor inicial de um objetivo vazio ───────────────────────────────────────
 function objetivoVazio(): ObjetivoItem {
   return { objetivo: undefined, descricao: undefined, status: undefined, motivo: undefined }
 }
@@ -116,12 +116,12 @@ export function criarObjetivosIniciais(): ObjetivosState {
   )
 }
 
-// â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── helpers ───────────────────────────────────────────────────────────────────
 function contarPreenchidos(items: ObjetivoItem[]): number {
   return items.filter((i) => i.objetivo).length
 }
 
-// â”€â”€ sub-componente: linha de objetivo ANTERIOR (somente status + motivo) â”€â”€â”€â”€â”€
+// ── sub-componente: linha de objetivo ANTERIOR (somente status + motivo) ─────
 function LinhaObjetivoAnterior({
   numero,
   item,
@@ -133,7 +133,7 @@ function LinhaObjetivoAnterior({
 }) {
   return (
     <Row gutter={[12, 8]} align="top" style={{ marginBottom: 8, borderBottom: '1px solid #f0f0f0', paddingBottom: 8 }}>
-      {/* nÃºmero */}
+      {/* número */}
       <Col flex="32px">
         <div style={{
           width: 28, height: 28, borderRadius: '50%',
@@ -145,7 +145,7 @@ function LinhaObjetivoAnterior({
         </div>
       </Col>
 
-      {/* objetivo (readonly â€” vem do PTS anterior) */}
+      {/* objetivo (readonly — vem do PTS anterior) */}
       <Col flex="1" style={{ minWidth: 180 }}>
         <Input
           value={item.objetivo ?? ''}
@@ -159,24 +159,26 @@ function LinhaObjetivoAnterior({
       <Col flex="220px">
         <Select
           style={{ width: '100%' }}
-          placeholder="Status da evoluÃ§Ã£o..."
+          placeholder="Status da evolução..."
+          aria-label={`Status da evolução do objetivo ${numero}`}
           allowClear
           options={STATUS_EVOLUCAO}
           value={item.status}
           onChange={(v) => {
             onChange('status', v)
-            // limpa motivo se mudou para AlcanÃ§ado / NÃ£o se Aplica
+            // limpa motivo se mudou para Alcançado / Não se Aplica
             if (!exigeMotivo(v)) onChange('motivo', undefined)
           }}
         />
       </Col>
 
-      {/* motivo â€” sÃ³ exibido quando status exige */}
+      {/* motivo — só exibido quando status exige */}
       {exigeMotivo(item.status) && (
         <Col flex="220px">
           <Select
             style={{ width: '100%' }}
             placeholder="Motivo..."
+            aria-label={`Motivo do status do objetivo ${numero}`}
             allowClear
             options={MOTIVOS_NAO_ALCANCADO}
             value={item.motivo}
@@ -188,7 +190,7 @@ function LinhaObjetivoAnterior({
   )
 }
 
-// â”€â”€ sub-componente: linha de objetivo ATUAL (select + descriÃ§Ã£o) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── sub-componente: linha de objetivo ATUAL (select + descrição) ─────────────
 function LinhaObjetivoAtual({
   numero,
   item,
@@ -202,7 +204,7 @@ function LinhaObjetivoAtual({
 }) {
   return (
     <Row gutter={[12, 8]} align="top" style={{ marginBottom: 8, borderBottom: '1px solid #f0f0f0', paddingBottom: 8 }}>
-      {/* nÃºmero */}
+      {/* número */}
       <Col flex="32px">
         <div style={{
           width: 28, height: 28, borderRadius: '50%',
@@ -219,6 +221,7 @@ function LinhaObjetivoAtual({
         <Select
           style={{ width: '100%' }}
           placeholder="Selecione o objetivo..."
+          aria-label={`Selecione o objetivo atual número ${numero}`}
           allowClear
           showSearch
           optionFilterProp="label"
@@ -242,7 +245,7 @@ function LinhaObjetivoAtual({
   )
 }
 
-// â”€â”€ componente principal exportado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── componente principal exportado ────────────────────────────────────────────
 interface Props {
   value: ObjetivosState
   onChange: (next: ObjetivosState) => void
@@ -300,8 +303,9 @@ export default function ObjetivosEspecialidades({ value, onChange }: Props) {
           <Segmented
             options={[
               { label: 'Objetivos Atuais', value: 'atual' },
-              { label: 'Objetivos Anteriores (evoluÃ§Ã£o)', value: 'anterior' },
+              { label: 'Objetivos Anteriores (evolução)', value: 'anterior' },
             ]}
+            aria-label="Alternar entre objetivos atuais e anteriores"
             value={mom}
             onChange={(v) => handleMomento(esp.key, v as MomentoObjetivos)}
             style={{ width: '100%' }}
@@ -309,7 +313,7 @@ export default function ObjetivosEspecialidades({ value, onChange }: Props) {
 
           {mom === 'anterior' && (
             <Text type="secondary" style={{ fontSize: 12 }}>
-              Objetivos carregados automaticamente do Ãºltimo PTS (vigÃªncia anterior). Informe o status e, se necessÃ¡rio, o motivo.
+              Objetivos carregados automaticamente do último PTS (vigência anterior). Informe o status e, se necessário, o motivo.
             </Text>
           )}
 

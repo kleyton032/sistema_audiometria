@@ -1,4 +1,4 @@
-# Sistema de Laudos de Audiometria
+# CDM — Centro de Documentação Multidisciplinar
 
 Este projeto é uma iniciativa para o desenvolvimento de um sistema automatizado para a geração de laudos audiológicos. O objetivo é criar uma solução robusta e escalável para processar exames de audiometria e imitanciometria, integrando-se a sistemas hospitalares existentes.
 

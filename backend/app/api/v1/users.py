@@ -27,6 +27,8 @@ def _user_to_response(user: User) -> UserResponse:
         ds_conselho        = p.ds_conselho        if p else None,
         ds_codigo_conselho = p.ds_codigo_conselho if p else None,
         nm_tip_presta      = p.nm_tip_presta      if p else None,
+        nr_conselho        = user.nr_conselho,
+        ds_especialidade   = user.ds_especialidade,
     )
 
 

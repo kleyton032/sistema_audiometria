@@ -9,6 +9,7 @@ import {
   Button,
   Badge,
   Alert,
+  Tooltip,
 } from 'antd'
 import {
   ReloadOutlined,
@@ -146,15 +147,21 @@ export default function PtsPacientesPage() {
       width: 150,
       fixed: 'right',
       render: (_, record) => (
-        <Button
-          type="primary"
-          size="small"
-          icon={<FileProtectOutlined />}
-          onClick={() => abrirPTS(record)}
-          style={{ background: '#667eea', borderColor: '#667eea' }}
-        >
-          Preencher PTS
-        </Button>
+        <Tooltip title={!record.cd_atendimento ? "Aguardando recepção (sem código de atendimento)" : undefined}>
+          <Button
+            type="primary"
+            size="small"
+            icon={<FileProtectOutlined />}
+            disabled={!record.cd_atendimento}
+            onClick={() => abrirPTS(record)}
+            style={{ 
+              background: !record.cd_atendimento ? undefined : '#667eea', 
+              borderColor: !record.cd_atendimento ? undefined : '#667eea' 
+            }}
+          >
+            Preencher PTS
+          </Button>
+        </Tooltip>
       ),
     },
   ]
@@ -190,7 +197,7 @@ export default function PtsPacientesPage() {
 
   return (
     <div style={{ padding: '0 8px' }}>
-      <Title level={3}>Pacientes — PTS</Title>
+      <Title level={1}>Pacientes — PTS</Title>
 
       <Card style={{ marginBottom: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
         <Space wrap style={{ marginBottom: 16 }}>
@@ -201,6 +208,7 @@ export default function PtsPacientesPage() {
             onChange={handleDateChange}
             format="DD/MM/YYYY"
             allowClear={false}
+            aria-label="Data de referência para consulta da agenda"
           />
           <Button
             icon={<ReloadOutlined />}

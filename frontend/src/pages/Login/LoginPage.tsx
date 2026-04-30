@@ -128,8 +128,8 @@ export default function LoginPage() {
         <Space direction="vertical" size="large" style={{ width: '100%', textAlign: 'center' }}>
           <div>
             <AudioOutlined style={{ fontSize: 48, color: '#667eea' }} />
-            <Title level={3} style={{ marginTop: 8, marginBottom: 0 }}>
-              Sistema de Audiometria
+            <Title level={1} style={{ marginTop: 8, marginBottom: 0 }}>
+              CDM — Centro de Documentação Multidisciplinar
             </Title>
             <Text type="secondary">Faça login para acessar o sistema</Text>
           </div>
@@ -152,7 +152,7 @@ export default function LoginPage() {
                   name="username"
                   rules={[{ required: true, message: 'Informe seu login ou código MV' }]}
                 >
-                  <Input prefix={<UserOutlined />} placeholder="Login / Código MV" onPressEnter={handleCheckUser} />
+                  <Input prefix={<UserOutlined />} placeholder="Login / Código MV" onPressEnter={handleCheckUser} aria-label="Login ou Código MV" />
                 </Form.Item>
                 <Form.Item>
                   <Button type="primary" onClick={handleCheckUser} loading={loading} block>
@@ -172,7 +172,7 @@ export default function LoginPage() {
                   name="password"
                   rules={[{ required: true, message: 'Informe sua senha' }]}
                 >
-                  <Input.Password prefix={<LockOutlined />} placeholder="Senha" autoFocus />
+                  <Input.Password prefix={<LockOutlined />} placeholder="Senha" autoFocus aria-label="Senha" />
                 </Form.Item>
                 <Form.Item>
                   <Button type="primary" htmlType="submit" loading={loading} block>
@@ -190,7 +190,7 @@ export default function LoginPage() {
                 </div>
                 <Alert 
                    message="Seja bem-vindo(a)!"
-                   description="Crie uma senha segura para o seu primeiro acesso ao sistema de Audiometria."
+                   description="Crie uma senha segura para o seu primeiro acesso ao CDM."
                    type="info"
                    showIcon
                    style={{ marginBottom: 16, textAlign: 'left' }}
