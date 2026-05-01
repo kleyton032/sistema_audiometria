@@ -45,7 +45,7 @@ import {
   type CerGrupo,
   type Area,
 } from './data/listas'
-import { getMe, getPTSDiagnosticosPrincipais, getPTSDiagnosticosArea, getPTSDiagnosticosTerapeuticos, getPTSEspecialidades, getPTSItensMultidisciplinar, getPTSTerapiasIndicadas, getPTSInstrumentosAvaliacao, finalizarPTS, cancelarPTS } from '@/api'
+import { getMe, getPTSDiagnosticosPrincipais, getPTSDiagnosticosArea, getPTSDiagnosticosTerapeuticos, getPTSEspecialidades, getPTSItensMultidisciplinar, getPTSTerapiasIndicadas, getPTSInstrumentosAvaliacao, finalizarPTS, cancelarPTS, savePTS } from '@/api'
 import type { User } from '@/types'
 
 const { Title, Text } = Typography
@@ -281,10 +281,20 @@ export default function PTSPage() {
           : undefined,
       ].filter(Boolean).join('/'),
     }
-    // TODO: chamar endpoint PTS quando disponível
-    console.log('PTS payload:', payload)
-    // Simulação: quando o save retornar o id_pts real, chamar setIdPtsSalvo(id)
-    setSalvandoPTS(false)
+    // TODO: remover prestador e especialidade_conselho se backend pegar do token
+    
+    savePTS(payload)
+      .then((resp) => {
+        message.success(resp.mensagem)
+        setIdPtsSalvo(resp.id_pts)
+      })
+      .catch((error) => {
+        console.error('Erro ao salvar PTS:', error)
+        message.error('Erro ao salvar PTS. Verifique o console para mais detalhes.')
+      })
+      .finally(() => {
+        setSalvandoPTS(false)
+      })
   }
 
   const handleFinalizar = async () => {

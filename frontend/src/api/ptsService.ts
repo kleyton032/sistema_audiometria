@@ -63,3 +63,10 @@ export async function cancelarPTS(idPts: number): Promise<{ status: string; mens
   )
   return data
 }
+export async function savePTS(payload: any): Promise<{ status: string; mensagem: string; id_pts: number }> {
+  const { data } = await api.post<{ status: string; mensagem: string; id_pts: number }>(
+    '/pts',
+    payload
+  )
+  return data
+}

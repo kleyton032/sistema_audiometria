@@ -6,6 +6,8 @@ from pydantic import BaseModel
 
 from app.dependencies import get_db, get_current_user
 from app.db.models import User
+from app.schemas.pts import PTSCreate
+from app.db.repositories.pts import create_pts
 
 router = APIRouter(prefix="/pts", tags=["PTS"])
 
@@ -124,6 +126,27 @@ def listar_terapias_indicadas(
 class PTSFinalizarResponse(BaseModel):
     status: str
     mensagem: str
+
+
+@router.post(
+    "",
+    summary="Salvar um novo PTS",
+    response_model=dict,
+)
+def salvar_pts(
+    pts_data: PTSCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    try:
+        db_pts = create_pts(db=db, pts_data=pts_data, id_usuario=user.id_usuario)
+        return {"status": "success", "mensagem": "PTS salvo com sucesso.", "id_pts": db_pts.id_pts}
+    except Exception as e:
+        # Em produção, adicionar logs detalhados
+        print(f"Erro ao salvar PTS: {e}")
+        db.rollback()
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=f"Erro interno ao salvar PTS: {str(e)}")
 
 
 @router.post(
