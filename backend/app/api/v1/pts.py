@@ -33,9 +33,8 @@ def listar_diagnosticos_principais(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    session = get_db_session(user, db)
     try:
-        rows = session.execute(
+        rows = db.execute(
             text(
                 """
                 SELECT e.ds_diagnostico
@@ -48,9 +47,8 @@ def listar_diagnosticos_principais(
             )
         ).fetchall()
         return [{"ds_diagnostico": r[0]} for r in rows]
-    finally:
-        if user.nm_login == 'testesoul':
-            session.close()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 class EspecialidadeOut(BaseModel):
@@ -67,9 +65,8 @@ def listar_especialidades(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    session = get_db_session(user, db)
     try:
-        rows = session.execute(
+        rows = db.execute(
             text(
                 """
                 SELECT e.cd_especialid, e.ds_especialid
@@ -79,9 +76,8 @@ def listar_especialidades(
             )
         ).fetchall()
         return [{'cd_especialidade': str(r[0]), 'ds_especialidade': r[1]} for r in rows]
-    finally:
-        if user.nm_login == 'testesoul':
-            session.close()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 class ItemMultidisciplinarOut(BaseModel):
@@ -98,9 +94,8 @@ def listar_itens_multidisciplinar(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    session = get_db_session(user, db)
     try:
-        rows = session.execute(
+        rows = db.execute(
             text(
                 """
                 SELECT '' || i.cd_item_agendamento, i.ds_item_agendamento
@@ -114,9 +109,8 @@ def listar_itens_multidisciplinar(
             )
         ).fetchall()
         return [{'cd_item': str(r[0]), 'ds_item': r[1]} for r in rows]
-    finally:
-        if user.nm_login == 'testesoul':
-            session.close()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 class TerapiaIndicadaOut(BaseModel):
@@ -133,9 +127,8 @@ def listar_terapias_indicadas(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    session = get_db_session(user, db)
     try:
-        rows = session.execute(
+        rows = db.execute(
             text(
                 """
                 SELECT DISTINCT it.cd_item_agendamento || '',
@@ -147,9 +140,8 @@ def listar_terapias_indicadas(
             )
         ).fetchall()
         return [{'cd_item': str(r[0]), 'ds_item': r[1]} for r in rows]
-    finally:
-        if user.nm_login == 'testesoul':
-            session.close()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 class PTSFinalizarResponse(BaseModel):
@@ -250,9 +242,8 @@ def listar_diagnosticos_area(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    session = get_db_session(user, db)
     try:
-        rows = session.execute(
+        rows = db.execute(
             text(
                 """
                 SELECT e.ds_diagnostico
@@ -266,9 +257,8 @@ def listar_diagnosticos_area(
             {"id_esp": id_especialidade},
         ).fetchall()
         return [{"ds_diagnostico": r[0]} for r in rows]
-    finally:
-        if user.nm_login == 'testesoul':
-            session.close()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get(
@@ -280,9 +270,8 @@ def listar_diagnosticos_terapeuticos(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    session = get_db_session(user, db)
     try:
-        rows = session.execute(
+        rows = db.execute(
             text(
                 """
                 SELECT DISTINCT e.ds_diagnostico
@@ -295,9 +284,8 @@ def listar_diagnosticos_terapeuticos(
             )
         ).fetchall()
         return [{"ds_diagnostico": r[0]} for r in rows]
-    finally:
-        if user.nm_login == 'testesoul':
-            session.close()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 class InstrumentoAvaliacaoOut(BaseModel):
@@ -314,9 +302,8 @@ def listar_instrumentos_avaliacao(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    session = get_db_session(user, db)
     try:
-        rows = session.execute(
+        rows = db.execute(
             text(
                 """
                 SELECT ''||i.seq CODIGO, UPPER(i.instrumento) DESCRICAO
@@ -326,6 +313,5 @@ def listar_instrumentos_avaliacao(
             )
         ).fetchall()
         return [{'codigo': str(r[0]), 'descricao': r[1]} for r in rows]
-    finally:
-        if user.nm_login == 'testesoul':
-            session.close()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
