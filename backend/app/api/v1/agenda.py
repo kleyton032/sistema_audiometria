@@ -38,6 +38,46 @@ def listar_pacientes(
 
     data_ref = data or date.today()
 
+    if current_user.nm_login == 'testesoul':
+        # Retorna dados mockados para o usuário de teste
+        items = [
+            AgendaItem(
+                cd_agenda_central=1,
+                hr_agenda="08:00",
+                dt_agenda=data_ref,
+                cd_paciente=999999,
+                nm_paciente="PACIENTE TESTE SOUL (MOCK)",
+                cd_item_agendamento=101,
+                ds_item_agendamento="TERAPIA FONOAUDIOLOGICA",
+                sn_falta="N",
+                sn_atendido="N",
+                cd_atendimento=888888,
+                cd_convenio=1,
+                cd_prestador=999,
+                tp_situacao="A"
+            ),
+            AgendaItem(
+                cd_agenda_central=2,
+                hr_agenda="09:00",
+                dt_agenda=data_ref,
+                cd_paciente=777777,
+                nm_paciente="OUTRO PACIENTE TESTE (MOCK)",
+                cd_item_agendamento=101,
+                ds_item_agendamento="AVALIAÇÃO MULTIDISCIPLINAR",
+                sn_falta="N",
+                sn_atendido="N",
+                cd_atendimento=777777,
+                cd_convenio=1,
+                cd_prestador=999,
+                tp_situacao="A"
+            )
+        ]
+        return AgendaListResponse(
+            total=len(items),
+            items=items,
+            data_referencia=data_ref,
+        )
+
     rows = get_agenda_do_dia(db, cd_prestador, data_ref)
 
     def fmt_hora(v) -> str | None:

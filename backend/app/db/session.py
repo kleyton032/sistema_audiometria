@@ -34,6 +34,17 @@ engine = create_engine(
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+# Configuração do Banco de Testes (Docker)
+ORACLE_TEST_URL = f"oracle+oracledb://{settings.ORACLE_TEST_USER}:{settings.ORACLE_TEST_PASSWORD}@{settings.ORACLE_TEST_DSN}"
+
+engine_test = create_engine(
+    ORACLE_TEST_URL,
+    echo=True,
+    pool_pre_ping=True,
+)
+
+SessionTest = sessionmaker(autocommit=False, autoflush=False, bind=engine_test)
+
 
 class Base(DeclarativeBase):
     pass

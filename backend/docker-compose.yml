@@ -9,6 +9,20 @@ services:
       - .env
     environment:
       - RUNNING_IN_DOCKER=1
+      - APP_ENV=test
     volumes:
       - .:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    depends_on:
+      - oracle-test
+
+  oracle-test:
+    image: gvenzl/oracle-free:slim-faststart
+    environment:
+      - ORACLE_PASSWORD=oracle
+      - APP_USER=test_schema
+      - APP_USER_PASSWORD=oracle
+    ports:
+      - "1521:1521"
+    volumes:
+      - ./init-scripts:/container-entrypoint-initdb.d
