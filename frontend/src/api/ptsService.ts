@@ -70,3 +70,11 @@ export async function savePTS(payload: any): Promise<{ status: string; mensagem:
   )
   return data
 }
+
+export async function getPTSObjetivosPorEspecialidade(dsEspecialidade: string): Promise<string[]> {
+  const { data } = await api.get<{ id_objetivo: number; ds_objetivo: string }[]>(
+    '/pts/objetivos-por-especialidade',
+    { params: { ds_especialidade: dsEspecialidade } },
+  )
+  return data.map((d) => d.ds_objetivo)
+}

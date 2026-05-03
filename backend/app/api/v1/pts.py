@@ -24,6 +24,11 @@ class DiagnosticoPrincipalOut(BaseModel):
     ds_diagnostico: str
 
 
+class ObjetivoOut(BaseModel):
+    id_objetivo: int
+    ds_objetivo: str
+
+
 @router.get(
     "/diagnosticos-principais",
     response_model=list[DiagnosticoPrincipalOut],
@@ -315,3 +320,47 @@ def listar_instrumentos_avaliacao(
         return [{'codigo': str(r[0]), 'descricao': r[1]} for r in rows]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get(
+    "/objetivos-por-especialidade",
+    response_model=list[ObjetivoOut],
+    summary="Lista de objetivos cadastrados por especialidade",
+)
+def listar_objetivos_por_especialidade(
+    ds_especialidade: str = Query(..., description="Nome da especialidade (ex: FISIOTERAPIA)"),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    # Converte o nome que vem do Frontend para caixa alta e remove espaços extras
+    esp_frontend = ds_especialidade.upper().strip()
+
+    # Mapeamento: DE (Nome no Frontend) -> PARA (Nome Exato no Banco de Dados)
+    mapa_especialidades = {
+        "FISIOTERAPIA AQUÁTICA": "FISIOTERAPIA",
+        "PROF. EDUCAÇÃO FÍSICA": "PROFISSIONAL DE ED. FÍSICA",
+        "PSICOLOGIA SONORO MUSICAL": "PSICOLOGIA COM ENFOQUE SONORO MUSICAL",
+        "PROFESSOR DE BRAILLE": "PROFESSOR DE BRAILLE"
+    }
+
+    # Se o nome enviado pelo Frontend estiver no mapa, usamos o nome do Banco.
+    # Caso contrário, usamos o nome original convertido para UPPER.
+    esp_busca = mapa_especialidades.get(esp_frontend, esp_frontend)
+
+    try:
+        rows = db.execute(
+            text(
+                """
+                SELECT o.id_objetivo, o.ds_objetivo
+                FROM FAV_TB_OBJETIVO_CERIV o
+                JOIN FAV_TB_ESP_OBJETIVO_CERIV e ON o.id_especialidade = e.id_especialidade
+                WHERE UPPER(e.ds_especialidade) = :esp
+                AND o.ic_ativo = 'S'
+                ORDER BY o.ds_objetivo
+                """
+            ),
+            {"esp": esp_busca},
+        ).fetchall()
+        return [{"id_objetivo": int(r[0]), "ds_objetivo": r[1]} for r in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar objetivos: {str(e)}")

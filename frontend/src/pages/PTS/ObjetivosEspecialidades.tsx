@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { getPTSObjetivosPorEspecialidade } from '@/api/ptsService'
 import {
   Collapse,
   Segmented,
@@ -66,18 +67,7 @@ function exigeMotivo(status: string | undefined) {
   return status === 'PARCIAL' || status === 'NAO_ALCANCADO'
 }
 
-// TODO: preencher com as listas reais de objetivos por especialidade
-const OBJETIVOS_POR_ESPECIALIDADE: Record<string, string[]> = {
-  fisioterapia:        [],
-  fisio_aquatica:      [],
-  fonoaudiologia:      [],
-  terapia_ocupacional: [],
-  ed_fisica:           [],
-  psicologia:          [],
-  psicologia_musical:  [],
-  psicopedagogia:      [],
-  prof_braille:        [],
-}
+// TODO: As listas agora são carregadas dinamicamente via API no componente principal
 
 // ── especialidades ────────────────────────────────────────────────────────────
 interface Especialidade {
@@ -252,9 +242,33 @@ interface Props {
 }
 
 export default function ObjetivosEspecialidades({ value, onChange }: Props) {
+  const [objetivosPorArea, setObjetivosPorArea] = useState<Record<string, string[]>>({})
   const [momento, setMomento] = useState<Record<string, MomentoObjetivos>>(
     () => Object.fromEntries(ESPECIALIDADES.map((e) => [e.key, 'atual' as MomentoObjetivos]))
   )
+
+  useEffect(() => {
+    async function carregarObjetivos() {
+      const novosObjetivos: Record<string, string[]> = {}
+      
+      // Busca os objetivos para cada especialidade em paralelo
+      await Promise.all(
+        ESPECIALIDADES.map(async (esp) => {
+          try {
+            const lista = await getPTSObjetivosPorEspecialidade(esp.label)
+            novosObjetivos[esp.key] = lista
+          } catch (error) {
+            console.error(`Erro ao carregar objetivos para ${esp.label}:`, error)
+            novosObjetivos[esp.key] = []
+          }
+        })
+      )
+      
+      setObjetivosPorArea(novosObjetivos)
+    }
+
+    carregarObjetivos()
+  }, [])
 
   function handleMomento(key: string, m: MomentoObjetivos) {
     setMomento((prev) => ({ ...prev, [key]: m }))
@@ -331,7 +345,7 @@ export default function ObjetivosEspecialidades({ value, onChange }: Props) {
                 key={idx}
                 numero={idx + 1}
                 item={item}
-                listaOpcoes={OBJETIVOS_POR_ESPECIALIDADE[esp.key]}
+                listaOpcoes={objetivosPorArea[esp.key] || []}
                 onChange={(campo, val) => handleItem(esp.key, mom, idx, campo, val)}
               />
             )
