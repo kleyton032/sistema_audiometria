@@ -387,16 +387,26 @@ export default function PTSPrintView({ data }: Props) {
 
       {validTerapias.length > 0 && (
         <Section title="19. Prescrição de Terapias Indicadas">
-          <ul style={{ margin: 0, paddingLeft: 20 }}>
-            {validTerapias.map((t, i) => (
-              <li key={i}>
-                <strong>{t.terapia}</strong>
-                {t.tipo_atendimento && ` - ${MAP_TIPO[t.tipo_atendimento] || t.tipo_atendimento}`}
-                {t.periodicidade && ` - ${MAP_PERIODICIDADE[t.periodicidade] || t.periodicidade}`}
-                {t.qtde_sessoes ? ` - ${t.qtde_sessoes} sessão(ões)` : ''}
-              </li>
-            ))}
-          </ul>
+          {validTerapias.map((t, i) => (
+            <div key={i} style={{ 
+              marginBottom: 12, 
+              padding: '8px', 
+              border: '1px solid #eee', 
+              borderRadius: '4px',
+              breakInside: 'avoid'
+            }}>
+              <div><strong>Item:</strong> {t.terapia}</div>
+              {t.tipo_atendimento && (
+                <div><strong>Tipo de atendimento:</strong> {MAP_TIPO[t.tipo_atendimento] || t.tipo_atendimento}</div>
+              )}
+              {t.periodicidade && (
+                <div><strong>Periodicidade:</strong> {MAP_PERIODICIDADE[t.periodicidade] || t.periodicidade}</div>
+              )}
+              {t.qtde_sessoes && (
+                <div><strong>Qtd. Sessões:</strong> {t.qtde_sessoes} sessão(ões)</div>
+              )}
+            </div>
+          ))}
         </Section>
       )}
 
