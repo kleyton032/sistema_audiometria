@@ -509,7 +509,11 @@ def report_dashboard_pts(
                 p.DS_VIGENCIA,
                 TO_CHAR(p.DT_CRIACAO, 'DD/MM/YYYY') as DT_CRIACAO,
                 p.FL_FINALIZADO,
-                (SELECT LISTAGG(t.DS_TERAPIA || ' (' || t.NR_QTDE_SESSOES || ')', ', ') WITHIN GROUP (ORDER BY t.NR_ORDEM) 
+                (SELECT LISTAGG(
+                    t.DS_TERAPIA || ' - ' || 
+                    DECODE(t.DS_TIPO_ATENDIMENTO, '01', 'Individual', '02', 'Dupla', '03', 'Grupo 3', '04', 'Grupo 4', '05', 'Grupo 5', t.DS_TIPO_ATENDIMENTO) || ' - ' ||
+                    DECODE(t.DS_PERIODICIDADE, '1', 'Semanal', '2', 'Quinzenal', '3', 'Mensal', '4', 'Bimestral', '5', 'Trimestral', t.DS_PERIODICIDADE) || 
+                    ' (' || t.NR_QTDE_SESSOES || ')', ', ') WITHIN GROUP (ORDER BY t.NR_ORDEM) 
                  FROM FAV_TB_PTS_TERAPIA t WHERE t.ID_PTS = p.ID_PTS) as TERAPIAS,
                 (SELECT LISTAGG(o.DS_OBJETIVO, '; ') WITHIN GROUP (ORDER BY o.DS_ESPECIALIDADE, o.NR_ITEM) 
                  FROM FAV_TB_PTS_OBJETIVO o WHERE o.ID_PTS = p.ID_PTS AND o.DS_MOMENTO = 'atual') as OBJETIVOS

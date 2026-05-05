@@ -26,6 +26,29 @@ interface Props {
   data: PTSPrintData;
 }
 
+const MAP_TIPO: Record<string, string> = {
+  '01': 'Individual',
+  '02': 'Dupla',
+  '03': 'Grupo 3',
+  '04': 'Grupo 4',
+  '05': 'Grupo 5',
+  '06': 'Grupo 6',
+  '07': 'Grupo 7',
+  '08': 'Grupo 8',
+  '09': 'Grupo 9',
+  '10': 'Grupo 10',
+}
+
+const MAP_PERIODICIDADE: Record<string, string> = {
+  '1': 'Semanal',
+  '2': 'Quinzenal',
+  '3': 'Mensal',
+  '4': 'Bimestral',
+  '5': 'Trimestral',
+  '6': 'Semestral',
+  '7': 'Anual',
+}
+
 export default function PTSPrintView({ data }: Props) {
   const {
     paciente,
@@ -368,8 +391,8 @@ export default function PTSPrintView({ data }: Props) {
             {validTerapias.map((t, i) => (
               <li key={i}>
                 <strong>{t.terapia}</strong>
-                {t.tipo_atendimento && ` - ${t.tipo_atendimento}`}
-                {t.periodicidade && ` - ${t.periodicidade}`}
+                {t.tipo_atendimento && ` - ${MAP_TIPO[t.tipo_atendimento] || t.tipo_atendimento}`}
+                {t.periodicidade && ` - ${MAP_PERIODICIDADE[t.periodicidade] || t.periodicidade}`}
                 {t.qtde_sessoes ? ` - ${t.qtde_sessoes} sessão(ões)` : ''}
               </li>
             ))}

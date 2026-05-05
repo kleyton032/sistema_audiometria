@@ -1344,7 +1344,7 @@ export default function PTSPage() {
                     placeholder="Selecione..."
                     aria-label="Tipo de atendimento da terapia"
                     allowClear
-                    options={TIPOS_ATENDIMENTO}
+                    options={TIPOS_ATENDIMENTO.map(o => ({ label: o.label, value: o.label }))}
                     value={row.tipo_atendimento}
                     onChange={(v) => setTerapias((prev) => prev.map((r) => r.key === row.key ? { ...r, tipo_atendimento: v } : r))}
                   />
@@ -1360,7 +1360,7 @@ export default function PTSPage() {
                     placeholder="Selecione..."
                     aria-label="Periodicidade da terapia"
                     allowClear
-                    options={PERIODICIDADES}
+                    options={PERIODICIDADES.map(o => ({ label: o.label, value: o.label }))}
                     value={row.periodicidade}
                     onChange={(v) => setTerapias((prev) => prev.map((r) => r.key === row.key ? { ...r, periodicidade: v } : r))}
                   />
