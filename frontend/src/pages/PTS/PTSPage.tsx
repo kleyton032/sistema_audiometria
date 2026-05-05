@@ -186,6 +186,16 @@ export default function PTSPage() {
   const [idPtsSalvo, setIdPtsSalvo] = useState<number | null>(paciente.id_pts ?? null)
   const [ptsFinalizado, setPtsFinalizado] = useState((paciente.fl_finalizado ?? 0) === 1)
   const [idUsuarioAutor, setIdUsuarioAutor] = useState<number | null>(null)
+
+  // Observador para o campo de prazo da seção 16
+  const prazoEstimado = Form.useWatch('intervencao_prazo', form)
+
+  // Helper para extrair número de meses do texto (ex: "06 (Seis) Meses" -> 6)
+  const obterMesesPrazo = (texto: string | undefined): number => {
+    if (!texto) return 0
+    const match = texto.match(/(\d+)/)
+    return match ? parseInt(match[1], 10) : 0
+  }
   const [modalResultado, setModalResultado] = useState<{ visivel: boolean; status: 'success' | 'error'; titulo: string; mensagem: string }>(
     { visivel: false, status: 'success', titulo: '', mensagem: '' }
   )
@@ -604,7 +614,15 @@ export default function PTSPage() {
         banner
       />
 
-      <Form form={form} layout="vertical" onFinish={handleSave}>
+      <Form 
+        form={form} 
+        layout="vertical" 
+        onFinish={handleSave}
+        initialValues={{
+          intervencao_prazo: '06 (Seis) Meses',
+          pts_vigencia: dayjs().format('YYYY-MM')
+        }}
+      >
 
         {/* ── SEÇÃO 1: Diagnóstico Médico Principal ── */}
         <Card
@@ -1330,7 +1348,10 @@ export default function PTSPage() {
                     optionFilterProp="label"
                     options={opcoesTerapiasIndicadas.map((e) => ({ label: e.ds, value: e.ds }))}
                     value={row.terapia}
-                    onChange={(v) => setTerapias((prev) => prev.map((r) => r.key === row.key ? { ...r, terapia: v } : r))}
+                    onChange={(v) => {
+                      const meses = obterMesesPrazo(prazoEstimado)
+                      setTerapias((prev) => prev.map((r) => r.key === row.key ? { ...r, terapia: v } : r))
+                    }}
                   />
                 ),
               },
@@ -1346,7 +1367,28 @@ export default function PTSPage() {
                     allowClear
                     options={TIPOS_ATENDIMENTO.map(o => ({ label: o.label, value: o.label }))}
                     value={row.tipo_atendimento}
-                    onChange={(v) => setTerapias((prev) => prev.map((r) => r.key === row.key ? { ...r, tipo_atendimento: v } : r))}
+                    onChange={(v) => {
+                      setTerapias((prev) => prev.map((r) => {
+                        if (r.key === row.key) {
+                          const meses = obterMesesPrazo(prazoEstimado)
+                          let novaQtde = r.qtde_sessoes
+                          
+                          // Sugere quantidade apenas se tiver prazo definido
+                          if (meses > 0 && v) {
+                            if (r.periodicidade === 'Semanal') novaQtde = meses * 4
+                            else if (r.periodicidade === 'Quinzenal') novaQtde = meses * 2
+                            else if (r.periodicidade === 'Mensal') novaQtde = meses * 1
+                            else if (r.periodicidade === 'Bimestral') novaQtde = Math.ceil(meses / 2)
+                            else if (r.periodicidade === 'Trimestral') novaQtde = Math.ceil(meses / 3)
+                            else if (r.periodicidade === 'Semestral') novaQtde = Math.ceil(meses / 6)
+                            else if (r.periodicidade === 'Anual') novaQtde = 1
+                          }
+
+                          return { ...r, tipo_atendimento: v, qtde_sessoes: novaQtde }
+                        }
+                        return r
+                      }))
+                    }}
                   />
                 ),
               },
@@ -1362,7 +1404,27 @@ export default function PTSPage() {
                     allowClear
                     options={PERIODICIDADES.map(o => ({ label: o.label, value: o.label }))}
                     value={row.periodicidade}
-                    onChange={(v) => setTerapias((prev) => prev.map((r) => r.key === row.key ? { ...r, periodicidade: v } : r))}
+                    onChange={(v) => {
+                      setTerapias((prev) => prev.map((r) => {
+                        if (r.key === row.key) {
+                          const meses = obterMesesPrazo(prazoEstimado)
+                          let novaQtde = r.qtde_sessoes
+                          
+                          if (meses > 0) {
+                            if (v === 'Semanal') novaQtde = meses * 4
+                            else if (v === 'Quinzenal') novaQtde = meses * 2
+                            else if (v === 'Mensal') novaQtde = meses * 1
+                            else if (v === 'Bimestral') novaQtde = Math.ceil(meses / 2)
+                            else if (v === 'Trimestral') novaQtde = Math.ceil(meses / 3)
+                            else if (v === 'Semestral') novaQtde = Math.ceil(meses / 6)
+                            else if (v === 'Anual') novaQtde = 1
+                          }
+
+                          return { ...r, periodicidade: v, qtde_sessoes: novaQtde }
+                        }
+                        return r
+                      }))
+                    }}
                   />
                 ),
               },
