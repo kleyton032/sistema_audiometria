@@ -23,6 +23,7 @@ import dayjs, { type Dayjs } from 'dayjs'
 import 'dayjs/locale/pt-br'
 import { useNavigate } from 'react-router-dom'
 import { getAgendaDoPacientes, type AgendaItem } from '@/api/agendaService'
+import { getPTSStatusBatch } from '@/api/ptsService'
 
 dayjs.locale('pt-br')
 
@@ -54,13 +55,17 @@ export default function PtsPacientesPage() {
   const [data, setData]         = useState<AgendaItem[]>([])
   const [total, setTotal]       = useState(0)
   const [dataRef, setDataRef]   = useState<Dayjs>(dayjs())
+  const [ptsStatus, setPtsStatus] = useState<Record<string, { id_pts: number; fl_finalizado: number } | null>>({})
 
   function abrirPTS(record: AgendaItem) {
+    const status = record.cd_atendimento != null ? ptsStatus[String(record.cd_atendimento)] : null
     navigate('/pts', {
       state: {
         nm_paciente:    record.nm_paciente,
         cd_paciente:    record.cd_paciente,
         cd_atendimento: record.cd_atendimento,
+        id_pts:         status?.id_pts ?? null,
+        fl_finalizado:  status?.fl_finalizado ?? 0,
       },
     })
   }
@@ -146,23 +151,32 @@ export default function PtsPacientesPage() {
       key: 'preencher_pts',
       width: 150,
       fixed: 'right',
-      render: (_, record) => (
-        <Tooltip title={!record.cd_atendimento ? "Aguardando recepção (sem código de atendimento)" : undefined}>
-          <Button
-            type="primary"
-            size="small"
-            icon={<FileProtectOutlined />}
-            disabled={!record.cd_atendimento}
-            onClick={() => abrirPTS(record)}
-            style={{ 
-              background: !record.cd_atendimento ? undefined : '#667eea', 
-              borderColor: !record.cd_atendimento ? undefined : '#667eea' 
-            }}
-          >
-            Preencher PTS
-          </Button>
-        </Tooltip>
-      ),
+      render: (_, record) => {
+        const status = record.cd_atendimento != null ? ptsStatus[String(record.cd_atendimento)] : null
+        const finalizado = status?.fl_finalizado === 1
+        const temPTS     = status != null
+        return (
+          <Space direction="vertical" size={4} align="center">
+            <Tooltip title={!record.cd_atendimento ? "Aguardando recepção (sem código de atendimento)" : undefined}>
+              <Button
+                type="primary"
+                size="small"
+                icon={<FileProtectOutlined />}
+                disabled={!record.cd_atendimento}
+                onClick={() => abrirPTS(record)}
+                style={{
+                  background: !record.cd_atendimento ? undefined : finalizado ? '#52c41a' : '#667eea',
+                  borderColor: !record.cd_atendimento ? undefined : finalizado ? '#52c41a' : '#667eea',
+                }}
+              >
+                {finalizado ? 'Ver PTS' : temPTS ? 'Editar PTS' : 'Preencher PTS'}
+              </Button>
+            </Tooltip>
+            {finalizado && <Tag color="success" style={{ fontSize: 10, margin: 0 }}>Finalizado</Tag>}
+            {temPTS && !finalizado && <Tag color="processing" style={{ fontSize: 10, margin: 0 }}>Em andamento</Tag>}
+          </Space>
+        )
+      },
     },
   ]
 
@@ -173,6 +187,13 @@ export default function PtsPacientesPage() {
       const result = await getAgendaDoPacientes(d.format('YYYY-MM-DD'))
       setData(result.items)
       setTotal(result.total)
+      // Busca status PTS para todos os pacientes da agenda
+      const ids = result.items
+        .map((i) => i.cd_atendimento)
+        .filter((id): id is number => id != null)
+      if (ids.length > 0) {
+        getPTSStatusBatch(ids).then(setPtsStatus).catch(() => null)
+      }
     } catch (err: unknown) {
       const msg =
         (err as any)?.response?.data?.detail ?? 'Erro ao buscar agenda do MV.'
@@ -237,7 +258,7 @@ export default function PtsPacientesPage() {
 
         <Table<AgendaItem>
           rowKey={(r) =>
-            `${r.cd_item_agendamento ?? ''}-${r.cd_paciente ?? ''}-${r.hr_agenda ?? ''}`
+            `${r.cd_atendimento ?? '0'}-${r.cd_item_agendamento ?? '0'}-${r.cd_paciente ?? '0'}`
           }
           columns={columns}
           dataSource={data}

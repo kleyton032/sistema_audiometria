@@ -18,8 +18,11 @@ import {
   InputNumber,
   DatePicker,
   Popconfirm,
+  Modal,
+  Result,
+  Spin,
 } from 'antd'
-import { SaveOutlined, FileTextOutlined, PlusOutlined, DeleteOutlined, CheckCircleOutlined, CloseCircleOutlined, ArrowLeftOutlined } from '@ant-design/icons'
+import { SaveOutlined, FileTextOutlined, PlusOutlined, DeleteOutlined, CheckCircleOutlined, CloseCircleOutlined, ArrowLeftOutlined, PrinterOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import 'dayjs/locale/pt-br'
 import ObjetivosEspecialidades, {
@@ -27,6 +30,7 @@ import ObjetivosEspecialidades, {
   type ObjetivosState,
 } from './ObjetivosEspecialidades'
 import type { ColumnsType } from 'antd/es/table'
+import PTSPrintView from './PTSPrintView'
 import {
   DIAGNOSTICOS_PRINCIPAIS,
   DIAGNOSTICOS_AREA,
@@ -45,7 +49,7 @@ import {
   type CerGrupo,
   type Area,
 } from './data/listas'
-import { getMe, getPTSDiagnosticosPrincipais, getPTSDiagnosticosArea, getPTSDiagnosticosTerapeuticos, getPTSEspecialidades, getPTSItensMultidisciplinar, getPTSTerapiasIndicadas, getPTSInstrumentosAvaliacao, finalizarPTS, cancelarPTS, savePTS } from '@/api'
+import { getMe, getPTSDiagnosticosPrincipais, getPTSDiagnosticosArea, getPTSDiagnosticosTerapeuticos, getPTSEspecialidades, getPTSItensMultidisciplinar, getPTSTerapiasIndicadas, getPTSInstrumentosAvaliacao, finalizarPTS, cancelarPTS, savePTS, updatePTS, getPTSById } from '@/api'
 import type { User } from '@/types'
 
 const { Title, Text } = Typography
@@ -145,6 +149,8 @@ interface PacienteState {
   nm_paciente:    string | null
   cd_paciente:    number | null
   cd_atendimento: number | null
+  id_pts:         number | null
+  fl_finalizado:  number | null
 }
 
 export default function PTSPage() {
@@ -176,7 +182,13 @@ export default function PTSPage() {
   const [salvandoPTS, setSalvandoPTS] = useState(false)
   const [finalizandoPTS, setFinalizandoPTS] = useState(false)
   const [cancelandoPTS, setCancelandoPTS] = useState(false)
-  const [idPtsSalvo, setIdPtsSalvo] = useState<number | null>(null)
+  const [printTrigger, setPrintTrigger] = useState(0)
+  const [idPtsSalvo, setIdPtsSalvo] = useState<number | null>(paciente.id_pts ?? null)
+  const [ptsFinalizado, setPtsFinalizado] = useState((paciente.fl_finalizado ?? 0) === 1)
+  const [idUsuarioAutor, setIdUsuarioAutor] = useState<number | null>(null)
+  const [modalResultado, setModalResultado] = useState<{ visivel: boolean; status: 'success' | 'error'; titulo: string; mensagem: string }>(
+    { visivel: false, status: 'success', titulo: '', mensagem: '' }
+  )
   const [opcoesInstrumentos, setOpcoesInstrumentos] = useState<{ cd: string; ds: string }[]>([])
   const [opcoesDiagArea, setOpcoesDiagArea] = useState<Record<Area, string[]>>({
     visual: [],
@@ -184,6 +196,96 @@ export default function PTSPage() {
     fisica: [],
     auditiva: [],
   })
+  const [carregandoDados, setCarregandoDados] = useState(false)
+  const [modalCancelamento, setModalCancelamento] = useState(false)
+  const [formCancel] = Form.useForm()
+
+  // ── carrega dados do PTS existente ao montar ──────────────────────────────
+  function popularFormulario(d: any) {
+    // Campos escalares do formulário antd
+    form.setFieldsValue({
+      queixa_principal:          d.queixa_principal,
+      def_associada_visual:      d.def_associada_visual,
+      def_associada_intelectual: d.def_associada_intelectual,
+      def_associada_fisica:      d.def_associada_fisica,
+      def_associada_auditiva:    d.def_associada_auditiva,
+      cond_nao_se_aplica:        d.cond_nao_se_aplica,
+      cond_nao_escuta:           d.cond_nao_escuta,
+      cond_nao_fala:             d.cond_nao_fala,
+      cond_nao_enxerga:          d.cond_nao_enxerga,
+      cond_agitacao:             d.cond_agitacao,
+      cond_agressividade:        d.cond_agressividade,
+      cond_nao_anda:             d.cond_nao_anda,
+      cond_nao_fica_sozinho:     d.cond_nao_fica_sozinho,
+      cond_sem_ctrl_cervical:    d.cond_sem_ctrl_cervical,
+      cond_sem_ctrl_tronco:      d.cond_sem_ctrl_tronco,
+      cond_outra:                d.cond_outra,
+      opme_nao_se_aplica:        d.opme_nao_se_aplica,
+      opme_cadeira:              d.opme_cadeira,
+      opme_bengala:              d.opme_bengala,
+      opme_muleta:               d.opme_muleta,
+      opme_andador:              d.opme_andador,
+      opme_protese:              d.opme_protese,
+      opme_com_alta:             d.opme_com_alta,
+      opme_com_baixa:            d.opme_com_baixa,
+      opme_orteses:              d.opme_orteses,
+      opme_outros:               d.opme_outros,
+      cer_terapias_texto:        d.cer_terapias_texto,
+      ext_nao_realiza:           d.ext_nao_realiza,
+      observacoes_gerais:        d.observacoes_gerais,
+      conduta_interdisciplinar:  d.conduta_interdisciplinar,
+      intervencao_prazo:         d.intervencao_prazo,
+      intervencao_descricao:     d.intervencao_descricao,
+      prog_nao_se_aplica:        d.prog_nao_se_aplica,
+      prog_glaucoma:             d.prog_glaucoma,
+      prog_catarata:             d.prog_catarata,
+      prog_alem_olhar:           d.prog_alem_olhar,
+      prog_zika:                 d.prog_zika,
+      prog_apoio_familiar:       d.prog_apoio_familiar,
+      prog_tea:                  d.prog_tea,
+      prog_intervencao_precoce:  d.prog_intervencao_precoce,
+      prog_rop:                  d.prog_rop,
+      prog_pronas_tea:           d.prog_pronas_tea,
+      prog_pronas_doencas_raras: d.prog_pronas_doencas_raras,
+      pts_vigencia:              d.pts_vigencia,
+      pts_nao_concluido:         d.pts_nao_concluido,
+    })
+    setIdUsuarioAutor(d.id_usuario ?? null)
+    // Listas gerenciadas por estado
+    const toRows = (arr: string[]): DiagPrincipalRow[] =>
+      arr.length > 0
+        ? arr.map((v, i) => ({ key: i + 1, diagnostico: v }))
+        : [{ key: 1, diagnostico: undefined }]
+    setDiagPrincipais(toRows(d.diagnosticos_principais ?? []))
+    setDiagTerapeuticos(toRows(d.diagnosticos_terapeuticos ?? []))
+    setExtTerapias(toRows(d.cer_terapias ?? []))
+    setConductaRows(toRows(d.conduta_avaliacao_medica ?? []))
+    setMultidisciplinarRows(toRows(d.conduta_multidisciplinar ?? []))
+    setInstrumentoRows(toRows(d.instrumentos ?? []))
+    setTerapias(
+      (d.terapias_indicadas ?? []).length > 0
+        ? d.terapias_indicadas
+        : [{ key: 1, terapia: undefined, tipo_atendimento: undefined, periodicidade: undefined, qtde_sessoes: undefined }]
+    )
+    setDiagnosticosArea(
+      (d.diagnosticos_area ?? {}) as Record<Area, string | undefined>
+    )
+    setGrauArea((d.grau_area ?? {}) as Record<Area, string | undefined>)
+    setObjetivos({ ...criarObjetivosIniciais(), ...(d.objetivos ?? {}) })
+    setIdPtsSalvo(d.id_pts)
+    setPtsFinalizado(d.fl_finalizado === 1)
+  }
+
+  useEffect(() => {
+    if (paciente.id_pts) {
+      setCarregandoDados(true)
+      getPTSById(paciente.id_pts)
+        .then(popularFormulario)
+        .catch((e) => console.error('Erro ao carregar PTS:', e))
+        .finally(() => setCarregandoDados(false))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     getMe().then(setUsuarioMe).catch(() => null)
@@ -263,6 +365,8 @@ export default function PTSPage() {
     setSalvandoPTS(true)
     const payload = {
       ...values,
+      cd_paciente: paciente.cd_paciente != null ? String(paciente.cd_paciente) : undefined,
+      nr_atendimento: paciente.cd_atendimento != null ? String(paciente.cd_atendimento) : undefined,
       diagnosticos_principais: diagPrincipais.map((r) => r.diagnostico).filter(Boolean),
       diagnosticos_terapeuticos: diagTerapeuticos.map((r) => r.diagnostico).filter(Boolean),
       cer_terapias: extTerapias.map((r) => r.diagnostico).filter(Boolean),
@@ -283,14 +387,19 @@ export default function PTSPage() {
     }
     // TODO: remover prestador e especialidade_conselho se backend pegar do token
     
-    savePTS(payload)
+    const promise = idPtsSalvo !== null
+      ? updatePTS(idPtsSalvo, payload)
+      : savePTS(payload)
+
+    promise
       .then((resp) => {
-        message.success(resp.mensagem)
         setIdPtsSalvo(resp.id_pts)
+        setModalResultado({ visivel: true, status: 'success', titulo: 'PTS Salvo', mensagem: resp.mensagem })
       })
       .catch((error) => {
         console.error('Erro ao salvar PTS:', error)
-        message.error('Erro ao salvar PTS. Verifique o console para mais detalhes.')
+        const msg = error?.response?.data?.detail ?? 'Erro ao salvar PTS. Tente novamente.'
+        setModalResultado({ visivel: true, status: 'error', titulo: 'Erro ao Salvar', mensagem: msg })
       })
       .finally(() => {
         setSalvandoPTS(false)
@@ -305,8 +414,13 @@ export default function PTSPage() {
     }
     setFinalizandoPTS(true)
     try {
-      await finalizarPTS(idPtsSalvo)
-      // TODO: feedback de sucesso (notification)
+      const resp = await finalizarPTS(idPtsSalvo)
+      setPtsFinalizado(true)
+      setModalResultado({ visivel: true, status: 'success', titulo: 'PTS Finalizado', mensagem: resp.mensagem })
+    } catch (error: any) {
+      console.error('Erro ao finalizar PTS:', error)
+      const msg = error?.response?.data?.detail ?? 'Erro ao finalizar PTS. Tente novamente.'
+      setModalResultado({ visivel: true, status: 'error', titulo: 'Erro ao Finalizar', mensagem: msg })
     } finally {
       setFinalizandoPTS(false)
     }
@@ -325,21 +439,104 @@ export default function PTSPage() {
     </div>
   )
 
-  const handleCancelar = async () => {
+  const handleCancelar = async (values: { ds_motivo: string; ds_detalhe?: string }) => {
     if (idPtsSalvo === null) return
     setCancelandoPTS(true)
     try {
-      await cancelarPTS(idPtsSalvo)
+      await cancelarPTS(idPtsSalvo, values)
       setIdPtsSalvo(null)
+      setPtsFinalizado(false)
+      setModalCancelamento(false)
       form.resetFields()
-      // TODO: feedback de sucesso (notification)
+      setModalResultado({
+        visivel: true,
+        status: 'success',
+        titulo: 'PTS Cancelado',
+        mensagem: 'O PTS foi cancelado e os itens foram removidos da fila de espera.'
+      })
+    } catch (error: any) {
+      console.error('Erro ao cancelar PTS:', error)
+      const msg = error?.response?.data?.detail ?? 'Erro ao cancelar PTS.'
+      setModalResultado({
+        visivel: true,
+        status: 'error',
+        titulo: 'Erro no Cancelamento',
+        mensagem: msg
+      })
     } finally {
       setCancelandoPTS(false)
     }
   }
 
+  const handleImprimir = () => {
+    setPrintTrigger(prev => prev + 1)
+    setTimeout(() => {
+      window.print()
+    }, 150)
+  }
+
   return (
+    <>
+    <div className="no-print">
+    <Spin spinning={carregandoDados} tip="Carregando dados do PTS...">
     <Space direction="vertical" style={{ width: '100%' }} size="large">
+      <Modal
+        open={modalResultado.visivel}
+        footer={
+          <Button type="primary" onClick={() => setModalResultado((p) => ({ ...p, visivel: false }))}>
+            OK
+          </Button>
+        }
+        onCancel={() => setModalResultado((p) => ({ ...p, visivel: false }))}
+        centered
+        width={480}
+      >
+        <Result
+          status={modalResultado.status}
+          title={modalResultado.titulo}
+          subTitle={modalResultado.mensagem}
+        />
+      </Modal>
+
+      {/* Modal de Justificativa de Cancelamento */}
+      <Modal
+        title="Justificativa de Cancelamento"
+        open={modalCancelamento}
+        onCancel={() => setModalCancelamento(false)}
+        onOk={() => formCancel.submit()}
+        confirmLoading={cancelandoPTS}
+        okText="Confirmar Cancelamento"
+        cancelText="Desistir"
+        okButtonProps={{ danger: true }}
+        centered
+      >
+        <Form
+          form={formCancel}
+          layout="vertical"
+          onFinish={handleCancelar}
+        >
+          <Form.Item
+            name="ds_motivo"
+            label="Motivo do Cancelamento"
+            rules={[{ required: true, message: 'Por favor, selecione um motivo.' }]}
+          >
+            <Select placeholder="Selecione o motivo...">
+              <Select.Option value="ERRO_PREENCHIMENTO">Erro de Preenchimento</Select.Option>
+              <Select.Option value="MUDANCA_CONDUTA">Mudança de Conduta Terapêutica</Select.Option>
+              <Select.Option value="SOLICITACAO_PACIENTE">Solicitação do Paciente/Família</Select.Option>
+              <Select.Option value="DUPLICIDADE">Registro em Duplicidade</Select.Option>
+              <Select.Option value="OUTROS">Outros</Select.Option>
+            </Select>
+          </Form.Item>
+          <Form.Item
+            name="ds_detalhe"
+            label="Detalhes / Observações"
+            rules={[{ required: true, message: 'Por favor, descreva o motivo do cancelamento.' }]}
+          >
+            <Input.TextArea rows={4} placeholder="Descreva detalhadamente o porquê do cancelamento..." />
+          </Form.Item>
+        </Form>
+      </Modal>
       {/* Cabeçalho */}
       <Card
         variant="borderless"
@@ -1280,30 +1477,38 @@ export default function PTSPage() {
           <Col>
             <Space>
               <Button onClick={() => form.resetFields()}>Limpar</Button>
-              <Popconfirm
-                title="Cancelar PTS"
-                description="Todos os itens inseridos na fila de espera serão removidos. Confirma?"
-                okText="Sim, cancelar"
-                cancelText="Não"
-                okButtonProps={{ danger: true }}
-                disabled={idPtsSalvo === null}
-                onConfirm={handleCancelar}
+              <Button
+                danger
+                icon={<CloseCircleOutlined />}
+                loading={cancelandoPTS}
+                disabled={idPtsSalvo === null || (idUsuarioAutor !== null && usuarioMe?.id_usuario !== idUsuarioAutor)}
+                onClick={() => {
+                  formCancel.resetFields()
+                  setModalCancelamento(true)
+                }}
+                title={
+                  idPtsSalvo === null 
+                    ? 'Salve o PTS antes de cancelar' 
+                    : (idUsuarioAutor !== null && usuarioMe?.id_usuario !== idUsuarioAutor)
+                      ? 'Apenas o autor deste PTS pode cancelá-lo'
+                      : 'Cancela o PTS e remove itens da fila de espera'
+                }
               >
-                <Button
-                  danger
-                  icon={<CloseCircleOutlined />}
-                  loading={cancelandoPTS}
-                  disabled={idPtsSalvo === null}
-                  title={idPtsSalvo === null ? 'Salve o PTS antes de cancelar' : 'Cancela o PTS e remove itens da fila de espera'}
-                >
-                  Cancelar PTS
-                </Button>
-              </Popconfirm>
+                Cancelar PTS
+              </Button>
+              <Button
+                icon={<PrinterOutlined />}
+                onClick={handleImprimir}
+              >
+                Imprimir
+              </Button>
               <Button
                 type="primary"
                 htmlType="submit"
                 icon={<SaveOutlined />}
                 loading={salvandoPTS}
+                disabled={ptsFinalizado}
+                title={ptsFinalizado ? 'PTS já finalizado — não é possível editar' : undefined}
               >
                 Salvar PTS
               </Button>
@@ -1313,7 +1518,8 @@ export default function PTSPage() {
                 icon={<CheckCircleOutlined />}
                 loading={finalizandoPTS}
                 onClick={handleFinalizar}
-                title="Salva o PTS e insere as terapias na fila de espera"
+                disabled={ptsFinalizado}
+                title={ptsFinalizado ? 'PTS já finalizado' : 'Salva o PTS e insere as terapias na fila de espera'}
               >
                 Finalizar PTS
               </Button>
@@ -1321,7 +1527,32 @@ export default function PTSPage() {
           </Col>
         </Row>
 
+
+      {/* Componente oculto na tela, visível na impressão */}
+      <div className="print-only" style={{ display: 'none' }}>
+        <PTSPrintView
+          key={printTrigger}
+          data={{
+            paciente,
+            formValues: form.getFieldsValue(true),
+            diagPrincipais,
+            diagnosticosArea,
+            grauArea,
+            diagTerapeuticos,
+            extTerapias,
+            conductaRows,
+            multidisciplinarRows,
+            instrumentoRows,
+            terapias,
+            objetivos,
+            usuarioMe,
+          }}
+        />
+      </div>
       </Form>
     </Space>
+    </Spin>
+    </div>
+    </>
   )
 }

@@ -12,11 +12,6 @@ class Settings(BaseSettings):
     ORACLE_PASSWORD: str
     ORACLE_DSN: str
 
-    ORACLE_TEST_USER: str = "system"
-    ORACLE_TEST_PASSWORD: str = "oracle"
-    ORACLE_TEST_DSN: str = "localhost:1521/FREEPDB1"
-
-
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480  # 8 horas — duração de um turno de trabalho

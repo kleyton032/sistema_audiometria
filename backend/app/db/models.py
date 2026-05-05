@@ -274,7 +274,11 @@ class PTS(Base):
     fl_prog_pronas_doencas_raras = Column("FL_PROG_PRONAS_DOENCAS_RARAS", Integer, default=0, nullable=False)
     
     fl_nao_concluido = Column("FL_NAO_CONCLUIDO", Integer, default=0, nullable=False)
-    
+    fl_finalizado = Column("FL_FINALIZADO", Integer, default=0, nullable=False)
+
+    ds_motivo_cancelamento = Column("DS_MOTIVO_CANCELAMENTO", String(200))
+    ds_detalhe_cancelamento = Column("DS_DETALHE_CANCELAMENTO", String(4000))
+
     dt_criacao = Column("DT_CRIACAO", Date, server_default=func.now(), nullable=False)
     dt_atualizacao = Column("DT_ATUALIZACAO", Date, onupdate=func.now())
     fl_ativo = Column("FL_ATIVO", Integer, default=1, nullable=False)

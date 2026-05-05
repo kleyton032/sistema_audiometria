@@ -55,6 +55,7 @@ export default function AppLayout() {
       label: 'PTS',
       children: [
         { key: '/pts/pacientes', icon: <TeamOutlined />, label: 'Pacientes' },
+        { key: '/pts/dashboard', icon: <DashboardOutlined />, label: 'Dashboard' },
       ],
     },
   ]

@@ -1,5 +1,6 @@
 # app/api/v1/agenda.py
 from datetime import date, datetime
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
@@ -9,6 +10,22 @@ from app.db.repositories.agenda import get_cd_prestador_by_mv_user, get_agenda_d
 from app.schemas.agenda import AgendaItem, AgendaListResponse
 
 router = APIRouter(prefix="/agenda", tags=["Agenda / Pacientes"])
+
+logger = logging.getLogger(__name__)
+
+
+@router.get("/debug-user", summary="Diagnóstico: retorna cd_prestador resolvido para o usuário logado")
+def debug_user(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    cd_prestador = get_cd_prestador_by_mv_user(db, current_user.cd_usuario_mv or "") if current_user.cd_usuario_mv else None
+    return {
+        "nm_login": current_user.nm_login,
+        "cd_usuario_mv": current_user.cd_usuario_mv,
+        "cd_prestador_resolvido": cd_prestador,
+        "id_usuario": current_user.id_usuario,
+    }
 
 
 @router.get("/pacientes", response_model=AgendaListResponse)
@@ -30,6 +47,8 @@ def listar_pacientes(
 
     cd_prestador = get_cd_prestador_by_mv_user(db, current_user.cd_usuario_mv)
 
+    logger.warning(f"[AGENDA] login={current_user.nm_login} | cd_usuario_mv={current_user.cd_usuario_mv} | cd_prestador={cd_prestador} | data={data or date.today()}")
+
     if cd_prestador is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -38,46 +57,6 @@ def listar_pacientes(
 
     data_ref = data or date.today()
 
-    if current_user.nm_login == 'testesoul':
-        # Retorna dados mockados para o usuário de teste
-        items = [
-            AgendaItem(
-                cd_agenda_central=1,
-                hr_agenda="08:00",
-                dt_agenda=data_ref,
-                cd_paciente=999999,
-                nm_paciente="PACIENTE TESTE SOUL (MOCK)",
-                cd_item_agendamento=101,
-                ds_item_agendamento="TERAPIA FONOAUDIOLOGICA",
-                sn_falta="N",
-                sn_atendido="N",
-                cd_atendimento=888888,
-                cd_convenio=1,
-                cd_prestador=999,
-                tp_situacao="A"
-            ),
-            AgendaItem(
-                cd_agenda_central=2,
-                hr_agenda="09:00",
-                dt_agenda=data_ref,
-                cd_paciente=777777,
-                nm_paciente="OUTRO PACIENTE TESTE (MOCK)",
-                cd_item_agendamento=101,
-                ds_item_agendamento="AVALIAÇÃO MULTIDISCIPLINAR",
-                sn_falta="N",
-                sn_atendido="N",
-                cd_atendimento=777777,
-                cd_convenio=1,
-                cd_prestador=999,
-                tp_situacao="A"
-            )
-        ]
-        return AgendaListResponse(
-            total=len(items),
-            items=items,
-            data_referencia=data_ref,
-        )
-
     rows = get_agenda_do_dia(db, cd_prestador, data_ref)
 
     def fmt_hora(v) -> str | None:
@@ -85,32 +64,46 @@ def listar_pacientes(
             return None
         if hasattr(v, "strftime"):
             return v.strftime("%H:%M")
-        return str(v)[:5]  # fallback para string "HH:MM:SS" → "HH:MM"
+        s = str(v)
+        # "HH:MM:SS" → "HH:MM"
+        return s[:5] if len(s) >= 5 else s
 
-    items = [
-        AgendaItem(
-            cd_agenda_central=row.get("CD_AGENDA_CENTRAL"),
-            hr_agenda=fmt_hora(row.get("HR_AGENDA")),
-            dt_agenda=row.get("DT_AGENDA"),
-            cd_paciente=row.get("CD_PACIENTE"),
-            nm_paciente=row.get("NM_PACIENTE"),
-            cd_item_agendamento=row.get("CD_ITEM_AGENDAMENTO"),
-            ds_item_agendamento=row.get("DS_ITEM_AGENDAMENTO"),
-            sn_falta=row.get("SN_FALTA"),
-            sn_atendido=row.get("SN_ATENDIDO"),
-            nr_fone=row.get("NR_FONE"),
-            cd_atendimento=row.get("CD_ATENDIMENTO"),
-            cd_convenio=row.get("CD_CONVENIO"),
-            cd_prestador=row.get("CD_PRESTADOR"),
-            cd_setor=row.get("CD_SETOR"),
-            tp_situacao=row.get("TP_SITUACAO"),
-            cd_unidade_atendimento=row.get("CD_UNIDADE_ATENDIMENTO"),
-            ds_observacao=row.get("DS_OBSERVACAO"),
-            ds_consultorio=row.get("DS_CONSULTORIO"),
-            sn_encaixe=row.get("SN_ENCAIXE"),
+    seen = set()
+    items = []
+    for row in rows:
+        cd_atend = row.get("CD_ATENDIMENTO")
+        cd_agenda = row.get("CD_AGENDA_CENTRAL")
+        
+        # Chave para deduplicar: priorizamos CD_ATENDIMENTO, depois CD_AGENDA_CENTRAL
+        dup_key = f"atend_{cd_atend}" if cd_atend else f"agenda_{cd_agenda}" if cd_agenda else f"pac_{row.get('CD_PACIENTE')}_{fmt_hora(row.get('HR_AGENDA'))}"
+        
+        if dup_key in seen:
+            continue
+        seen.add(dup_key)
+        
+        items.append(
+            AgendaItem(
+                cd_agenda_central=cd_agenda,
+                hr_agenda=fmt_hora(row.get("HR_AGENDA")),
+                dt_agenda=row.get("DT_AGENDA"),
+                cd_paciente=row.get("CD_PACIENTE"),
+                nm_paciente=row.get("NM_PACIENTE"),
+                cd_item_agendamento=row.get("CD_ITEM_AGENDAMENTO"),
+                ds_item_agendamento=row.get("DS_ITEM_AGENDAMENTO"),
+                sn_falta=row.get("SN_FALTA"),
+                sn_atendido=row.get("SN_ATENDIDO"),
+                nr_fone=row.get("NR_FONE"),
+                cd_atendimento=cd_atend,
+                cd_convenio=row.get("CD_CONVENIO"),
+                cd_prestador=row.get("CD_PRESTADOR"),
+                cd_setor=row.get("CD_SETOR"),
+                tp_situacao=row.get("TP_SITUACAO"),
+                cd_unidade_atendimento=row.get("CD_UNIDADE_ATENDIMENTO"),
+                ds_observacao=row.get("DS_OBSERVACAO"),
+                ds_consultorio=row.get("DS_CONSULTORIO"),
+                sn_encaixe=row.get("SN_ENCAIXE"),
+            )
         )
-        for row in rows
-    ]
 
     return AgendaListResponse(
         total=len(items),

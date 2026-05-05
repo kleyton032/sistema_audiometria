@@ -22,8 +22,10 @@ import {
   ExperimentOutlined,
   ReadOutlined,
   RobotOutlined,
+  LockOutlined,
 } from '@ant-design/icons'
-import type { ReactNode } from 'react'
+import React, { ReactNode, memo, useMemo, useCallback } from 'react'
+import { useAuth } from '@/contexts'
 
 const { Text } = Typography
 
@@ -111,14 +113,35 @@ function contarPreenchidos(items: ObjetivoItem[]): number {
   return items.filter((i) => i.objetivo).length
 }
 
+function canEditEspecialidade(espKey: string, espLabel: string, user: any): boolean {
+  if (!user) return false
+  if (user.ds_perfil === 'ADMIN') return true
+
+  const userTip = (user.nm_tip_presta || user.ds_especialidade || '').toUpperCase()
+  if (!userTip) return false
+
+  // Mapeamento flexível das especialidades do MV para as chaves do sistema
+  if ((espKey === 'fisioterapia' || espKey === 'fisio_aquatica') && userTip.includes('FISIOTERA')) return true
+  if (espKey === 'fonoaudiologia' && userTip.includes('FONOAUDIO')) return true
+  if (espKey === 'terapia_ocupacional' && userTip.includes('OCUPACIONAL')) return true
+  if (espKey === 'ed_fisica' && (userTip.includes('FISICA') || userTip.includes('FÍSICA'))) return true
+  if (espKey.startsWith('psicologia') && userTip.includes('PSICOLOG')) return true
+  if (espKey === 'psicopedagogia' && userTip.includes('PSICOPEDAGOG')) return true
+  if (espKey === 'prof_braille' && userTip.includes('BRAILLE')) return true
+
+  return false
+}
+
 // ── sub-componente: linha de objetivo ANTERIOR (somente status + motivo) ─────
 function LinhaObjetivoAnterior({
   numero,
   item,
+  disabled,
   onChange,
 }: {
   numero: number
   item: ObjetivoItem
+  disabled: boolean
   onChange: (campo: keyof ObjetivoItem, valor: string | undefined) => void
 }) {
   return (
@@ -135,13 +158,12 @@ function LinhaObjetivoAnterior({
         </div>
       </Col>
 
-      {/* objetivo (readonly — vem do PTS anterior) */}
+      {/* objetivo — editável na primeira vez, será carregado do PTS anterior nas renovações */}
       <Col flex="1" style={{ minWidth: 180 }}>
-        <Input
-          value={item.objetivo ?? ''}
-          disabled
-          placeholder="Objetivo do PTS anterior (carregado automaticamente)"
-          style={{ background: '#fafafa', color: '#595959' }}
+        <InputObjetivoAnterior 
+          value={item.objetivo} 
+          disabled={disabled}
+          onChange={(val) => onChange('objetivo', val)} 
         />
       </Col>
 
@@ -152,6 +174,7 @@ function LinhaObjetivoAnterior({
           placeholder="Status da evolução..."
           aria-label={`Status da evolução do objetivo ${numero}`}
           allowClear
+          disabled={disabled}
           options={STATUS_EVOLUCAO}
           value={item.status}
           onChange={(v) => {
@@ -163,33 +186,92 @@ function LinhaObjetivoAnterior({
       </Col>
 
       {/* motivo — só exibido quando status exige */}
-      {exigeMotivo(item.status) && (
-        <Col flex="220px">
-          <Select
-            style={{ width: '100%' }}
-            placeholder="Motivo..."
-            aria-label={`Motivo do status do objetivo ${numero}`}
-            allowClear
-            options={MOTIVOS_NAO_ALCANCADO}
-            value={item.motivo}
-            onChange={(v) => onChange('motivo', v)}
-          />
-        </Col>
-      )}
+      {exigeMotivo(item.status) && (() => {
+        // valor selecionado no select: se começa com 'OUTROS:', seleciona 'OUTROS'
+        const selectVal = item.motivo?.startsWith('OUTROS:') ? 'OUTROS' : item.motivo
+        const outrosTexto = item.motivo?.startsWith('OUTROS:') ? item.motivo.slice(8) : ''
+        return (
+          <>
+            <Col flex="220px">
+              <Select
+                style={{ width: '100%' }}
+                placeholder="Motivo..."
+                aria-label={`Motivo do status do objetivo ${numero}`}
+                allowClear
+                disabled={disabled}
+                options={MOTIVOS_NAO_ALCANCADO}
+                value={selectVal}
+                onChange={(v) => {
+                  if (!v) { onChange('motivo', undefined); return }
+                  onChange('motivo', v === 'OUTROS' ? 'OUTROS: ' : v)
+                }}
+              />
+            </Col>
+            {selectVal === 'OUTROS' && (
+              <Col flex="1" style={{ minWidth: 180 }}>
+                <InputObjetivoAnterior
+                  placeholder="Descreva o motivo..."
+                  value={outrosTexto}
+                  disabled={disabled}
+                  onChange={(val) => onChange('motivo', val ? `OUTROS: ${val}` : undefined)}
+                />
+              </Col>
+            )}
+          </>
+        )
+      })()}
     </Row>
   )
 }
+
+// Componente de Input com estado local para evitar lag ao digitar
+const InputObjetivoAnterior = memo(({ 
+  value, 
+  onChange, 
+  placeholder = "Objetivo do período anterior...",
+  disabled = false
+}: { 
+  value: string | undefined, 
+  onChange: (v: string | undefined) => void,
+  placeholder?: string,
+  disabled?: boolean
+}) => {
+  const [localVal, setLocalVal] = useState(value ?? '')
+
+  useEffect(() => {
+    setLocalVal(value ?? '')
+  }, [value])
+
+  return (
+    <Input
+      value={localVal}
+      placeholder={placeholder}
+      disabled={disabled}
+      onChange={(e) => setLocalVal(e.target.value)}
+      onBlur={() => {
+        if (localVal !== (value ?? '')) {
+          onChange(localVal || undefined)
+        }
+      }}
+    />
+  )
+})
+
+const MemoizedLinhaObjetivoAnterior = memo(LinhaObjetivoAnterior)
+const MemoizedLinhaObjetivoAtual = memo(LinhaObjetivoAtual)
 
 // ── sub-componente: linha de objetivo ATUAL (select + descrição) ─────────────
 function LinhaObjetivoAtual({
   numero,
   item,
   listaOpcoes,
+  disabled,
   onChange,
 }: {
   numero: number
   item: ObjetivoItem
   listaOpcoes: string[]
+  disabled: boolean
   onChange: (campo: keyof ObjetivoItem, valor: string | undefined) => void
 }) {
   return (
@@ -214,6 +296,7 @@ function LinhaObjetivoAtual({
           aria-label={`Selecione o objetivo atual número ${numero}`}
           allowClear
           showSearch
+          disabled={disabled}
           optionFilterProp="label"
           options={listaOpcoes.map((v) => ({ label: v, value: v }))}
           value={item.objetivo}
@@ -221,16 +304,7 @@ function LinhaObjetivoAtual({
         />
       </Col>
 
-      {/* texto livre */}
-      <Col span={24} style={{ paddingLeft: 44 }}>
-        <Input.TextArea
-          rows={2}
-          placeholder="Descreva o objetivo atual..."
-          value={item.descricao}
-          onChange={(e) => onChange('descricao', e.target.value)}
-          style={{ fontSize: 13 }}
-        />
-      </Col>
+
     </Row>
   )
 }
@@ -242,6 +316,7 @@ interface Props {
 }
 
 export default function ObjetivosEspecialidades({ value, onChange }: Props) {
+  const { usuario } = useAuth()
   const [objetivosPorArea, setObjetivosPorArea] = useState<Record<string, string[]>>({})
   const [momento, setMomento] = useState<Record<string, MomentoObjetivos>>(
     () => Object.fromEntries(ESPECIALIDADES.map((e) => [e.key, 'atual' as MomentoObjetivos]))
@@ -270,95 +345,111 @@ export default function ObjetivosEspecialidades({ value, onChange }: Props) {
     carregarObjetivos()
   }, [])
 
-  function handleMomento(key: string, m: MomentoObjetivos) {
+  const handleMomento = useCallback((key: string, m: MomentoObjetivos) => {
     setMomento((prev) => ({ ...prev, [key]: m }))
-  }
+  }, [])
 
-  function handleItem(
+  const handleItem = useCallback((
     espKey: string,
     mom: MomentoObjetivos,
     idx: number,
     campo: keyof ObjetivoItem,
     val: string | undefined
-  ) {
+  ) => {
     const espAtual = value[espKey]
     const lista = [...espAtual[mom]] as [ObjetivoItem, ObjetivoItem, ObjetivoItem]
     lista[idx] = { ...lista[idx], [campo]: val }
     onChange({ ...value, [espKey]: { ...espAtual, [mom]: lista } })
-  }
+  }, [value, onChange])
 
-  const items = ESPECIALIDADES.map((esp) => {
-    const mom = momento[esp.key]
-    const lista = value[esp.key][mom]
-    const qtdAnterior = contarPreenchidos(value[esp.key].anterior)
-    const qtdAtual    = contarPreenchidos(value[esp.key].atual)
+  const collapseItems = useMemo(() => {
+    return ESPECIALIDADES.map((esp) => {
+      const mom = momento[esp.key]
+      const lista = value[esp.key][mom]
+      const qtdAnterior = contarPreenchidos(value[esp.key].anterior)
+      const qtdAtual    = contarPreenchidos(value[esp.key].atual)
 
-    return {
-      key: esp.key,
-      label: (
-        <Space>
-          <span style={{ color: esp.color }}>{esp.icon}</span>
-          <Text strong>{esp.label}</Text>
-          {qtdAnterior > 0 && (
-            <Tag color="default" style={{ fontSize: 11 }}>
-              {qtdAnterior} anterior{qtdAnterior > 1 ? 'es' : ''}
-            </Tag>
-          )}
-          {qtdAtual > 0 && (
-            <Tag color="purple" style={{ fontSize: 11 }}>
-              {qtdAtual} atual{qtdAtual > 1 ? 'is' : ''}
-            </Tag>
-          )}
-        </Space>
-      ),
-      children: (
-        <Space direction="vertical" style={{ width: '100%' }} size={12}>
-          {/* toggle anterior / atual */}
-          <Segmented
-            options={[
-              { label: 'Objetivos Atuais', value: 'atual' },
-              { label: 'Objetivos Anteriores (evolução)', value: 'anterior' },
-            ]}
-            aria-label="Alternar entre objetivos atuais e anteriores"
-            value={mom}
-            onChange={(v) => handleMomento(esp.key, v as MomentoObjetivos)}
-            style={{ width: '100%' }}
-          />
+      const canEdit = canEditEspecialidade(esp.key, esp.label, usuario)
 
-          {mom === 'anterior' && (
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              Objetivos carregados automaticamente do último PTS (vigência anterior). Informe o status e, se necessário, o motivo.
-            </Text>
-          )}
+      return {
+        key: esp.key,
+        label: (
+          <Space>
+            <span style={{ color: esp.color }}>{esp.icon}</span>
+            <Text strong>{esp.label}</Text>
+            {!canEdit && <LockOutlined style={{ color: '#bfbfbf' }} title="Visualização apenas" />}
+            {qtdAnterior > 0 && (
+              <Tag color="default" style={{ fontSize: 11 }}>
+                {qtdAnterior} anterior{qtdAnterior > 1 ? 'es' : ''}
+              </Tag>
+            )}
+            {qtdAtual > 0 && (
+              <Tag color="purple" style={{ fontSize: 11 }}>
+                {qtdAtual} {qtdAtual > 1 ? 'atuais' : 'atual'}
+              </Tag>
+            )}
+          </Space>
+        ),
+        children: (
+          <Space direction="vertical" style={{ width: '100%' }} size={12}>
+            {/* toggle anterior / atual */}
+            <Segmented
+              options={[
+                { label: 'Objetivos Atuais', value: 'atual' },
+                { label: 'Objetivos Anteriores (evolução)', value: 'anterior' },
+              ]}
+              aria-label="Alternar entre objetivos atuais e anteriores"
+              value={mom}
+              onChange={(v) => handleMomento(esp.key, v as MomentoObjetivos)}
+              style={{ width: '100%' }}
+            />
 
-          {/* 3 linhas de objetivo */}
-          {lista.map((item, idx) =>
-            mom === 'anterior' ? (
-              <LinhaObjetivoAnterior
-                key={idx}
-                numero={idx + 1}
-                item={item}
-                onChange={(campo, val) => handleItem(esp.key, mom, idx, campo, val)}
-              />
-            ) : (
-              <LinhaObjetivoAtual
-                key={idx}
-                numero={idx + 1}
-                item={item}
-                listaOpcoes={objetivosPorArea[esp.key] || []}
-                onChange={(campo, val) => handleItem(esp.key, mom, idx, campo, val)}
-              />
-            )
-          )}
-        </Space>
-      ),
-    }
-  })
+            {mom === 'anterior' && (
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Objetivos carregados automaticamente do último PTS (vigência anterior). Informe o status e, se necessário, o motivo.
+              </Text>
+            )}
+
+            {!canEdit && (
+              <div style={{ background: '#fffbe6', border: '1px solid #ffe58f', padding: '8px 12px', borderRadius: 4, marginBottom: 8 }}>
+                <Text type="warning" style={{ fontSize: 12 }}>
+                  <LockOutlined style={{ marginRight: 6 }} />
+                  Você possui acesso apenas para visualização aos objetivos desta especialidade.
+                </Text>
+              </div>
+            )}
+
+            {/* 3 linhas de objetivo */}
+            {lista.map((item, idx) =>
+              mom === 'anterior' ? (
+                <MemoizedLinhaObjetivoAnterior
+                  key={idx}
+                  numero={idx + 1}
+                  item={item}
+                  disabled={!canEdit}
+                  onChange={(campo, val) => handleItem(esp.key, mom, idx, campo, val)}
+                />
+              ) : (
+                <MemoizedLinhaObjetivoAtual
+                  key={idx}
+                  numero={idx + 1}
+                  item={item}
+                  disabled={!canEdit}
+                  listaOpcoes={objetivosPorArea[esp.key] || []}
+                  onChange={(campo, val) => handleItem(esp.key, mom, idx, campo, val)}
+                />
+              )
+            )}
+          </Space>
+        ),
+      }
+    })
+  }, [value, momento, objetivosPorArea, handleItem, handleMomento])
 
   return (
     <Collapse
       accordion={false}
-      items={items}
+      items={collapseItems}
       style={{ background: '#fff' }}
       expandIconPosition="end"
     />

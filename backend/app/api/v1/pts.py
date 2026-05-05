@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from app.dependencies import get_db, get_current_user
 from app.db.models import User
 from app.schemas.pts import PTSCreate
-from app.db.repositories.pts import create_pts
+from app.db.repositories.pts import create_pts, update_pts, get_pts_by_id, get_pts_status_batch, calcular_vigencia
 from app.db.session import SessionTest
 
 router = APIRouter(prefix="/pts", tags=["PTS"])
@@ -154,6 +154,50 @@ class PTSFinalizarResponse(BaseModel):
     mensagem: str
 
 
+class PTSCancel(BaseModel):
+    ds_motivo: str
+    ds_detalhe: str | None = None
+
+
+class PTSDashboardStats(BaseModel):
+    total_pts: int
+    finalizados: int
+    em_rascunho: int
+    cancelados: int
+
+
+class PTSReportItem(BaseModel):
+    id_pts: int
+    cd_paciente: str
+    nm_paciente: str
+    nr_atendimento: str
+    nm_usuario: str
+    ds_vigencia: str
+    dt_criacao: str
+    fl_finalizado: int
+    terapias: str | None = None
+    objetivos: str | None = None
+
+
+@router.get(
+    "/status-batch",
+    summary="Retorna status do PTS (vigência atual) para uma lista de atendimentos",
+)
+def status_batch(
+    cd_pacientes: str,  # nr_atendimentos separados por vírgula
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    ids = [p.strip() for p in cd_pacientes.split(",") if p.strip()]
+    vigencia = calcular_vigencia()
+    session = get_db_session(user, db)
+    try:
+        return get_pts_status_batch(session, ids, vigencia)
+    finally:
+        if user.nm_login == 'testesoul':
+            session.close()
+
+
 @router.post(
     "",
     summary="Salvar um novo PTS",
@@ -178,6 +222,32 @@ def salvar_pts(
             session.close()
 
 
+@router.put(
+    "/{id_pts}",
+    summary="Atualizar um PTS existente (mesmo registro)",
+    response_model=dict,
+)
+def atualizar_pts(
+    id_pts: int,
+    pts_data: PTSCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    session = get_db_session(user, db)
+    try:
+        db_pts = update_pts(db=session, id_pts=id_pts, pts_data=pts_data)
+        return {"status": "success", "mensagem": "PTS atualizado com sucesso.", "id_pts": db_pts.id_pts}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        print(f"Erro ao atualizar PTS: {e}")
+        session.rollback()
+        raise HTTPException(status_code=500, detail=f"Erro interno ao atualizar PTS: {str(e)}")
+    finally:
+        if user.nm_login == 'testesoul':
+            session.close()
+
+
 @router.post(
     '/{id_pts}/finalizar',
     response_model=PTSFinalizarResponse,
@@ -195,6 +265,8 @@ def finalizar_pts(
             text('BEGIN PRC_FAV_PTS_INSERE_FILA(:id_pts, :nm_usuario); END;'),
             {'id_pts': id_pts, 'nm_usuario': nm_usuario},
         )
+        from app.db.models import PTS as PTSModel
+        session.query(PTSModel).filter(PTSModel.id_pts == id_pts).update({"fl_finalizado": 1})
         session.commit()
         return {
             'status': 'ok',
@@ -215,19 +287,36 @@ def finalizar_pts(
 )
 def cancelar_pts(
     id_pts: int,
+    cancel_data: PTSCancel,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
     session = get_db_session(user, db)
+    
+    # Busca o PTS para verificar a autoria
+    pts_db = db.query(PTS).filter(PTS.id_pts == id_pts).first()
+    if not pts_db:
+        raise HTTPException(status_code=404, detail="PTS não encontrado.")
+    
+    if pts_db.id_usuario != user.id_usuario:
+        raise HTTPException(
+            status_code=403, 
+            detail="Apenas o profissional que criou este PTS pode cancelá-lo."
+        )
+
     try:
         session.execute(
-            text("BEGIN PRC_FAV_PTS_CANCELA_FILA(:id_pts, 'Cancelado via PTS'); END;"),
-            {'id_pts': id_pts},
+            text("BEGIN PRC_FAV_PTS_CANCELA_FILA(:id_pts, :motivo, :detalhe); END;"),
+            {
+                'id_pts': id_pts,
+                'motivo': cancel_data.ds_motivo,
+                'detalhe': cancel_data.ds_detalhe
+            },
         )
         session.commit()
         return {
             'status': 'ok',
-            'mensagem': f'PTS {id_pts} cancelado. Itens removidos da fila de espera.',
+            'mensagem': f'PTS {id_pts} cancelado com sucesso.',
         }
     except Exception as e:
         session.rollback()
@@ -364,3 +453,100 @@ def listar_objetivos_por_especialidade(
         return [{"id_objetivo": int(r[0]), "ds_objetivo": r[1]} for r in rows]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao buscar objetivos: {str(e)}")
+
+
+@router.get(
+    "/dashboard/stats",
+    response_model=PTSDashboardStats,
+    summary="Estatísticas gerais para o Dashboard de PTS",
+)
+def stats_dashboard_pts(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    try:
+        # Contagens básicas
+        total = db.execute(text("SELECT COUNT(*) FROM FAV_TB_PTS")).scalar() or 0
+        finalizados = db.execute(text("SELECT COUNT(*) FROM FAV_TB_PTS WHERE FL_FINALIZADO = 1 AND FL_ATIVO = 1")).scalar() or 0
+        rascunhos = db.execute(text("SELECT COUNT(*) FROM FAV_TB_PTS WHERE FL_FINALIZADO = 0 AND FL_ATIVO = 1")).scalar() or 0
+        cancelados = db.execute(text("SELECT COUNT(*) FROM FAV_TB_PTS WHERE FL_ATIVO = 0")).scalar() or 0
+        
+        return {
+            "total_pts": total,
+            "finalizados": finalizados,
+            "em_rascunho": rascunhos,
+            "cancelados": cancelados
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar estatísticas: {str(e)}")
+
+
+@router.get(
+    "/dashboard/report",
+    response_model=list[PTSReportItem],
+    summary="Relatório detalhado de PTS para o Dashboard",
+)
+def report_dashboard_pts(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    try:
+        sql = """
+            SELECT 
+                p.ID_PTS,
+                p.CD_PACIENTE,
+                (SELECT NM_PACIENTE FROM dbamv.PACIENTE WHERE CD_PACIENTE = TO_NUMBER(p.CD_PACIENTE)) as NM_PACIENTE,
+                p.NR_ATENDIMENTO,
+                u.NM_USUARIO,
+                p.DS_VIGENCIA,
+                TO_CHAR(p.DT_CRIACAO, 'DD/MM/YYYY') as DT_CRIACAO,
+                p.FL_FINALIZADO,
+                (SELECT LISTAGG(t.DS_TERAPIA || ' (' || t.NR_QTDE_SESSOES || ')', ', ') WITHIN GROUP (ORDER BY t.NR_ORDEM) 
+                 FROM FAV_TB_PTS_TERAPIA t WHERE t.ID_PTS = p.ID_PTS) as TERAPIAS,
+                (SELECT LISTAGG(o.DS_OBJETIVO, '; ') WITHIN GROUP (ORDER BY o.DS_ESPECIALIDADE, o.NR_ITEM) 
+                 FROM FAV_TB_PTS_OBJETIVO o WHERE o.ID_PTS = p.ID_PTS AND o.DS_MOMENTO = 'atual') as OBJETIVOS
+            FROM FAV_TB_PTS p
+            
+            JOIN FAV_TB_SILA_USUARIOS u ON p.ID_USUARIO = u.ID_USUARIO
+            WHERE p.FL_ATIVO = 1
+            ORDER BY p.DT_CRIACAO DESC
+        """
+        rows = db.execute(text(sql)).fetchall()
+        
+        return [
+            {
+                "id_pts": r[0],
+                "cd_paciente": str(r[1]),
+                "nm_paciente": r[2] or "N/A",
+                "nr_atendimento": str(r[3]),
+                "nm_usuario": r[4],
+                "ds_vigencia": r[5],
+                "dt_criacao": r[6],
+                "fl_finalizado": r[7],
+                "terapias": r[8],
+                "objetivos": r[9]
+            } for r in rows
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar relatório: {str(e)}")
+
+
+@router.get(
+    "/load/{id_pts}",
+    summary="Carrega dados completos de um PTS existente",
+)
+def carregar_pts(
+    id_pts: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    session = get_db_session(user, db)
+    try:
+        from app.db.repositories.pts import pts_to_dict
+        pts = get_pts_by_id(session, id_pts)
+        if pts is None:
+            raise HTTPException(status_code=404, detail="PTS não encontrado")
+        return pts_to_dict(pts)
+    finally:
+        if user.nm_login == 'testesoul':
+            session.close()
