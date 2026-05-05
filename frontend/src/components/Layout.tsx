@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Layout as AntLayout, Menu, Button, theme, Avatar, Typography, Tooltip, Space } from 'antd'
+import { Layout as AntLayout, Menu, Button, theme, Avatar, Typography, Tooltip, Space, Modal, Descriptions, Badge, Tag, Divider } from 'antd'
 import {
   DashboardOutlined,
   LogoutOutlined,
@@ -15,13 +15,14 @@ import { useNavigate, useLocation, Outlet } from 'react-router-dom'
 import { useAuth } from '@/contexts'
 
 const { Header, Sider, Content } = AntLayout
-const { Text } = Typography
+const { Text, Title } = Typography
 
 // nm_tip_presta do MV para Fonoaudiólogo (cd_tip_presta = 6)
 const NM_TIP_FONOAUDIOLOGO = 'FONOAUDIOLOGO(A)'
 
 export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false)
+  const [profileVisible, setProfileVisible] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
   const { logout, usuario } = useAuth()
@@ -134,6 +135,7 @@ export default function AppLayout() {
         {/* Rodapé com dados do usuário */}
         {!collapsed && usuario && (
           <div
+            onClick={() => setProfileVisible(true)}
             style={{
               position: 'absolute',
               bottom: 0,
@@ -142,7 +144,10 @@ export default function AppLayout() {
               padding: '12px 16px',
               borderTop: '1px solid rgba(255,255,255,0.1)',
               background: 'rgba(0,0,0,0.2)',
+              cursor: 'pointer',
+              transition: 'background 0.3s',
             }}
+            className="sidebar-user-footer"
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Avatar size={28} icon={<UserOutlined />} style={{ background: '#667eea', flexShrink: 0 }} />
@@ -163,9 +168,12 @@ export default function AppLayout() {
           </div>
         )}
         {collapsed && usuario && (
-          <div style={{ position: 'absolute', bottom: 12, left: 0, right: 0, display: 'flex', justifyContent: 'center' }}>
+          <div 
+            onClick={() => setProfileVisible(true)}
+            style={{ position: 'absolute', bottom: 12, left: 0, right: 0, display: 'flex', justifyContent: 'center', cursor: 'pointer' }}
+          >
             <Tooltip title={usuario.nm_usuario} placement="right">
-              <Avatar size={28} icon={<UserOutlined />} style={{ background: '#667eea', cursor: 'default' }} />
+              <Avatar size={28} icon={<UserOutlined />} style={{ background: '#667eea' }} />
             </Tooltip>
           </div>
         )}
@@ -205,6 +213,71 @@ export default function AppLayout() {
           <Outlet />
         </Content>
       </AntLayout>
+
+      {/* Modal de Perfil do Usuário */}
+      <Modal
+        title={
+          <Space>
+            <UserOutlined />
+            <span>Perfil do Profissional</span>
+          </Space>
+        }
+        open={profileVisible}
+        onCancel={() => setProfileVisible(false)}
+        footer={[
+          <Button key="close" type="primary" onClick={() => setProfileVisible(false)}>
+            Fechar
+          </Button>
+        ]}
+        width={600}
+        centered
+      >
+        {usuario && (
+          <div style={{ padding: '4px 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
+              <Avatar size={64} icon={<UserOutlined />} style={{ background: '#667eea' }} />
+              <div>
+                <Title level={4} style={{ margin: 0 }}>{usuario.nm_usuario}</Title>
+                <Text type="secondary">{usuario.ds_email}</Text>
+                <div style={{ marginTop: 4 }}>
+                  <Tag color={usuario.ds_perfil === 'ADMIN' ? 'gold' : 'blue'}>
+                    {usuario.ds_perfil}
+                  </Tag>
+                </div>
+              </div>
+            </div>
+
+            <Divider orientation="left" style={{ margin: '12px 0' }}>Informações Profissionais</Divider>
+            
+            <Descriptions bordered column={1} size="small" labelStyle={{ width: 160, fontWeight: 'bold', background: '#fafafa' }}>
+              <Descriptions.Item label="Login">{usuario.nm_login}</Descriptions.Item>
+              <Descriptions.Item label="Tipo de Prestador">
+                {usuario.nm_tip_presta || 'Não informado'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Conselho">
+                {usuario.ds_conselho || usuario.nr_conselho ? (
+                  <Space>
+                    <Tag color="cyan">{usuario.ds_conselho || 'Conselho'}</Tag>
+                    <Text strong>{usuario.ds_codigo_conselho || usuario.nr_conselho}</Text>
+                  </Space>
+                ) : '—'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Especialidade">
+                {usuario.ds_especialidade || '—'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Status">
+                <Badge status={usuario.fl_ativo === 1 ? 'success' : 'error'} text={usuario.fl_ativo === 1 ? 'Ativo' : 'Inativo'} />
+              </Descriptions.Item>
+            </Descriptions>
+          </div>
+        )}
+      </Modal>
+
+      <style>{`
+        .sidebar-user-footer:hover {
+          background: rgba(255, 255, 255, 0.1) !important;
+        }
+      `}</style>
     </AntLayout>
   )
 }
