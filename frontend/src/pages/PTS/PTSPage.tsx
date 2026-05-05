@@ -548,10 +548,10 @@ export default function PTSPage() {
             <FileTextOutlined style={{ fontSize: 28, color: '#fff' }} />
             <div>
               <Title level={1} style={{ color: '#fff', margin: 0 }}>
-                PTS — Programa Terapêutico Singular
+                PTS — Projeto Terapêutico Singular
               </Title>
               <Text style={{ color: 'rgba(255,255,255,0.85)' }}>
-                Preenchimento do Programa Terapêutico Singular do paciente
+                Preenchimento do Projeto Terapêutico Singular do paciente
               </Text>
             </div>
           </Space>
@@ -1015,7 +1015,7 @@ export default function PTSPage() {
                         allowClear
                         showSearch
                         optionFilterProp="label"
-                        options={opcoesEspecialidades.map((e) => ({ label: e.ds, value: e.cd }))}
+                        options={opcoesEspecialidades.map((e) => ({ label: e.ds, value: e.ds }))}
                         value={row.diagnostico}
                         onChange={(v) =>
                           setConductaRows((prev) =>
@@ -1084,7 +1084,7 @@ export default function PTSPage() {
                         allowClear
                         showSearch
                         optionFilterProp="label"
-                        options={opcoesMultidisciplinar.map((e) => ({ label: e.ds, value: e.cd }))}
+                        options={opcoesMultidisciplinar.map((e) => ({ label: e.ds, value: e.ds }))}
                         value={row.diagnostico}
                         onChange={(v) =>
                           setMultidisciplinarRows((prev) =>
@@ -1328,7 +1328,7 @@ export default function PTSPage() {
                     allowClear
                     showSearch
                     optionFilterProp="label"
-                    options={opcoesTerapiasIndicadas.map((e) => ({ label: e.ds, value: e.cd }))}
+                    options={opcoesTerapiasIndicadas.map((e) => ({ label: e.ds, value: e.ds }))}
                     value={row.terapia}
                     onChange={(v) => setTerapias((prev) => prev.map((r) => r.key === row.key ? { ...r, terapia: v } : r))}
                   />

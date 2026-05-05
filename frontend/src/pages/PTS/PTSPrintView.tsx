@@ -174,8 +174,8 @@ export default function PTSPrintView({ data }: Props) {
   return (
     <div style={{ padding: 20, background: '#fff', color: '#000' }}>
       <div style={{ textAlign: 'center', marginBottom: 24, borderBottom: '2px solid #ccc', paddingBottom: 16 }}>
-        <Title level={3} style={{ margin: 0 }}>Programa Terapêutico Singular (PTS)</Title>
-        <Text type="secondary">Preenchimento do Programa Terapêutico Singular do Paciente</Text>
+        <Title level={3} style={{ margin: 0 }}>Projeto Terapêutico Singular (PTS)</Title>
+        <Text type="secondary">Preenchimento do Projeto Terapêutico Singular do Paciente</Text>
       </div>
 
       <Row gutter={16} style={{ marginBottom: 24 }}>

@@ -249,7 +249,7 @@ export default function AppLayout() {
 
             <Divider orientation="left" style={{ margin: '12px 0' }}>Informações Profissionais</Divider>
             
-            <Descriptions bordered column={1} size="small" labelStyle={{ width: 160, fontWeight: 'bold', background: '#fafafa' }}>
+            <Descriptions bordered column={1} size="small" styles={{ label: { width: 160, fontWeight: 'bold', background: '#fafafa' } }}>
               <Descriptions.Item label="Login">{usuario.nm_login}</Descriptions.Item>
               <Descriptions.Item label="Tipo de Prestador">
                 {usuario.nm_tip_presta || 'Não informado'}
