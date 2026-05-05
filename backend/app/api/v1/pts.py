@@ -450,7 +450,15 @@ def listar_objetivos_por_especialidade(
             ),
             {"esp": esp_busca},
         ).fetchall()
-        return [{"id_objetivo": int(r[0]), "ds_objetivo": r[1]} for r in rows]
+        
+        # Converte para lista de dicionários garantindo tipos primitivos (evita erro de serialização se vier LOB/None)
+        return [
+            {
+                "id_objetivo": int(r[0]) if r[0] is not None else 0, 
+                "ds_objetivo": str(r[1]) if r[1] is not None else ""
+            } 
+            for r in rows
+        ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao buscar objetivos: {str(e)}")
 
