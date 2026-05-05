@@ -19,6 +19,7 @@ export interface PTSPrintData {
   terapias: any[];
   objetivos: any;
   usuarioMe: any;
+  fl_finalizado?: number;
 }
 
 interface Props {
@@ -40,6 +41,7 @@ export default function PTSPrintView({ data }: Props) {
     terapias,
     objetivos,
     usuarioMe,
+    fl_finalizado,
   } = data;
 
   const validDiagPrincipais = diagPrincipais.filter(d => d.diagnostico);
@@ -172,8 +174,31 @@ export default function PTSPrintView({ data }: Props) {
   const objetivosContent = renderObjetivos();
 
   return (
-    <div style={{ padding: 20, background: '#fff', color: '#000' }}>
-      <div style={{ textAlign: 'center', marginBottom: 24, borderBottom: '2px solid #ccc', paddingBottom: 16 }}>
+    <div style={{ padding: 20, background: '#fff', color: '#000', position: 'relative', overflow: 'hidden' }}>
+      {/* Marca d'água de Rascunho */}
+      {fl_finalizado !== 1 && (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%) rotate(-45deg)',
+          fontSize: '120px',
+          color: 'rgba(255, 0, 0, 0.1)',
+          fontWeight: 'bold',
+          zIndex: 0,
+          pointerEvents: 'none',
+          whiteSpace: 'nowrap',
+          userSelect: 'none',
+          textTransform: 'uppercase',
+          border: '15px solid rgba(255, 0, 0, 0.1)',
+          padding: '20px 40px',
+          borderRadius: '20px',
+        }}>
+          Rascunho
+        </div>
+      )}
+
+      <div style={{ textAlign: 'center', marginBottom: 24, borderBottom: '2px solid #ccc', paddingBottom: 16, position: 'relative', zIndex: 1 }}>
         <Title level={3} style={{ margin: 0 }}>Projeto Terapêutico Singular (PTS)</Title>
         <Text type="secondary">Preenchimento do Projeto Terapêutico Singular do Paciente</Text>
       </div>

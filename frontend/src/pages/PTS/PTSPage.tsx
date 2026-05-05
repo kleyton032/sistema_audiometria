@@ -1546,6 +1546,7 @@ export default function PTSPage() {
             terapias,
             objetivos,
             usuarioMe,
+            fl_finalizado: ptsFinalizado ? 1 : 0,
           }}
         />
       </div>
