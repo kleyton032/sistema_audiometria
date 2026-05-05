@@ -65,15 +65,15 @@ export default function PTSPrintView({ data }: Props) {
     objetivos,
     usuarioMe,
     fl_finalizado,
-  } = data;
+  } = data || {};
 
-  const validDiagPrincipais = diagPrincipais.filter(d => d.diagnostico);
-  const validDiagTerapeuticos = diagTerapeuticos.filter(d => d.diagnostico);
-  const validExtTerapias = extTerapias.filter(d => d.diagnostico);
-  const validConductaRows = conductaRows.filter(d => d.diagnostico);
-  const validMultiRows = multidisciplinarRows.filter(d => d.diagnostico);
-  const validInstruRows = instrumentoRows.filter(d => d.diagnostico);
-  const validTerapias = terapias.filter(t => t.terapia);
+  const validDiagPrincipais = (diagPrincipais || []).filter(d => d?.diagnostico);
+  const validDiagTerapeuticos = (diagTerapeuticos || []).filter(d => d?.diagnostico);
+  const validExtTerapias = (extTerapias || []).filter(d => d?.diagnostico);
+  const validConductaRows = (conductaRows || []).filter(d => d?.diagnostico);
+  const validMultiRows = (multidisciplinarRows || []).filter(d => d?.diagnostico);
+  const validInstruRows = (instrumentoRows || []).filter(d => d?.diagnostico);
+  const validTerapias = (terapias || []).filter(t => t?.terapia);
 
   // Helper para seções
   const Section = ({ title, children }: { title: string, children: React.ReactNode }) => {
@@ -105,7 +105,7 @@ export default function PTSPrintView({ data }: Props) {
     { key: 'cond_nao_fica_sozinho', label: 'Não consegue ficar sozinho na sala' },
     { key: 'cond_sem_ctrl_cervical', label: 'Não tem controle cervical' },
     { key: 'cond_sem_ctrl_tronco', label: 'Não tem controle do tronco' },
-  ].filter(c => formValues[c.key]);
+  ].filter(c => formValues?.[c.key]);
 
   const opmes = [
     { key: 'opme_nao_se_aplica', label: 'Não se aplica' },
@@ -117,14 +117,14 @@ export default function PTSPrintView({ data }: Props) {
     { key: 'opme_com_alta', label: 'Recursos de Comunicação Alternativa (alta)' },
     { key: 'opme_com_baixa', label: 'Recursos de Comunicação Alternativa (baixa)' },
     { key: 'opme_orteses', label: 'Usa Órteses' },
-  ].filter(o => formValues[o.key]);
+  ].filter(o => formValues?.[o.key]);
 
   const deficiencias = [
     { key: 'def_associada_visual', label: 'Visual' },
     { key: 'def_associada_intelectual', label: 'Intelectual' },
     { key: 'def_associada_fisica', label: 'Física' },
     { key: 'def_associada_auditiva', label: 'Auditiva' },
-  ].filter(d => formValues[d.key]);
+  ].filter(d => formValues?.[d.key]);
 
   const programas = [
     { key: 'prog_nao_se_aplica', label: 'Não se Aplica' },
@@ -138,7 +138,7 @@ export default function PTSPrintView({ data }: Props) {
     { key: 'prog_rop', label: 'ROP' },
     { key: 'prog_pronas_tea', label: 'PRONAS TEA' },
     { key: 'prog_pronas_doencas_raras', label: 'PRONAS Doenças Raras' },
-  ].filter(p => formValues[p.key]);
+  ].filter(p => formValues?.[p.key]);
 
   // Função para renderizar os objetivos por área
   const renderObjetivos = () => {

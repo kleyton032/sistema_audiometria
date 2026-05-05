@@ -472,7 +472,7 @@ export default function PTSPage() {
     setPrintTrigger(prev => prev + 1)
     setTimeout(() => {
       window.print()
-    }, 150)
+    }, 500)
   }
 
   return (
@@ -1499,6 +1499,8 @@ export default function PTSPage() {
               <Button
                 icon={<PrinterOutlined />}
                 onClick={handleImprimir}
+                disabled={salvandoPTS || finalizandoPTS}
+                title={salvandoPTS || finalizandoPTS ? 'Aguarde o salvamento terminar para imprimir' : undefined}
               >
                 Imprimir
               </Button>
@@ -1529,7 +1531,14 @@ export default function PTSPage() {
 
 
       {/* Componente oculto na tela, visível na impressão */}
-      <div className="print-only" style={{ display: 'none' }}>
+      <div className="print-only" style={{ 
+        position: 'absolute', 
+        left: '-9999px', 
+        top: 0, 
+        visibility: 'hidden', 
+        height: 0, 
+        overflow: 'hidden' 
+      }}>
         <PTSPrintView
           key={printTrigger}
           data={{
