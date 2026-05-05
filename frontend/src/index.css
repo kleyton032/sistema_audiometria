@@ -41,3 +41,8 @@ body {
     padding: 0 !important;
   }
 }
+
+/* Ocultar elementos de impressão por padrão na tela */
+.print-only {
+  display: none;
+}

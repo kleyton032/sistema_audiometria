@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   Card,
@@ -183,12 +183,18 @@ export default function PTSPage() {
   const [finalizandoPTS, setFinalizandoPTS] = useState(false)
   const [cancelandoPTS, setCancelandoPTS] = useState(false)
   const [printTrigger, setPrintTrigger] = useState(0)
-  const [idPtsSalvo, setIdPtsSalvo] = useState<number | null>(paciente.id_pts ?? null)
-  const [ptsFinalizado, setPtsFinalizado] = useState((paciente.fl_finalizado ?? 0) === 1)
+  const [idPtsSalvo, setIdPtsSalvo] = useState<number | null>(() => paciente.id_pts ?? null)
+  const [ptsFinalizado, setPtsFinalizado] = useState(() => (paciente.fl_finalizado ?? 0) === 1)
   const [idUsuarioAutor, setIdUsuarioAutor] = useState<number | null>(null)
 
   // Observador para o campo de prazo da seção 16
   const prazoEstimado = Form.useWatch('intervencao_prazo', form)
+
+  // Memo para valores iniciais estáveis
+  const initialValues = React.useMemo(() => ({
+    intervencao_prazo: '06 (Seis) Meses',
+    pts_vigencia: dayjs().format('YYYY-MM')
+  }), [])
 
   // Helper para extrair número de meses do texto (ex: "06 (Seis) Meses" -> 6)
   const obterMesesPrazo = (texto: string | undefined): number => {
@@ -618,10 +624,7 @@ export default function PTSPage() {
         form={form} 
         layout="vertical" 
         onFinish={handleSave}
-        initialValues={{
-          intervencao_prazo: '06 (Seis) Meses',
-          pts_vigencia: dayjs().format('YYYY-MM')
-        }}
+        initialValues={initialValues}
       >
 
         {/* ── SEÇÃO 1: Diagnóstico Médico Principal ── */}
@@ -1593,14 +1596,8 @@ export default function PTSPage() {
 
 
       {/* Componente oculto na tela, visível na impressão */}
-      <div className="print-only" style={{ 
-        position: 'absolute', 
-        left: '-9999px', 
-        top: 0, 
-        visibility: 'hidden', 
-        height: 0, 
-        overflow: 'hidden' 
-      }}>
+      <div className="print-only">
+        {/* Usando um componente de impressão que só recebe o necessário para evitar loops */}
         <PTSPrintView
           key={printTrigger}
           data={{
