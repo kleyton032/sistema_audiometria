@@ -1619,8 +1619,8 @@ export default function PTSPage() {
               <Button
                 icon={<PrinterOutlined />}
                 onClick={handleImprimir}
-                disabled={salvandoPTS || finalizandoPTS}
-                title={salvandoPTS || finalizandoPTS ? 'Aguarde o salvamento terminar para imprimir' : undefined}
+                disabled={!ptsFinalizado || salvandoPTS || finalizandoPTS}
+                title={!ptsFinalizado ? 'Finalize o PTS para habilitar a impressão' : (salvandoPTS || finalizandoPTS ? 'Aguarde...' : undefined)}
               >
                 Imprimir
               </Button>
