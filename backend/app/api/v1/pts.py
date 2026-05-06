@@ -543,6 +543,85 @@ def report_dashboard_pts(
         raise HTTPException(status_code=500, detail=f"Erro ao gerar relatório: {str(e)}")
 
 
+
+@router.get(
+    "/outros-pts-vigencia",
+    summary="Lista PTS de outros profissionais do mesmo paciente na mesma vigência",
+)
+def listar_outros_pts_vigencia(
+    nr_atendimento: str = Query(...),
+    cd_paciente: str = Query(default=''),
+    vigencia: str = Query(...),
+    id_pts_excluir: int = Query(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    session = get_db_session(user, db)
+    try:
+        sql = """
+            SELECT
+                p.id_pts,
+                u.nm_usuario                    AS nm_prestador,
+                COALESCE(up.nm_tip_presta, u.ds_especialidade) AS ds_especialidade_profissional,
+                o.ds_especialidade,
+                o.ds_momento,
+                o.nr_item,
+                o.ds_objetivo,
+                o.ds_status,
+                o.ds_motivo
+            FROM FAV_TB_PTS p
+            JOIN FAV_TB_SILA_USUARIOS u ON u.id_usuario = p.id_usuario
+            LEFT JOIN FAV_TB_USUARIO_PRESTADOR up ON up.id_usuario = p.id_usuario
+            LEFT JOIN FAV_TB_PTS_OBJETIVO o ON o.id_pts = p.id_pts
+            WHERE (p.nr_atendimento = :nr_atendimento OR p.cd_paciente = :cd_paciente)
+              AND p.ds_vigencia    = :vigencia
+              AND p.id_pts        != :id_pts_excluir
+            ORDER BY p.id_pts, o.ds_especialidade, o.ds_momento, o.nr_item
+        """
+        rows = session.execute(
+            text(sql),
+            {"nr_atendimento": nr_atendimento, "cd_paciente": cd_paciente, "vigencia": vigencia, "id_pts_excluir": id_pts_excluir}
+        ).fetchall()
+
+        # Agrupar por id_pts
+        pts_map: dict = {}
+        for r in rows:
+            id_pts = r[0]
+            if id_pts not in pts_map:
+                pts_map[id_pts] = {
+                    "id_pts": id_pts,
+                    "nm_prestador": r[1],
+                    "ds_especialidade_profissional": r[2],
+                    "objetivos": {},
+                }
+            # Se tem objetivo (LEFT JOIN pode trazer nulos)
+            if r[3]:
+                esp = r[3]
+                momento = r[4] or "atual"
+                nr_item = (r[5] or 1) - 1
+                if esp not in pts_map[id_pts]["objetivos"]:
+                    vazio = {"objetivo": None, "status": None, "motivo": None}
+                    pts_map[id_pts]["objetivos"][esp] = {
+                        "anterior": [dict(vazio) for _ in range(3)],
+                        "atual":    [dict(vazio) for _ in range(3)],
+                    }
+                if 0 <= nr_item <= 2:
+                    pts_map[id_pts]["objetivos"][esp][momento][nr_item] = {
+                        "objetivo": r[6],
+                        "status":   r[7],
+                        "motivo":   r[8],
+                    }
+
+        return list(pts_map.values())
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar outros PTS: {str(e)}")
+    finally:
+        if user.nm_login == 'testesoul':
+            session.close()
+
+
 @router.get(
     "/load/{id_pts}",
     summary="Carrega dados completos de um PTS existente",

@@ -24,6 +24,12 @@ body {
   }
 
   .print-only {
+    position: static !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    overflow: visible !important;
+    z-index: auto !important;
     display: block !important;
   }
 
@@ -42,7 +48,12 @@ body {
   }
 }
 
-/* Ocultar elementos de impressão por padrão na tela */
+/* Ocultar elementos de impressão por padrão na tela — usando off-screen para manter renderizado */
 .print-only {
-  display: none;
+  position: absolute !important;
+  left: -9999px !important;
+  top: 0 !important;
+  width: 800px !important;
+  overflow: hidden !important;
+  z-index: -1 !important;
 }

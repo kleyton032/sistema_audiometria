@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { getPTSObjetivosPorEspecialidade } from '@/api/ptsService'
+import { getPTSObjetivosPorEspecialidade, getOutrosPTSVigencia } from '@/api/ptsService'
+import type { OutroPTSItem } from '@/api/ptsService'
 import {
   Collapse,
   Segmented,
@@ -11,6 +12,10 @@ import {
   Row,
   Col,
   Badge,
+  Button,
+  Modal,
+  Tooltip,
+  Divider,
 } from 'antd'
 import {
   MedicineBoxOutlined,
@@ -23,6 +28,7 @@ import {
   ReadOutlined,
   RobotOutlined,
   LockOutlined,
+  EyeOutlined,
 } from '@ant-design/icons'
 import React, { ReactNode, memo, useMemo, useCallback } from 'react'
 import { useAuth } from '@/contexts'
@@ -130,6 +136,32 @@ function canEditEspecialidade(espKey: string, espLabel: string, user: any): bool
   if (espKey === 'prof_braille' && userTip.includes('BRAILLE')) return true
 
   return false
+}
+
+// Encontra o ícone e cor da especialidade a partir do nome do profissional (vindo do banco)
+function getEspecialidadeInfo(dsEspecialidade: string | null | undefined): { icon: ReactNode; color: string; label: string } {
+  if (!dsEspecialidade) return { icon: <UserOutlined />, color: '#8c8c8c', label: 'Desconhecida' }
+  const up = dsEspecialidade.toUpperCase()
+  for (const esp of ESPECIALIDADES) {
+    const label = esp.label.toUpperCase()
+    if (up.includes(label) || label.includes(up)) return { icon: esp.icon, color: esp.color, label: esp.label }
+  }
+  // Mapeamentos adicionais
+  if (up.includes('FISIOTERA'))     return { icon: <HeartOutlined />,          color: '#52c41a', label: 'Fisioterapia' }
+  if (up.includes('FONOAUDIO'))     return { icon: <SoundOutlined />,          color: '#1677ff', label: 'Fonoaudiologia' }
+  if (up.includes('OCUPACIONAL'))   return { icon: <MedicineBoxOutlined />,    color: '#722ed1', label: 'Terapia Ocupacional' }
+  if (up.includes('PSICOLOG'))      return { icon: <TeamOutlined />,           color: '#eb2f96', label: 'Psicologia' }
+  if (up.includes('PSICOPEDAGOG'))  return { icon: <BookOutlined />,           color: '#faad14', label: 'Psicopedagogia' }
+  if (up.includes('BRAILLE'))       return { icon: <ReadOutlined />,           color: '#08979c', label: 'Professor de Braille' }
+  if (up.includes('FISICA') || up.includes('FÍSICA')) return { icon: <UserOutlined />, color: '#fa8c16', label: 'Prof. Educação Física' }
+  return { icon: <UserOutlined />, color: '#8c8c8c', label: dsEspecialidade }
+}
+
+// Retorna as keys de especialidades que o usuário pode editar
+function getMinhasEspecialidades(user: any): string[] {
+  if (!user) return []
+  if (user.ds_perfil === 'ADMIN') return ESPECIALIDADES.map(e => e.key)
+  return ESPECIALIDADES.filter(esp => canEditEspecialidade(esp.key, esp.label, user)).map(e => e.key)
 }
 
 // ── sub-componente: linha de objetivo ANTERIOR (somente status + motivo) ─────
@@ -313,14 +345,26 @@ function LinhaObjetivoAtual({
 interface Props {
   value: ObjetivosState
   onChange: (next: ObjetivosState) => void
+  ptsFinalizado?: boolean
+  nrAtendimento?: string | number | null
+  cdPaciente?: string | number | null
+  vigencia?: string
+  idPtsAtual?: number | null
 }
 
-export default function ObjetivosEspecialidades({ value, onChange }: Props) {
+export default function ObjetivosEspecialidades({
+  value, onChange, ptsFinalizado = false,
+  nrAtendimento, cdPaciente, vigencia, idPtsAtual,
+}: Props) {
   const { usuario } = useAuth()
   const [objetivosPorArea, setObjetivosPorArea] = useState<Record<string, string[]>>({})
   const [momento, setMomento] = useState<Record<string, MomentoObjetivos>>(
     () => Object.fromEntries(ESPECIALIDADES.map((e) => [e.key, 'atual' as MomentoObjetivos]))
   )
+
+  // Estado para outros PTS da mesma vigência
+  const [outrosPTS, setOutrosPTS] = useState<OutroPTSItem[]>([])
+  const [modalPTS, setModalPTS] = useState<OutroPTSItem | null>(null)
 
   useEffect(() => {
     async function carregarObjetivos() {
@@ -345,6 +389,21 @@ export default function ObjetivosEspecialidades({ value, onChange }: Props) {
     carregarObjetivos()
   }, [])
 
+  // Carrega outros PTS da mesma vigência do paciente (com debounce via useRef para evitar loop)
+  const ultimaChamadaRef = React.useRef<string>('')
+  useEffect(() => {
+    if (!vigencia) return
+    const excluir = idPtsAtual && idPtsAtual > 0 ? idPtsAtual : -1
+    const nr = nrAtendimento ?? ''
+    const cd = cdPaciente ?? ''
+    const chave = `${nr}|${cd}|${vigencia}|${excluir}`
+    if (ultimaChamadaRef.current === chave) return  // já buscou com esses parâmetros
+    ultimaChamadaRef.current = chave
+    getOutrosPTSVigencia(nr, cd, vigencia, excluir)
+      .then(setOutrosPTS)
+      .catch((err) => console.error('Erro ao carregar outros PTS:', err))
+  }, [nrAtendimento, cdPaciente, vigencia, idPtsAtual])
+
   const handleMomento = useCallback((key: string, m: MomentoObjetivos) => {
     setMomento((prev) => ({ ...prev, [key]: m }))
   }, [])
@@ -362,8 +421,19 @@ export default function ObjetivosEspecialidades({ value, onChange }: Props) {
     onChange({ ...value, [espKey]: { ...espAtual, [mom]: lista } })
   }, [value, onChange])
 
+  // Identificar as especialidades do usuário logado
+  const minhasEsps = useMemo(() => getMinhasEspecialidades(usuario), [usuario])
+  const isAdmin = usuario?.ds_perfil === 'ADMIN'
+
+  // Filtrar: ADMIN vê todas, profissional vê somente a(s) sua(s)
+  const especialidadesFiltradas = useMemo(() => {
+    if (isAdmin) return ESPECIALIDADES
+    if (minhasEsps.length === 0) return ESPECIALIDADES // fallback: mostrar todas em read-only
+    return ESPECIALIDADES.filter(e => minhasEsps.includes(e.key))
+  }, [isAdmin, minhasEsps])
+
   const collapseItems = useMemo(() => {
-    return ESPECIALIDADES.map((esp) => {
+    return especialidadesFiltradas.map((esp) => {
       const mom = momento[esp.key]
       const lista = value[esp.key][mom]
       const qtdAnterior = contarPreenchidos(value[esp.key].anterior)
@@ -410,6 +480,24 @@ export default function ObjetivosEspecialidades({ value, onChange }: Props) {
               </Text>
             )}
 
+            {mom === 'anterior' && ptsFinalizado && (
+              <div style={{ background: '#fff1f0', border: '1px solid #ffa39e', padding: '8px 12px', borderRadius: 4, marginBottom: 8 }}>
+                <Text type="danger" style={{ fontSize: 12 }}>
+                  <LockOutlined style={{ marginRight: 6 }} />
+                  PTS finalizado — os objetivos anteriores não podem ser editados.
+                </Text>
+              </div>
+            )}
+
+            {mom === 'atual' && ptsFinalizado && (
+              <div style={{ background: '#fff1f0', border: '1px solid #ffa39e', padding: '8px 12px', borderRadius: 4, marginBottom: 8 }}>
+                <Text type="danger" style={{ fontSize: 12 }}>
+                  <LockOutlined style={{ marginRight: 6 }} />
+                  PTS finalizado — os objetivos atuais não podem ser editados.
+                </Text>
+              </div>
+            )}
+
             {!canEdit && (
               <div style={{ background: '#fffbe6', border: '1px solid #ffe58f', padding: '8px 12px', borderRadius: 4, marginBottom: 8 }}>
                 <Text type="warning" style={{ fontSize: 12 }}>
@@ -426,7 +514,7 @@ export default function ObjetivosEspecialidades({ value, onChange }: Props) {
                   key={idx}
                   numero={idx + 1}
                   item={item}
-                  disabled={!canEdit}
+                  disabled={!canEdit || ptsFinalizado}
                   onChange={(campo, val) => handleItem(esp.key, mom, idx, campo, val)}
                 />
               ) : (
@@ -434,7 +522,7 @@ export default function ObjetivosEspecialidades({ value, onChange }: Props) {
                   key={idx}
                   numero={idx + 1}
                   item={item}
-                  disabled={!canEdit}
+                  disabled={!canEdit || ptsFinalizado}
                   listaOpcoes={objetivosPorArea[esp.key] || []}
                   onChange={(campo, val) => handleItem(esp.key, mom, idx, campo, val)}
                 />
@@ -444,14 +532,153 @@ export default function ObjetivosEspecialidades({ value, onChange }: Props) {
         ),
       }
     })
-  }, [value, momento, objetivosPorArea, handleItem, handleMomento])
+  }, [value, momento, objetivosPorArea, handleItem, handleMomento, especialidadesFiltradas, ptsFinalizado, usuario])
+
+  // Renderizar o conteúdo do modal de visualização de outro PTS
+  const renderModalContent = useCallback((pts: OutroPTSItem) => {
+    const espKeys = Object.keys(pts.objetivos)
+    if (espKeys.length === 0) {
+      return <Text type="secondary" italic>Nenhum objetivo registrado neste PTS.</Text>
+    }
+    return (
+      <Space direction="vertical" style={{ width: '100%' }} size={16}>
+        {espKeys.map((espKey) => {
+          const espInfo = ESPECIALIDADES.find(e => e.key === espKey)
+          const label = espInfo?.label || espKey
+          const icon = espInfo?.icon || <UserOutlined />
+          const color = espInfo?.color || '#8c8c8c'
+          const dados = pts.objetivos[espKey]
+
+          return (
+            <div key={espKey}>
+              <Space style={{ marginBottom: 8 }}>
+                <span style={{ color }}>{icon}</span>
+                <Text strong>{label}</Text>
+              </Space>
+
+              {/* Anteriores */}
+              {dados.anterior.some(o => o.objetivo) && (
+                <>
+                  <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 4 }}>
+                    Objetivos Anteriores
+                  </Text>
+                  {dados.anterior.map((obj, idx) => obj.objetivo && (
+                    <div key={`ant-${idx}`} style={{
+                      background: '#fafafa', border: '1px solid #f0f0f0',
+                      borderRadius: 6, padding: '8px 12px', marginBottom: 6,
+                    }}>
+                      <Text style={{ fontSize: 13 }}>{idx + 1}. {obj.objetivo}</Text>
+                      {obj.status && (
+                        <Tag color={obj.status === 'ALCANCADO' ? 'green' : obj.status === 'PARCIAL' ? 'orange' : 'red'} style={{ marginLeft: 8, fontSize: 11 }}>
+                          {STATUS_EVOLUCAO.find(s => s.value === obj.status)?.label || obj.status}
+                        </Tag>
+                      )}
+                      {obj.motivo && (
+                        <Text type="secondary" style={{ fontSize: 11, display: 'block', marginTop: 2 }}>
+                          Motivo: {MOTIVOS_NAO_ALCANCADO.find(m => m.value === obj.motivo)?.label || obj.motivo}
+                        </Text>
+                      )}
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {/* Atuais */}
+              {dados.atual.some(o => o.objetivo) && (
+                <>
+                  <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 4, marginTop: 8 }}>
+                    Objetivos Atuais
+                  </Text>
+                  {dados.atual.map((obj, idx) => obj.objetivo && (
+                    <div key={`atu-${idx}`} style={{
+                      background: '#f0f5ff', border: '1px solid #d6e4ff',
+                      borderRadius: 6, padding: '8px 12px', marginBottom: 6,
+                    }}>
+                      <Text style={{ fontSize: 13 }}>{idx + 1}. {obj.objetivo}</Text>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              <Divider style={{ margin: '12px 0' }} />
+            </div>
+          )
+        })}
+      </Space>
+    )
+  }, [])
 
   return (
-    <Collapse
-      accordion={false}
-      items={collapseItems}
-      style={{ background: '#fff' }}
-      expandIconPosition="end"
-    />
+    <>
+      {/* ── Chips de outros PTS da mesma vigência ── */}
+      {outrosPTS.length > 0 && (
+        <div style={{
+          background: '#f6ffed', border: '1px solid #b7eb8f',
+          borderRadius: 8, padding: '12px 16px', marginBottom: 16,
+        }}>
+          <Text strong style={{ fontSize: 13, display: 'block', marginBottom: 8 }}>
+            <EyeOutlined style={{ marginRight: 6 }} />
+            Outros PTS deste paciente na mesma vigência:
+          </Text>
+          <Space wrap size={8}>
+            {outrosPTS.map((pts) => {
+              const info = getEspecialidadeInfo(pts.ds_especialidade_profissional)
+              return (
+                <Tooltip key={pts.id_pts} title={`Visualizar objetivos de ${pts.nm_prestador}`}>
+                  <Button
+                    size="middle"
+                    icon={<span style={{ color: info.color, marginRight: 4 }}>{info.icon}</span>}
+                    onClick={() => setModalPTS(pts)}
+                    style={{
+                      borderColor: info.color,
+                      color: '#333',
+                      borderRadius: 20,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}
+                  >
+                    {pts.nm_prestador} — {info.label}
+                  </Button>
+                </Tooltip>
+              )
+            })}
+          </Space>
+        </div>
+      )}
+
+      {/* ── Collapse de edição (filtrado por especialidade) ── */}
+      <Collapse
+        accordion={false}
+        items={collapseItems}
+        style={{ background: '#fff' }}
+        expandIconPosition="end"
+        defaultActiveKey={minhasEsps.length > 0 && !isAdmin ? minhasEsps : undefined}
+      />
+
+      {/* ── Modal de visualização de outro PTS ── */}
+      <Modal
+        open={!!modalPTS}
+        onCancel={() => setModalPTS(null)}
+        footer={
+          <Button type="primary" onClick={() => setModalPTS(null)}>
+            Fechar
+          </Button>
+        }
+        width={700}
+        centered
+        title={
+          modalPTS ? (
+            <Space>
+              <EyeOutlined />
+              <span>Objetivos — {modalPTS.nm_prestador}</span>
+              <Tag color="blue">{getEspecialidadeInfo(modalPTS.ds_especialidade_profissional).label}</Tag>
+            </Space>
+          ) : ''
+        }
+      >
+        {modalPTS && renderModalContent(modalPTS)}
+      </Modal>
+    </>
   )
 }

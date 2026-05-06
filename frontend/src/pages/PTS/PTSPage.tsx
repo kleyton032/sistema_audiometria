@@ -189,6 +189,8 @@ export default function PTSPage() {
 
   // Observador para o campo de prazo da seção 16
   const prazoEstimado = Form.useWatch('intervencao_prazo', form)
+  // Observador reativo para vigência (necessário para passar ao ObjetivosEspecialidades)
+  const vigenciaAtual = Form.useWatch('pts_vigencia', form)
 
   // Memo para valores iniciais estáveis
   const initialValues = React.useMemo(() => ({
@@ -487,8 +489,53 @@ export default function PTSPage() {
   const handleImprimir = () => {
     setPrintTrigger(prev => prev + 1)
     setTimeout(() => {
-      window.print()
-    }, 500)
+      const el = document.getElementById('pts-print-content')
+      if (!el) {
+        window.print()
+        return
+      }
+
+      // Coleta todo o CSS do documento (Ant Design + styles inline)
+      const linkStyles = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+        .map((link) => `<link rel="stylesheet" href="${(link as HTMLLinkElement).href}">`)
+        .join('\n')
+
+      const inlineStyles = Array.from(document.querySelectorAll('style'))
+        .map((s) => `<style>${s.textContent}</style>`)
+        .join('\n')
+
+      const w = window.open('', '_blank', 'width=900,height=700,scrollbars=yes')
+      if (!w) {
+        alert('Permita popups neste site para imprimir o PTS.')
+        return
+      }
+
+      w.document.write(`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>PTS - Projeto Terapêutico Singular</title>
+  ${linkStyles}
+  ${inlineStyles}
+  <style>
+    body { background: white !important; color: black !important; margin: 0; }
+    @page { margin: 1.5cm; }
+    @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+  </style>
+</head>
+<body>
+  ${el.innerHTML}
+  <script>
+    window.onload = function() {
+      setTimeout(function() {
+        window.print();
+        window.onafterprint = function() { window.close(); };
+      }, 500);
+    };
+  <\/script>
+</body></html>`)
+      w.document.close()
+    }, 600)
   }
 
   return (
@@ -1154,7 +1201,15 @@ export default function PTSPage() {
             style={{ marginBottom: 12 }}
             message="Clique na especialidade para expandir. Alterne entre &lsquo;Objetivos Atuais&rsquo; e &lsquo;Objetivos Anteriores (evolução)&rsquo; dentro de cada painel."
           />
-          <ObjetivosEspecialidades value={objetivos} onChange={setObjetivos} />
+          <ObjetivosEspecialidades
+            value={objetivos}
+            onChange={setObjetivos}
+            ptsFinalizado={ptsFinalizado}
+            nrAtendimento={paciente.cd_atendimento}
+            cdPaciente={paciente.cd_paciente}
+            vigencia={vigenciaAtual || dayjs().format('YYYY-MM')}
+            idPtsAtual={idPtsSalvo ?? -1}
+          />
         </Card>
 
         {/* ── SEÇÃO 14: Observações Gerais ── */}
@@ -1595,9 +1650,14 @@ export default function PTSPage() {
         </Row>
 
 
-      {/* Componente oculto na tela, visível na impressão */}
-      <div className="print-only">
-        {/* Usando um componente de impressão que só recebe o necessário para evitar loops */}
+      </Form>
+    </Space>
+    </Spin>
+    </div>
+
+    {/* Componente de impressão FORA do no-print para não ser escondido pelo @media print */}
+    <div className="print-only">
+      <div id="pts-print-content">
         <PTSPrintView
           key={printTrigger}
           data={{
@@ -1618,9 +1678,6 @@ export default function PTSPage() {
           }}
         />
       </div>
-      </Form>
-    </Space>
-    </Spin>
     </div>
     </>
   )

@@ -113,3 +113,36 @@ export async function getPTSDashboardReport(): Promise<any[]> {
   const { data } = await api.get('/pts/dashboard/report')
   return data
 }
+
+export interface OutroPTSObjetivo {
+  objetivo: string | null
+  status: string | null
+  motivo: string | null
+}
+
+export interface OutroPTSItem {
+  id_pts: number
+  nm_prestador: string
+  ds_especialidade_profissional: string
+  objetivos: Record<string, {
+    anterior: OutroPTSObjetivo[]
+    atual: OutroPTSObjetivo[]
+  }>
+}
+
+export async function getOutrosPTSVigencia(
+  nrAtendimento: string | number,
+  cdPaciente: string | number,
+  vigencia: string,
+  idPtsExcluir: number
+): Promise<OutroPTSItem[]> {
+  const { data } = await api.get<OutroPTSItem[]>('/pts/outros-pts-vigencia', {
+    params: {
+      nr_atendimento: String(nrAtendimento),
+      cd_paciente: String(cdPaciente),
+      vigencia,
+      id_pts_excluir: idPtsExcluir,
+    },
+  })
+  return data
+}
