@@ -362,15 +362,20 @@ export default function PTSPrintView({ data }: Props) {
         </Section>
       )}
 
-      {(formValues.intervencao_prazo || formValues.intervencao_descricao) && (
-        <Section title="16. Intervenção e Prazo Estimado">
-          {formValues.intervencao_prazo && <div><strong>Prazo estimado:</strong> {formValues.intervencao_prazo}</div>}
-          {formValues.intervencao_descricao && <Text style={{ whiteSpace: 'pre-wrap' }}>{formValues.intervencao_descricao}</Text>}
+      {formValues.intervencao_descricao && (
+        <Section title="16. Intervenção">
+          <Text style={{ whiteSpace: 'pre-wrap' }}>{formValues.intervencao_descricao}</Text>
+        </Section>
+      )}
+
+      {formValues.intervencao_prazo && (
+        <Section title="17. Prazo Estimado">
+          <div><strong>Prazo estimado:</strong> {formValues.intervencao_prazo}</div>
         </Section>
       )}
 
       {validInstruRows.length > 0 && (
-        <Section title="17. Instrumentos e Escalas de Avaliação">
+        <Section title="18. Instrumentos e Escalas de Avaliação">
           <ul style={{ margin: 0, paddingLeft: 20 }}>
             {validInstruRows.map((d, i) => <li key={i}>{d.diagnostico}</li>)}
           </ul>
@@ -378,7 +383,7 @@ export default function PTSPrintView({ data }: Props) {
       )}
 
       {programas.length > 0 && (
-        <Section title="18. Programas Específicos de Acompanhamento">
+        <Section title="19. Programas Específicos de Acompanhamento">
           <ul style={{ margin: 0, paddingLeft: 20 }}>
             {programas.map((p, i) => <li key={i}>{p.label}</li>)}
           </ul>
@@ -386,7 +391,7 @@ export default function PTSPrintView({ data }: Props) {
       )}
 
       {validTerapias.length > 0 && (
-        <Section title="19. Prescrição de Terapias Indicadas">
+        <Section title="20. Prescrição de Terapias Indicadas">
           {validTerapias.map((t, i) => (
             <div key={i} style={{ 
               marginBottom: 12, 

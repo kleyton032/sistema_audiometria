@@ -1240,10 +1240,22 @@ export default function PTSPage() {
         <Card
           role="region"
           aria-labelledby="sec-intervencao"
-          title={<SectionHeader title="16. Intervenção e Prazo Estimado" id="sec-intervencao" />}
+          title={<SectionHeader title="16. Intervenção" id="sec-intervencao" />}
           style={{ marginBottom: 16 }}
         >
-          <Row gutter={[16, 8]} align="middle" style={{ marginBottom: 12 }}>
+          <Form.Item name="intervencao_descricao" style={{ marginBottom: 0 }}>
+            <Input.TextArea rows={4} placeholder="Descreva a intervenção..." />
+          </Form.Item>
+        </Card>
+
+        {/* ── SEÇÃO 17: Prazo Estimado ── */}
+        <Card
+          role="region"
+          aria-labelledby="sec-prazo"
+          title={<SectionHeader title="17. Prazo Estimado" id="sec-prazo" />}
+          style={{ marginBottom: 16 }}
+        >
+          <Row gutter={[16, 8]} align="middle">
             <Col flex="none">
               <Text strong>Prazo máximo estimado:</Text>
             </Col>
@@ -1253,9 +1265,6 @@ export default function PTSPage() {
               </Form.Item>
             </Col>
           </Row>
-          <Form.Item name="intervencao_descricao" style={{ marginBottom: 0 }}>
-            <Input.TextArea rows={3} placeholder="Descreva a intervenção..." />
-          </Form.Item>
         </Card>
 
         {/* ── SEÇÃO 17: Instrumentos usados na avaliação ── */}
@@ -1263,7 +1272,7 @@ export default function PTSPage() {
           role="region"
           aria-labelledby="sec-instrumentos"
           title={
-            <SectionHeader title="17. Instrumentos e Escalas de Avaliação" id="sec-instrumentos">
+            <SectionHeader title="18. Instrumentos e Escalas de Avaliação" id="sec-instrumentos">
               <Button
                 size="small"
                 icon={<PlusOutlined />}
@@ -1330,7 +1339,7 @@ export default function PTSPage() {
         <Card 
           role="region" 
           aria-labelledby="sec-prog-especifico"
-          title={<SectionHeader title="18. Programas Específicos de Acompanhamento" id="sec-prog-especifico" />}
+          title={<SectionHeader title="19. Programas Específicos de Acompanhamento" id="sec-prog-especifico" />}
           style={{ marginBottom: 16 }}
         >
           <Row gutter={[0, 0]} align="top">
@@ -1368,7 +1377,7 @@ export default function PTSPage() {
           role="region"
           aria-labelledby="sec-terapias-indicadas"
           title={
-            <SectionHeader title="19. Prescrição de Terapias Indicadas" id="sec-terapias-indicadas">
+            <SectionHeader title="20. Prescrição de Terapias Indicadas" id="sec-terapias-indicadas">
               <Button
                 size="small"
                 icon={<PlusOutlined />}
@@ -1524,7 +1533,7 @@ export default function PTSPage() {
         <Card 
           role="region" 
           aria-labelledby="sec-vigencia"
-          title={<SectionHeader title="20. Vigência e Responsabilidade Técnica" id="sec-vigencia" />}
+          title={<SectionHeader title="21. Vigência e Responsabilidade Técnica" id="sec-vigencia" />}
           style={{ marginBottom: 16 }}
         >
           <Space direction="vertical" style={{ width: '100%' }} size={12}>
