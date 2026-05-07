@@ -174,7 +174,7 @@ function LinhaObjetivoAnterior({
   numero: number
   item: ObjetivoItem
   disabled: boolean
-  onChange: (campo: keyof ObjetivoItem, valor: string | undefined) => void
+  onChange: (updates: Partial<ObjetivoItem>) => void
 }) {
   return (
     <Row gutter={[12, 8]} align="top" style={{ marginBottom: 8, borderBottom: '1px solid #f0f0f0', paddingBottom: 8 }}>
@@ -195,7 +195,7 @@ function LinhaObjetivoAnterior({
         <InputObjetivoAnterior 
           value={item.objetivo} 
           disabled={disabled}
-          onChange={(val) => onChange('objetivo', val)} 
+          onChange={(val) => onChange({ objetivo: val })} 
         />
       </Col>
 
@@ -210,9 +210,9 @@ function LinhaObjetivoAnterior({
           options={STATUS_EVOLUCAO}
           value={item.status}
           onChange={(v) => {
-            onChange('status', v)
-            // limpa motivo se mudou para Alcançado / Não se Aplica
-            if (!exigeMotivo(v)) onChange('motivo', undefined)
+            const updates: Partial<ObjetivoItem> = { status: v };
+            if (!exigeMotivo(v)) updates.motivo = undefined;
+            onChange(updates);
           }}
         />
       </Col>
@@ -234,8 +234,8 @@ function LinhaObjetivoAnterior({
                 options={MOTIVOS_NAO_ALCANCADO}
                 value={selectVal}
                 onChange={(v) => {
-                  if (!v) { onChange('motivo', undefined); return }
-                  onChange('motivo', v === 'OUTROS' ? 'OUTROS: ' : v)
+                  if (!v) { onChange({ motivo: undefined }); return }
+                  onChange({ motivo: v === 'OUTROS' ? 'OUTROS: ' : v });
                 }}
               />
             </Col>
@@ -245,7 +245,7 @@ function LinhaObjetivoAnterior({
                   placeholder="Descreva o motivo..."
                   value={outrosTexto}
                   disabled={disabled}
-                  onChange={(val) => onChange('motivo', val ? `OUTROS: ${val}` : undefined)}
+                  onChange={(val) => onChange({ motivo: val ? `OUTROS: ${val}` : undefined })}
                 />
               </Col>
             )}
@@ -305,7 +305,7 @@ function LinhaObjetivoAtual({
   item: ObjetivoItem
   listaOpcoes: string[]
   disabled: boolean
-  onChange: (campo: keyof ObjetivoItem, valor: string | undefined) => void
+  onChange: (updates: Partial<ObjetivoItem>) => void
 }) {
   return (
     <Row gutter={[12, 8]} align="top" style={{ marginBottom: 8, borderBottom: '1px solid #f0f0f0', paddingBottom: 8 }}>
@@ -334,7 +334,7 @@ function LinhaObjetivoAtual({
           options={listaOpcoes.map((v) => ({ label: v.toUpperCase(), value: v }))}
           popupClassName="uppercase-select-options"
           value={item.objetivo}
-          onChange={(v) => onChange('objetivo', v)}
+          onChange={(v) => onChange({ objetivo: v })}
         />
       </Col>
 
@@ -414,12 +414,11 @@ export default function ObjetivosEspecialidades({
     espKey: string,
     mom: MomentoObjetivos,
     idx: number,
-    campo: keyof ObjetivoItem,
-    val: string | undefined
+    updates: Partial<ObjetivoItem>
   ) => {
     const espAtual = value[espKey]
     const lista = [...espAtual[mom]] as [ObjetivoItem, ObjetivoItem, ObjetivoItem]
-    lista[idx] = { ...lista[idx], [campo]: val }
+    lista[idx] = { ...lista[idx], ...updates }
     onChange({ ...value, [espKey]: { ...espAtual, [mom]: lista } })
   }, [value, onChange])
 
@@ -517,7 +516,7 @@ export default function ObjetivosEspecialidades({
                   numero={idx + 1}
                   item={item}
                   disabled={!canEdit || ptsFinalizado}
-                  onChange={(campo, val) => handleItem(esp.key, mom, idx, campo, val)}
+                  onChange={(updates) => handleItem(esp.key, mom, idx, updates)}
                 />
               ) : (
                 <MemoizedLinhaObjetivoAtual
@@ -526,7 +525,7 @@ export default function ObjetivosEspecialidades({
                   item={item}
                   disabled={!canEdit || ptsFinalizado}
                   listaOpcoes={objetivosPorArea[esp.key] || []}
-                  onChange={(campo, val) => handleItem(esp.key, mom, idx, campo, val)}
+                  onChange={(updates) => handleItem(esp.key, mom, idx, updates)}
                 />
               )
             )}
