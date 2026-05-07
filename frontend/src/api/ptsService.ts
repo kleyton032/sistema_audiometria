@@ -124,6 +124,8 @@ export interface OutroPTSItem {
   id_pts: number
   nm_prestador: string
   ds_especialidade_profissional: string
+  fl_finalizado: number
+  fl_ativo: number
   objetivos: Record<string, {
     anterior: OutroPTSObjetivo[]
     atual: OutroPTSObjetivo[]

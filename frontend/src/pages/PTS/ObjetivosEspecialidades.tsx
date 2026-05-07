@@ -279,7 +279,8 @@ const InputObjetivoAnterior = memo(({
       value={localVal}
       placeholder={placeholder}
       disabled={disabled}
-      onChange={(e) => setLocalVal(e.target.value)}
+      style={{ textTransform: 'uppercase' }}
+      onChange={(e) => setLocalVal(e.target.value.toUpperCase())}
       onBlur={() => {
         if (localVal !== (value ?? '')) {
           onChange(localVal || undefined)
@@ -330,7 +331,8 @@ function LinhaObjetivoAtual({
           showSearch
           disabled={disabled}
           optionFilterProp="label"
-          options={listaOpcoes.map((v) => ({ label: v, value: v }))}
+          options={listaOpcoes.map((v) => ({ label: v.toUpperCase(), value: v }))}
+          popupClassName="uppercase-select-options"
           value={item.objetivo}
           onChange={(v) => onChange('objetivo', v)}
         />
@@ -567,7 +569,7 @@ export default function ObjetivosEspecialidades({
                       background: '#fafafa', border: '1px solid #f0f0f0',
                       borderRadius: 6, padding: '8px 12px', marginBottom: 6,
                     }}>
-                      <Text style={{ fontSize: 13 }}>{idx + 1}. {obj.objetivo}</Text>
+                      <Text style={{ fontSize: 13, textTransform: 'uppercase' }}>{idx + 1}. {obj.objetivo}</Text>
                       {obj.status && (
                         <Tag color={obj.status === 'ALCANCADO' ? 'green' : obj.status === 'PARCIAL' ? 'orange' : 'red'} style={{ marginLeft: 8, fontSize: 11 }}>
                           {STATUS_EVOLUCAO.find(s => s.value === obj.status)?.label || obj.status}
@@ -594,7 +596,7 @@ export default function ObjetivosEspecialidades({
                       background: '#f0f5ff', border: '1px solid #d6e4ff',
                       borderRadius: 6, padding: '8px 12px', marginBottom: 6,
                     }}>
-                      <Text style={{ fontSize: 13 }}>{idx + 1}. {obj.objetivo}</Text>
+                      <Text style={{ fontSize: 13, textTransform: 'uppercase' }}>{idx + 1}. {obj.objetivo}</Text>
                     </div>
                   ))}
                 </>

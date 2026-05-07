@@ -1377,20 +1377,7 @@ export default function PTSPage() {
           role="region"
           aria-labelledby="sec-terapias-indicadas"
           title={
-            <SectionHeader title="20. Prescrição de Terapias Indicadas" id="sec-terapias-indicadas">
-              <Button
-                size="small"
-                icon={<PlusOutlined />}
-                onClick={() =>
-                  setTerapias((prev) => [
-                    ...prev,
-                    { key: Date.now(), terapia: undefined, tipo_atendimento: undefined, periodicidade: undefined, qtde_sessoes: undefined },
-                  ])
-                }
-              >
-                Adicionar linha
-              </Button>
-            </SectionHeader>
+            <SectionHeader title="20. Prescrição de Terapias Indicadas" id="sec-terapias-indicadas" />
           }
           style={{ marginBottom: 16 }}
           styles={{ body: { padding: 0 } }}
@@ -1507,22 +1494,6 @@ export default function PTSPage() {
                     value={row.qtde_sessoes}
                     onChange={(v) => setTerapias((prev) => prev.map((r) => r.key === row.key ? { ...r, qtde_sessoes: v ?? undefined } : r))}
                   />
-                ),
-              },
-              {
-                title: '',
-                width: 48,
-                render: (_: unknown, row) => (
-                  terapias.length > 1 ? (
-                    <Button
-                      type="text"
-                      danger
-                      size="small"
-                      icon={<DeleteOutlined />}
-                      aria-label="Remover terapia indicada"
-                      onClick={() => setTerapias((prev) => prev.filter((r) => r.key !== row.key))}
-                    />
-                  ) : null
                 ),
               },
             ]}

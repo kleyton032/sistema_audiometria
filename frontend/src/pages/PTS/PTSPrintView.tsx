@@ -156,7 +156,7 @@ export default function PTSPrintView({ data }: Props) {
           <div key="atual" style={{ marginBottom: 4 }}>
             <strong>Objetivos Atuais:</strong>
             <ul style={{ margin: 0, paddingLeft: 20 }}>
-              {validAtual.map((o: any, i: number) => <li key={i}>{o.objetivo}</li>)}
+              {validAtual.map((o: any, i: number) => <li key={i} style={{ textTransform: 'uppercase' }}>{o.objetivo}</li>)}
             </ul>
           </div>
         );
@@ -168,7 +168,7 @@ export default function PTSPrintView({ data }: Props) {
             <strong>Objetivos Anteriores:</strong>
             <ul style={{ margin: 0, paddingLeft: 20 }}>
               {validAnterior.map((o: any, i: number) => (
-                <li key={i}>
+                <li key={i} style={{ textTransform: 'uppercase' }}>
                   {o.objetivo} 
                   {o.status && ` - Status: ${o.status}`}
                   {o.motivo && ` - Motivo: ${o.motivo}`}

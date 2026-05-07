@@ -568,7 +568,9 @@ def listar_outros_pts_vigencia(
                 o.nr_item,
                 o.ds_objetivo,
                 o.ds_status,
-                o.ds_motivo
+                o.ds_motivo,
+                p.fl_finalizado,
+                p.fl_ativo
             FROM FAV_TB_PTS p
             JOIN FAV_TB_SILA_USUARIOS u ON u.id_usuario = p.id_usuario
             LEFT JOIN FAV_TB_USUARIO_PRESTADOR up ON up.id_usuario = p.id_usuario
@@ -576,6 +578,8 @@ def listar_outros_pts_vigencia(
             WHERE (p.nr_atendimento = :nr_atendimento OR p.cd_paciente = :cd_paciente)
               AND p.ds_vigencia    = :vigencia
               AND p.id_pts        != :id_pts_excluir
+              AND p.fl_finalizado  = 1
+              AND p.fl_ativo       = 1
             ORDER BY p.id_pts, o.ds_especialidade, o.ds_momento, o.nr_item
         """
         rows = session.execute(
@@ -592,6 +596,8 @@ def listar_outros_pts_vigencia(
                     "id_pts": id_pts,
                     "nm_prestador": r[1],
                     "ds_especialidade_profissional": r[2],
+                    "fl_finalizado": r[9],
+                    "fl_ativo": r[10],
                     "objetivos": {},
                 }
             # Se tem objetivo (LEFT JOIN pode trazer nulos)
