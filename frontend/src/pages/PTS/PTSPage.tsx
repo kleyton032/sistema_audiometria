@@ -27,7 +27,9 @@ import dayjs from 'dayjs'
 import 'dayjs/locale/pt-br'
 import ObjetivosEspecialidades, {
   criarObjetivosIniciais,
+  validarObjetivos,
   type ObjetivosState,
+  type ObjetivoErro,
 } from './ObjetivosEspecialidades'
 import type { ColumnsType } from 'antd/es/table'
 import PTSPrintView from './PTSPrintView'
@@ -186,6 +188,8 @@ export default function PTSPage() {
   const [idPtsSalvo, setIdPtsSalvo] = useState<number | null>(() => paciente.id_pts ?? null)
   const [ptsFinalizado, setPtsFinalizado] = useState(() => (paciente.fl_finalizado ?? 0) === 1)
   const [idUsuarioAutor, setIdUsuarioAutor] = useState<number | null>(null)
+  const [errosObjetivos, setErrosObjetivos] = useState<Record<string, { anterior: (ObjetivoErro | null)[]; atual: (ObjetivoErro | null)[] }>>({})
+
 
   // Observador para o campo de prazo da seção 16
   const prazoEstimado = Form.useWatch('intervencao_prazo', form)
@@ -380,6 +384,21 @@ export default function PTSPage() {
 
   // ── submit ────────────────────────────────────────────────────────────────
   const handleSave = (values: PTSFormValues) => {
+    // Validação de objetivos antes de salvar
+    const val = validarObjetivos(objetivos)
+    if (val.temErro) {
+      setErrosObjetivos(val.erros)
+      notification.error({
+        message: 'Objetivos Incompletos',
+        description: `Por favor, preencha todos os campos obrigatórios nos objetivos das especialidades: ${val.especialidadesComErro.join(', ')}.`,
+        duration: 8,
+      })
+      // Faz scroll até a seção de objetivos
+      document.getElementById('sec-objetivos')?.scrollIntoView({ behavior: 'smooth' })
+      return
+    }
+    setErrosObjetivos({})
+
     setSalvandoPTS(true)
     const payload = {
       ...values,
@@ -425,6 +444,20 @@ export default function PTSPage() {
   }
 
   const handleFinalizar = async () => {
+    // Validação de objetivos antes de finalizar
+    const val = validarObjetivos(objetivos)
+    if (val.temErro) {
+      setErrosObjetivos(val.erros)
+      notification.error({
+        message: 'Objetivos Incompletos',
+        description: `Por favor, preencha todos os campos obrigatórios nos objetivos das especialidades: ${val.especialidadesComErro.join(', ')}.`,
+        duration: 8,
+      })
+      document.getElementById('sec-objetivos')?.scrollIntoView({ behavior: 'smooth' })
+      return
+    }
+    setErrosObjetivos({})
+
     if (idPtsSalvo === null) {
       // Se ainda não foi salvo, salva primeiro
       form.submit()
@@ -1209,6 +1242,7 @@ export default function PTSPage() {
             cdPaciente={paciente.cd_paciente}
             vigencia={vigenciaAtual || dayjs().format('YYYY-MM')}
             idPtsAtual={idPtsSalvo ?? -1}
+            erros={errosObjetivos}
           />
         </Card>
 

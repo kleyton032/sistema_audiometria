@@ -114,6 +114,62 @@ export function criarObjetivosIniciais(): ObjetivosState {
   )
 }
 
+/**
+ * Valida o estado dos objetivos e retorna um objeto com os erros encontrados por especialidade.
+ * Regras:
+ * 1. Se preencher qualquer campo na linha de anterior, objetivo e status tornam-se obrigatórios.
+ * 2. Se status exigir motivo (PARCIAL ou NAO_ALCANCADO), motivo torna-se obrigatório.
+ * 3. Se motivo for OUTROS, o texto descritivo torna-se obrigatório.
+ */
+export function validarObjetivos(state: ObjetivosState): { 
+  temErro: boolean; 
+  erros: Record<string, { anterior: (ObjetivoErro | null)[]; atual: (ObjetivoErro | null)[] }>;
+  especialidadesComErro: string[];
+} {
+  const erros: any = {}
+  let temErroGeral = false
+  const espsComErro: string[] = []
+
+  Object.entries(state).forEach(([espKey, dados]) => {
+    const errosAnterior = dados.anterior.map((item) => {
+      const e: ObjetivoErro = {}
+      const temAlgo = !!(item.objetivo || item.status || item.motivo)
+      
+      if (temAlgo) {
+        if (!item.objetivo) e.objetivo = true
+        if (!item.status) e.status = true
+        if (exigeMotivo(item.status) && !item.motivo) e.motivo = true
+        if (item.motivo?.startsWith('OUTROS:') && item.motivo.length <= 8) e.motivo = true
+      }
+
+      if (Object.keys(e).length > 0) return e
+      return null
+    })
+
+    const errosAtual = dados.atual.map((item) => {
+      // Por enquanto não há regras rígidas para o atual além de ser opcional, 
+      // mas se quiser obrigar algo pode adicionar aqui.
+      return null
+    })
+
+    const espTemErro = errosAnterior.some(x => x !== null) || errosAtual.some(x => x !== null)
+    if (espTemErro) {
+      temErroGeral = true
+      erros[espKey] = { anterior: errosAnterior, atual: errosAtual }
+      const label = ESPECIALIDADES.find(e => e.key === espKey)?.label || espKey
+      espsComErro.push(label)
+    }
+  })
+
+  return { temErro: temErroGeral, erros, especialidadesComErro: espsComErro }
+}
+
+export interface ObjetivoErro {
+  objetivo?: boolean
+  status?: boolean
+  motivo?: boolean
+}
+
 // ── helpers ───────────────────────────────────────────────────────────────────
 function contarPreenchidos(items: ObjetivoItem[]): number {
   return items.filter((i) => i.objetivo).length
@@ -170,11 +226,13 @@ function LinhaObjetivoAnterior({
   item,
   disabled,
   onChange,
+  erro,
 }: {
   numero: number
   item: ObjetivoItem
   disabled: boolean
   onChange: (updates: Partial<ObjetivoItem>) => void
+  erro?: ObjetivoErro | null
 }) {
   return (
     <Row gutter={[12, 8]} align="top" style={{ marginBottom: 8, borderBottom: '1px solid #f0f0f0', paddingBottom: 8 }}>
@@ -195,6 +253,7 @@ function LinhaObjetivoAnterior({
         <InputObjetivoAnterior 
           value={item.objetivo} 
           disabled={disabled}
+          status={erro?.objetivo ? 'error' : undefined}
           onChange={(val) => onChange({ objetivo: val })} 
         />
       </Col>
@@ -207,6 +266,7 @@ function LinhaObjetivoAnterior({
           aria-label={`Status da evolução do objetivo ${numero}`}
           allowClear
           disabled={disabled}
+          status={erro?.status ? 'error' : undefined}
           options={STATUS_EVOLUCAO}
           value={item.status}
           onChange={(v) => {
@@ -231,6 +291,7 @@ function LinhaObjetivoAnterior({
                 aria-label={`Motivo do status do objetivo ${numero}`}
                 allowClear
                 disabled={disabled}
+                status={erro?.motivo ? 'error' : undefined}
                 options={MOTIVOS_NAO_ALCANCADO}
                 value={selectVal}
                 onChange={(v) => {
@@ -245,6 +306,7 @@ function LinhaObjetivoAnterior({
                   placeholder="Descreva o motivo..."
                   value={outrosTexto}
                   disabled={disabled}
+                  status={erro?.motivo ? 'error' : undefined}
                   onChange={(val) => onChange({ motivo: val ? `OUTROS: ${val}` : undefined })}
                 />
               </Col>
@@ -261,12 +323,14 @@ const InputObjetivoAnterior = memo(({
   value, 
   onChange, 
   placeholder = "Objetivo do período anterior...",
-  disabled = false
+  disabled = false,
+  status
 }: { 
   value: string | undefined, 
   onChange: (v: string | undefined) => void,
   placeholder?: string,
-  disabled?: boolean
+  disabled?: boolean,
+  status?: "" | "error" | "warning" | undefined
 }) => {
   const [localVal, setLocalVal] = useState(value ?? '')
 
@@ -279,6 +343,7 @@ const InputObjetivoAnterior = memo(({
       value={localVal}
       placeholder={placeholder}
       disabled={disabled}
+      status={status}
       style={{ textTransform: 'uppercase' }}
       onChange={(e) => setLocalVal(e.target.value.toUpperCase())}
       onBlur={() => {
@@ -352,11 +417,13 @@ interface Props {
   cdPaciente?: string | number | null
   vigencia?: string
   idPtsAtual?: number | null
+  erros?: Record<string, { anterior: (ObjetivoErro | null)[]; atual: (ObjetivoErro | null)[] }>
 }
 
 export default function ObjetivosEspecialidades({
   value, onChange, ptsFinalizado = false,
   nrAtendimento, cdPaciente, vigencia, idPtsAtual,
+  erros = {},
 }: Props) {
   const { usuario } = useAuth()
   const [objetivosPorArea, setObjetivosPorArea] = useState<Record<string, string[]>>({})
@@ -516,6 +583,7 @@ export default function ObjetivosEspecialidades({
                   numero={idx + 1}
                   item={item}
                   disabled={!canEdit || ptsFinalizado}
+                  erro={erros[esp.key]?.anterior[idx]}
                   onChange={(updates) => handleItem(esp.key, mom, idx, updates)}
                 />
               ) : (
