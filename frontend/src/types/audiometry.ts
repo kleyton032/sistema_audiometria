@@ -10,8 +10,8 @@ export type Frequency = (typeof FREQUENCIES)[number]
 export interface EarThresholds {
   airConduction: Partial<Record<Frequency, number | null>>
   boneConduction: Partial<Record<Frequency, number | null>>
-  airNR?: boolean   // Sem resposta — via aérea
-  boneNR?: boolean  // Sem resposta — via óssea
+  airNR?: Partial<Record<Frequency, boolean>>   // Sem resposta por frequência — via aérea
+  boneNR?: Partial<Record<Frequency, boolean>>  // Sem resposta por frequência — via óssea
 }
 
 /** Dados de logoaudiometria de uma orelha */

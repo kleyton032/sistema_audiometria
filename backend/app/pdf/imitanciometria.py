@@ -19,7 +19,7 @@ def _timpanograma_base64(resultado) -> str:
     import matplotlib.pyplot as plt
     import numpy as np
 
-    fig, ax = plt.subplots(figsize=(9, 4))
+    fig, ax = plt.subplots(figsize=(7, 2.8))
     pressures = np.linspace(-400, 200, 300)
 
     def gaussian_curve(peak_pressure, peak_compliance, width=80):
@@ -37,13 +37,33 @@ def _timpanograma_base64(resultado) -> str:
     od_curve = gaussian_curve(od_peak_p, od_peak_c)
     oe_curve = gaussian_curve(oe_peak_p, oe_peak_c)
 
+    def draw_peak_marker(peak_p, peak_c, color: str, label: str, y_offset: float) -> None:
+        if peak_p is None or peak_c is None:
+            return
+        x = float(peak_p)
+        y = float(peak_c)
+        ax.scatter([x], [y], s=36, color=color, edgecolor="white", linewidth=1.0, zorder=6)
+        ax.annotate(
+            f"{label}: {x:.0f} daPa | {y:.2f} ml",
+            xy=(x, y),
+            xytext=(x + 12, y + y_offset),
+            textcoords="data",
+            fontsize=8,
+            color=color,
+            ha="left",
+            va="bottom",
+            arrowprops={"arrowstyle": "-", "color": color, "lw": 0.8, "alpha": 0.7},
+        )
+
     if od_curve is not None:
         ax.plot(pressures, od_curve, color="#e74c3c", linewidth=2, label="OD — Orelha Direita")
         ax.axvline(float(od_peak_p), color="#e74c3c", linestyle=":", linewidth=0.8, alpha=0.6)
+        draw_peak_marker(od_peak_p, od_peak_c, "#e74c3c", "OD", y_offset=0.06)
 
     if oe_curve is not None:
         ax.plot(pressures, oe_curve, color="#2980b9", linewidth=2, label="OE — Orelha Esquerda")
         ax.axvline(float(oe_peak_p), color="#2980b9", linestyle=":", linewidth=0.8, alpha=0.6)
+        draw_peak_marker(oe_peak_p, oe_peak_c, "#2980b9", "OE", y_offset=0.12)
 
     if od_curve is None and oe_curve is None:
         ax.text(
@@ -58,11 +78,9 @@ def _timpanograma_base64(resultado) -> str:
     ax.set_ylim(bottom=0)
     ax.axvline(0, color="#888", linestyle="--", linewidth=0.6, alpha=0.5)
     ax.grid(True, alpha=0.2)
-    if od_curve is not None or oe_curve is not None:
-        ax.legend(fontsize=8, loc="upper right")
 
     buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=130, bbox_inches="tight")
+    fig.savefig(buf, format="png", dpi=110, bbox_inches="tight")
     plt.close(fig)
     buf.seek(0)
     return base64.b64encode(buf.read()).decode()
@@ -102,24 +120,27 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str) -> str:
 <head>
 <meta charset="utf-8">
 <style>
+  @page {{ size: A4; margin: 12mm 14mm; }}
   * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-  body {{ font-family: Arial, sans-serif; font-size: 11px; color: #222; padding: 24px 32px; }}
-  h1 {{ font-size: 16px; color: #4c2c8a; }}
-  h2 {{ font-size: 13px; color: #4c2c8a; margin: 16px 0 6px; border-bottom: 1px solid #ddd; padding-bottom: 3px; }}
-  .header {{ display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }}
-  .header-info {{ font-size: 10px; color: #555; text-align: right; }}
-  .info-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; margin-bottom: 8px; }}
+  body {{ font-family: Arial, sans-serif; font-size: 9px; color: #222; }}
+  h1 {{ font-size: 13px; color: #4c2c8a; }}
+  h2 {{ font-size: 10px; color: #4c2c8a; margin: 6px 0 3px; border-bottom: 1px solid #ddd; padding-bottom: 2px; }}
+  .header {{ display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }}
+  .header-info {{ font-size: 9px; color: #555; text-align: right; }}
+  .info-grid {{ display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2px 16px; margin-bottom: 4px; }}
   .info-item span:first-child {{ font-weight: bold; }}
-  table {{ width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 10px; }}
-  th, td {{ border: 1px solid #ccc; padding: 4px 6px; text-align: center; }}
+  table {{ width: 100%; border-collapse: collapse; margin: 3px 0; font-size: 9px; }}
+  th, td {{ border: 1px solid #ccc; padding: 2px 4px; text-align: center; }}
   th {{ background: #f0eaff; font-weight: bold; }}
   .freq-header th {{ background: #4c2c8a; color: white; }}
-  .chart {{ text-align: center; margin: 10px 0; }}
+  .chart {{ text-align: center; margin: 4px 0; }}
   .chart img {{ max-width: 100%; height: auto; }}
-  .conclusao {{ background: #fafafa; border: 1px solid #ddd; padding: 10px 14px; border-radius: 4px; line-height: 1.6; min-height: 50px; }}
-  .assinatura {{ margin-top: 32px; text-align: center; }}
-  .assinatura .linha {{ border-top: 1px solid #333; width: 250px; margin: 0 auto 4px; }}
-  .tag {{ display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: bold; }}
+  .reflexos-row {{ display: flex; gap: 8px; }}
+  .reflexos-row > div {{ flex: 1; }}
+  .conclusao {{ background: #fafafa; border: 1px solid #ddd; padding: 4px 8px; border-radius: 3px; line-height: 1.4; min-height: 28px; font-size: 9px; }}
+  .assinatura {{ margin-top: 10px; text-align: center; }}
+  .assinatura .linha {{ border-top: 1px solid #333; width: 200px; margin: 0 auto 3px; }}
+  .tag {{ display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 9px; font-weight: bold; }}
   .tag-od {{ background: #fde8e8; color: #c0392b; }}
   .tag-oe {{ background: #e8f0fd; color: #1a5276; }}
   .np {{ color: #aaa; font-style: italic; }}
@@ -187,63 +208,57 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str) -> str:
   </tbody>
 </table>
 
-<h2>Reflexos Estapedianos — Orelha Direita (sonda OD)</h2>
-<table>
-  <thead>
-    <tr class="freq-header">
-      <th>Modalidade</th>
-      <th>500 Hz</th>
-      <th>1000 Hz</th>
-      <th>2000 Hz</th>
-      <th>4000 Hz</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>Ipsilateral (dB)</th>
-      <td class="{'np' if r.od_ipsi_500 is None else ''}">{_reflex_cell(r.od_ipsi_500)}</td>
-      <td class="{'np' if r.od_ipsi_1000 is None else ''}">{_reflex_cell(r.od_ipsi_1000)}</td>
-      <td class="{'np' if r.od_ipsi_2000 is None else ''}">{_reflex_cell(r.od_ipsi_2000)}</td>
-      <td class="{'np' if r.od_ipsi_4000 is None else ''}">{_reflex_cell(r.od_ipsi_4000)}</td>
-    </tr>
-    <tr>
-      <th>Contralateral (dB)</th>
-      <td class="{'np' if r.od_contra_500 is None else ''}">{_reflex_cell(r.od_contra_500)}</td>
-      <td class="{'np' if r.od_contra_1000 is None else ''}">{_reflex_cell(r.od_contra_1000)}</td>
-      <td class="{'np' if r.od_contra_2000 is None else ''}">{_reflex_cell(r.od_contra_2000)}</td>
-      <td class="{'np' if r.od_contra_4000 is None else ''}">{_reflex_cell(r.od_contra_4000)}</td>
-    </tr>
-  </tbody>
-</table>
-
-<h2>Reflexos Estapedianos — Orelha Esquerda (sonda OE)</h2>
-<table>
-  <thead>
-    <tr class="freq-header">
-      <th>Modalidade</th>
-      <th>500 Hz</th>
-      <th>1000 Hz</th>
-      <th>2000 Hz</th>
-      <th>4000 Hz</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>Ipsilateral (dB)</th>
-      <td class="{'np' if r.oe_ipsi_500 is None else ''}">{_reflex_cell(r.oe_ipsi_500)}</td>
-      <td class="{'np' if r.oe_ipsi_1000 is None else ''}">{_reflex_cell(r.oe_ipsi_1000)}</td>
-      <td class="{'np' if r.oe_ipsi_2000 is None else ''}">{_reflex_cell(r.oe_ipsi_2000)}</td>
-      <td class="{'np' if r.oe_ipsi_4000 is None else ''}">{_reflex_cell(r.oe_ipsi_4000)}</td>
-    </tr>
-    <tr>
-      <th>Contralateral (dB)</th>
-      <td class="{'np' if r.oe_contra_500 is None else ''}">{_reflex_cell(r.oe_contra_500)}</td>
-      <td class="{'np' if r.oe_contra_1000 is None else ''}">{_reflex_cell(r.oe_contra_1000)}</td>
-      <td class="{'np' if r.oe_contra_2000 is None else ''}">{_reflex_cell(r.oe_contra_2000)}</td>
-      <td class="{'np' if r.oe_contra_4000 is None else ''}">{_reflex_cell(r.oe_contra_4000)}</td>
-    </tr>
-  </tbody>
-</table>
+<h2>Reflexos Estapedianos</h2>
+<div class="reflexos-row">
+  <div>
+    <div style="font-weight:bold; color:#c0392b; margin-bottom:2px; font-size:9px;">OD — Orelha Direita (sonda OD)</div>
+    <table>
+      <thead>
+        <tr class="freq-header"><th>Modalidade</th><th>500 Hz</th><th>1000 Hz</th><th>2000 Hz</th><th>4000 Hz</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th>Ipsilateral (dB)</th>
+          <td class="{'np' if r.od_ipsi_500 is None else ''}">{_reflex_cell(r.od_ipsi_500)}</td>
+          <td class="{'np' if r.od_ipsi_1000 is None else ''}">{_reflex_cell(r.od_ipsi_1000)}</td>
+          <td class="{'np' if r.od_ipsi_2000 is None else ''}">{_reflex_cell(r.od_ipsi_2000)}</td>
+          <td class="{'np' if r.od_ipsi_4000 is None else ''}">{_reflex_cell(r.od_ipsi_4000)}</td>
+        </tr>
+        <tr>
+          <th>Contralateral (dB)</th>
+          <td class="{'np' if r.od_contra_500 is None else ''}">{_reflex_cell(r.od_contra_500)}</td>
+          <td class="{'np' if r.od_contra_1000 is None else ''}">{_reflex_cell(r.od_contra_1000)}</td>
+          <td class="{'np' if r.od_contra_2000 is None else ''}">{_reflex_cell(r.od_contra_2000)}</td>
+          <td class="{'np' if r.od_contra_4000 is None else ''}">{_reflex_cell(r.od_contra_4000)}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div>
+    <div style="font-weight:bold; color:#1a5276; margin-bottom:2px; font-size:9px;">OE — Orelha Esquerda (sonda OE)</div>
+    <table>
+      <thead>
+        <tr class="freq-header"><th>Modalidade</th><th>500 Hz</th><th>1000 Hz</th><th>2000 Hz</th><th>4000 Hz</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th>Ipsilateral (dB)</th>
+          <td class="{'np' if r.oe_ipsi_500 is None else ''}">{_reflex_cell(r.oe_ipsi_500)}</td>
+          <td class="{'np' if r.oe_ipsi_1000 is None else ''}">{_reflex_cell(r.oe_ipsi_1000)}</td>
+          <td class="{'np' if r.oe_ipsi_2000 is None else ''}">{_reflex_cell(r.oe_ipsi_2000)}</td>
+          <td class="{'np' if r.oe_ipsi_4000 is None else ''}">{_reflex_cell(r.oe_ipsi_4000)}</td>
+        </tr>
+        <tr>
+          <th>Contralateral (dB)</th>
+          <td class="{'np' if r.oe_contra_500 is None else ''}">{_reflex_cell(r.oe_contra_500)}</td>
+          <td class="{'np' if r.oe_contra_1000 is None else ''}">{_reflex_cell(r.oe_contra_1000)}</td>
+          <td class="{'np' if r.oe_contra_2000 is None else ''}">{_reflex_cell(r.oe_contra_2000)}</td>
+          <td class="{'np' if r.oe_contra_4000 is None else ''}">{_reflex_cell(r.oe_contra_4000)}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
 
 <h2>Classificação dos Timpanogramas — Jerger, Jerger e Maudin (1972)</h2>
 <table>

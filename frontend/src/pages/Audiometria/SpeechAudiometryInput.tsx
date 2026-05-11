@@ -24,11 +24,28 @@ function Num({
   step?: number
   placeholder?: string
 }) {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const allowedKeys = [
+      'Backspace', 'Delete', 'Tab', 'Escape', 'Enter',
+      'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+      '-', 'Subtract'
+    ]
+    if (
+      allowedKeys.includes(e.key) ||
+      (e.key >= '0' && e.key <= '9') ||
+      (e.ctrlKey || e.metaKey)
+    ) {
+      return
+    }
+    e.preventDefault()
+  }
+
   return (
     <InputNumber
       size="small"
       value={value}
       onChange={onChange}
+      onKeyDown={handleKeyDown}
       disabled={disabled}
       min={min}
       max={max}
