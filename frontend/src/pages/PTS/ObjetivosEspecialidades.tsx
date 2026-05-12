@@ -735,7 +735,7 @@ export default function ObjetivosEspecialidades({
           </Button>
         }
         width={700}
-        centered
+        style={{ top: 20 }}
         title={
           modalPTS ? (
             <Space>

@@ -230,7 +230,7 @@ export default function AppLayout() {
           </Button>
         ]}
         width={600}
-        centered
+        style={{ top: 20 }}
       >
         {usuario && (
           <div style={{ padding: '4px 0' }}>

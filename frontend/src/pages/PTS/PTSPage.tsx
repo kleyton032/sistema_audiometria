@@ -584,7 +584,7 @@ export default function PTSPage() {
           </Button>
         }
         onCancel={() => setModalResultado((p) => ({ ...p, visivel: false }))}
-        centered
+        style={{ top: 20 }}
         width={480}
       >
         <Result
@@ -604,7 +604,7 @@ export default function PTSPage() {
         okText="Confirmar Cancelamento"
         cancelText="Desistir"
         okButtonProps={{ danger: true }}
-        centered
+        style={{ top: 20 }}
       >
         <Form
           form={formCancel}
