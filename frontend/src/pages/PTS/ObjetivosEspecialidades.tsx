@@ -120,8 +120,9 @@ export function criarObjetivosIniciais(): ObjetivosState {
  * 1. Se preencher qualquer campo na linha de anterior, objetivo e status tornam-se obrigatórios.
  * 2. Se status exigir motivo (PARCIAL ou NAO_ALCANCADO), motivo torna-se obrigatório.
  * 3. Se motivo for OUTROS, o texto descritivo torna-se obrigatório.
+ * 4. Para especialidades obrigatórias, PELO MENOS UM objetivo (anterior OU atual) deve estar preenchido.
  */
-export function validarObjetivos(state: ObjetivosState): { 
+export function validarObjetivos(state: ObjetivosState, especialidadesObrigatorias: string[] = []): { 
   temErro: boolean; 
   erros: Record<string, { anterior: (ObjetivoErro | null)[]; atual: (ObjetivoErro | null)[] }>;
   especialidadesComErro: string[];
@@ -131,7 +132,9 @@ export function validarObjetivos(state: ObjetivosState): {
   const espsComErro: string[] = []
 
   Object.entries(state).forEach(([espKey, dados]) => {
-    const errosAnterior = dados.anterior.map((item) => {
+    const isObrigatoria = especialidadesObrigatorias.includes(espKey);
+
+    const errosAnterior = dados.anterior.map((item, idx) => {
       const e: ObjetivoErro = {}
       const temAlgo = !!(item.objetivo || item.status || item.motivo)
       
@@ -140,17 +143,39 @@ export function validarObjetivos(state: ObjetivosState): {
         if (!item.status) e.status = true
         if (exigeMotivo(item.status) && !item.motivo) e.motivo = true
         if (item.motivo?.startsWith('OUTROS:') && item.motivo.length <= 8) e.motivo = true
+      } else if (isObrigatoria && idx === 0) {
+        // Primeira linha do objetivo anterior é obrigatória para a especialidade do usuário
+        e.objetivo = true
+        e.status = true
       }
 
       if (Object.keys(e).length > 0) return e
       return null
     })
 
-    const errosAtual = dados.atual.map((item) => {
-      // Por enquanto não há regras rígidas para o atual além de ser opcional, 
-      // mas se quiser obrigar algo pode adicionar aqui.
+    const errosAtual = dados.atual.map((item, idx) => {
+      const e: ObjetivoErro = {}
+      if (isObrigatoria && idx === 0 && !item.objetivo) {
+        // Primeira linha do objetivo atual é obrigatória para a especialidade do usuário
+        e.objetivo = true
+      }
+      if (Object.keys(e).length > 0) return e
       return null
     })
+
+    // Validação adicional: Se é especialidade obrigatória, deve ter PELO MENOS UM objetivo preenchido (anterior OU atual)
+    if (isObrigatoria) {
+      const temObjetivoAnterior = dados.anterior.some(item => !!item.objetivo)
+      const temObjetivoAtual = dados.atual.some(item => !!item.objetivo)
+      
+      if (!temObjetivoAnterior && !temObjetivoAtual) {
+        // Nenhum objetivo foi preenchido - adicionar erro na primeira linha de ambos
+        if (!errosAnterior[0]) errosAnterior[0] = {}
+        if (!errosAtual[0]) errosAtual[0] = {}
+        errosAnterior[0]!.objetivo = true
+        errosAtual[0]!.objetivo = true
+      }
+    }
 
     const espTemErro = errosAnterior.some(x => x !== null) || errosAtual.some(x => x !== null)
     if (espTemErro) {
@@ -214,7 +239,7 @@ function getEspecialidadeInfo(dsEspecialidade: string | null | undefined): { ico
 }
 
 // Retorna as keys de especialidades que o usuário pode editar
-function getMinhasEspecialidades(user: any): string[] {
+export function getMinhasEspecialidades(user: any): string[] {
   if (!user) return []
   if (user.ds_perfil === 'ADMIN') return ESPECIALIDADES.map(e => e.key)
   return ESPECIALIDADES.filter(esp => canEditEspecialidade(esp.key, esp.label, user)).map(e => e.key)
@@ -256,6 +281,7 @@ function LinhaObjetivoAnterior({
           status={erro?.objetivo ? 'error' : undefined}
           onChange={(val) => onChange({ objetivo: val })} 
         />
+        {erro?.objetivo && <div style={{ color: '#ff4d4f', fontSize: 12, marginTop: 2 }}>Campo obrigatório</div>}
       </Col>
 
       {/* status */}
@@ -275,6 +301,7 @@ function LinhaObjetivoAnterior({
             onChange(updates);
           }}
         />
+        {erro?.status && <div style={{ color: '#ff4d4f', fontSize: 12, marginTop: 2 }}>Status obrigatório</div>}
       </Col>
 
       {/* motivo — só exibido quando status exige */}
@@ -309,7 +336,13 @@ function LinhaObjetivoAnterior({
                   status={erro?.motivo ? 'error' : undefined}
                   onChange={(val) => onChange({ motivo: val ? `OUTROS: ${val}` : undefined })}
                 />
+                {erro?.motivo && <div style={{ color: '#ff4d4f', fontSize: 12, marginTop: 2 }}>Descrição obrigatória</div>}
               </Col>
+            )}
+            {selectVal !== 'OUTROS' && erro?.motivo && (
+               <Col flex="1" style={{ minWidth: 0 }}>
+                 <div style={{ color: '#ff4d4f', fontSize: 12, marginTop: 6 }}>Motivo obrigatório</div>
+               </Col>
             )}
           </>
         )
@@ -365,12 +398,14 @@ function LinhaObjetivoAtual({
   listaOpcoes,
   disabled,
   onChange,
+  erro,
 }: {
   numero: number
   item: ObjetivoItem
   listaOpcoes: string[]
   disabled: boolean
   onChange: (updates: Partial<ObjetivoItem>) => void
+  erro?: ObjetivoErro | null
 }) {
   return (
     <Row gutter={[12, 8]} align="top" style={{ marginBottom: 8, borderBottom: '1px solid #f0f0f0', paddingBottom: 8 }}>
@@ -395,12 +430,14 @@ function LinhaObjetivoAtual({
           allowClear
           showSearch
           disabled={disabled}
+          status={erro?.objetivo ? 'error' : undefined}
           optionFilterProp="label"
           options={listaOpcoes.map((v) => ({ label: v.toUpperCase(), value: v }))}
           popupClassName="uppercase-select-options"
           value={item.objetivo}
           onChange={(v) => onChange({ objetivo: v })}
         />
+        {erro?.objetivo && <div style={{ color: '#ff4d4f', fontSize: 12, marginTop: 2 }}>Objetivo obrigatório</div>}
       </Col>
 
 
@@ -593,6 +630,7 @@ export default function ObjetivosEspecialidades({
                   item={item}
                   disabled={!canEdit || ptsFinalizado}
                   listaOpcoes={objetivosPorArea[esp.key] || []}
+                  erro={erros[esp.key]?.atual[idx]}
                   onChange={(updates) => handleItem(esp.key, mom, idx, updates)}
                 />
               )

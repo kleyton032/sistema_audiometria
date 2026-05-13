@@ -415,12 +415,6 @@ export default function PTSPrintView({ data }: Props) {
         </Section>
       )}
 
-      {formValues.pts_nao_concluido && (
-        <div style={{ marginTop: 24, padding: 12, border: '1px solid #cf1322', borderRadius: 4, background: '#fff1f0', color: '#cf1322', fontWeight: 'bold' }}>
-          ATENÇÃO: PTS NÃO CONCLUÍDO
-        </div>
-      )}
-
       <div style={{ marginTop: 40, borderTop: '1px solid #ccc', paddingTop: 16, textAlign: 'center', fontSize: 12, color: '#666' }}>
         <strong>LGPD — Lei Geral de Proteção de Dados</strong><br />
         Documento com dados sensíveis coletados para fins de assistência médica e terapêutica.<br />

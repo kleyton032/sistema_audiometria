@@ -21,6 +21,7 @@ import {
   Modal,
   Result,
   Spin,
+  notification,
 } from 'antd'
 import { SaveOutlined, FileTextOutlined, PlusOutlined, DeleteOutlined, CheckCircleOutlined, CloseCircleOutlined, ArrowLeftOutlined, PrinterOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
@@ -28,6 +29,7 @@ import 'dayjs/locale/pt-br'
 import ObjetivosEspecialidades, {
   criarObjetivosIniciais,
   validarObjetivos,
+  getMinhasEspecialidades,
   type ObjetivosState,
   type ObjetivoErro,
 } from './ObjetivosEspecialidades'
@@ -385,7 +387,8 @@ export default function PTSPage() {
   // ── submit ────────────────────────────────────────────────────────────────
   const handleSave = (values: PTSFormValues) => {
     // Validação de objetivos antes de salvar
-    const val = validarObjetivos(objetivos)
+    const minhasEsps = getMinhasEspecialidades(usuarioMe)
+    const val = validarObjetivos(objetivos, minhasEsps)
     if (val.temErro) {
       setErrosObjetivos(val.erros)
       notification.error({
@@ -445,7 +448,8 @@ export default function PTSPage() {
 
   const handleFinalizar = async () => {
     // Validação de objetivos antes de finalizar
-    const val = validarObjetivos(objetivos)
+    const minhasEsps = getMinhasEspecialidades(usuarioMe)
+    const val = validarObjetivos(objetivos, minhasEsps)
     if (val.temErro) {
       setErrosObjetivos(val.erros)
       notification.error({
@@ -1542,15 +1546,6 @@ export default function PTSPage() {
           style={{ marginBottom: 16 }}
         >
           <Space direction="vertical" style={{ width: '100%' }} size={12}>
-            {/* Não concluído */}
-            <Form.Item name="pts_nao_concluido" valuePropName="checked" style={{ marginBottom: 0 }}>
-              <Checkbox>
-                <Text style={{ color: '#cf1322', fontWeight: 600 }}>PTS não concluído</Text>
-              </Checkbox>
-            </Form.Item>
-
-            <Divider style={{ margin: '4px 0' }} />
-
             {/* Data automática */}
             <Row gutter={[16, 8]} align="middle">
               <Col flex="none"><Text strong>Data:</Text></Col>

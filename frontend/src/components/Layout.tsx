@@ -34,29 +34,29 @@ export default function AppLayout() {
     // ── Dashboard (todos) ──────────────────────────────────────
     {
       key: '/dashboard',
-      icon: <DashboardOutlined />,
-      label: 'Dashboard',
+      icon: <DashboardOutlined aria-hidden="true" />,
+      label: 'Dashboard - Página inicial',
     },
 
     // ── Exames Auditivos (apenas Fonoaudiólogo) ─────────────────
     ...(isFonoaudiologo ? [{
       key: 'grupo-exames',
-      icon: <SoundOutlined />,
+      icon: <SoundOutlined aria-hidden="true" />,
       label: 'Exames Auditivos',
       children: [
-        { key: '/pacientes', icon: <TeamOutlined />, label: 'Pacientes' },
-        { key: '/consulta', icon: <SearchOutlined />, label: 'Laudos' },
+        { key: '/pacientes', icon: <TeamOutlined aria-hidden="true" />, label: 'Pacientes - Audiometrias' },
+        { key: '/consulta', icon: <SearchOutlined aria-hidden="true" />, label: 'Laudos - Consultas' },
       ],
     }] : []),
 
     // ── PTS (todos os usuários) ─────────────────────────────────
     {
       key: 'grupo-pts',
-      icon: <FileProtectOutlined />,
-      label: 'PTS',
+      icon: <FileProtectOutlined aria-hidden="true" />,
+      label: 'Plano Terapêutico Singular (PTS)',
       children: [
-        { key: '/pts/pacientes', icon: <TeamOutlined />, label: 'Pacientes' },
-        { key: '/pts/dashboard', icon: <DashboardOutlined />, label: 'Dashboard' },
+        { key: '/pts/pacientes', icon: <TeamOutlined aria-hidden="true" />, label: 'Pacientes PTS' },
+        { key: '/pts/dashboard', icon: <DashboardOutlined aria-hidden="true" />, label: 'Dashboard PTS' },
       ],
     },
   ]
@@ -68,12 +68,34 @@ export default function AppLayout() {
 
   return (
     <AntLayout style={{ minHeight: '100vh' }}>
+      {/* Skip link para acessibilidade */}
+      <a 
+        href="#main-content"
+        className="skip-link"
+        style={{
+          position: 'absolute',
+          top: -40,
+          left: 0,
+          background: '#000',
+          color: '#fff',
+          padding: '8px 12px',
+          zIndex: 100,
+          textDecoration: 'none',
+          fontSize: 12,
+          fontWeight: 500,
+        }}
+      >
+        Pular para conteúdo principal
+      </a>
+      
       <Sider
         trigger={null}
         collapsible
         collapsed={collapsed}
         theme="dark"
         width={220}
+        role="navigation"
+        aria-label="Menu de navegação principal"
       >
         {/* Logo */}
         <div
@@ -134,18 +156,22 @@ export default function AppLayout() {
 
         {/* Rodapé com dados do usuário */}
         {!collapsed && usuario && (
-          <div
+          <button
             onClick={() => setProfileVisible(true)}
+            aria-label={`Perfil de ${usuario.nm_usuario}. ${usuario.nm_tip_presta}${usuario.ds_conselho && usuario.ds_codigo_conselho ? ` - ${usuario.ds_conselho} ${usuario.ds_codigo_conselho}` : ''}. Clique para ver detalhes`}
             style={{
               position: 'absolute',
               bottom: 0,
               left: 0,
               right: 0,
               padding: '12px 16px',
+              border: 'none',
               borderTop: '1px solid rgba(255,255,255,0.1)',
               background: 'rgba(0,0,0,0.2)',
               cursor: 'pointer',
               transition: 'background 0.3s',
+              width: '100%',
+              textAlign: 'left',
             }}
             className="sidebar-user-footer"
           >
@@ -165,22 +191,36 @@ export default function AppLayout() {
                 )}
               </div>
             </div>
-          </div>
+          </button>
         )}
         {collapsed && usuario && (
-          <div 
-            onClick={() => setProfileVisible(true)}
-            style={{ position: 'absolute', bottom: 12, left: 0, right: 0, display: 'flex', justifyContent: 'center', cursor: 'pointer' }}
-          >
-            <Tooltip title={usuario.nm_usuario} placement="right">
+          <Tooltip title={`Perfil: ${usuario.nm_usuario}. ${usuario.nm_tip_presta}`} placement="right">
+            <button
+              onClick={() => setProfileVisible(true)}
+              aria-label={`Abrir perfil de ${usuario.nm_usuario}`}
+              style={{
+                position: 'absolute',
+                bottom: 12,
+                left: 0,
+                right: 0,
+                display: 'flex',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                border: 'none',
+                background: 'transparent',
+                padding: 0,
+              }}
+            >
               <Avatar size={28} icon={<UserOutlined />} style={{ background: '#667eea' }} />
-            </Tooltip>
-          </div>
+            </button>
+          </Tooltip>
         )}
       </Sider>
 
       <AntLayout>
         <Header
+          role="banner"
+          aria-label="Barra superior de navegação"
           style={{
             padding: '0 24px',
             background: themeToken.colorBgContainer,
@@ -192,16 +232,24 @@ export default function AppLayout() {
         >
           <Button
             type="text"
-            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            icon={collapsed ? <MenuUnfoldOutlined aria-hidden="true" /> : <MenuFoldOutlined aria-hidden="true" />}
             onClick={() => setCollapsed(!collapsed)}
             aria-label={collapsed ? 'Expandir menu lateral' : 'Recolher menu lateral'}
             aria-expanded={!collapsed}
           />
-          <Button type="text" icon={<LogoutOutlined />} onClick={handleLogout} aria-label="Sair do sistema">
+          <Button 
+            type="text" 
+            icon={<LogoutOutlined aria-hidden="true" />} 
+            onClick={handleLogout} 
+            aria-label="Sair do sistema"
+          >
             Sair
           </Button>
         </Header>
         <Content
+          id="main-content"
+          role="main"
+          aria-label="Conteúdo principal da aplicação"
           style={{
             margin: 24,
             padding: 24,
@@ -274,8 +322,56 @@ export default function AppLayout() {
       </Modal>
 
       <style>{`
+        /* Skip link visível no focus */
+        .skip-link:focus {
+          top: 0;
+          left: 0;
+          right: 0;
+          width: 100%;
+          padding: 12px;
+          z-index: 1000;
+        }
+
+        /* Item de menu selecionado com indicador visual forte */
+        .ant-menu-item-selected::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          width: 4px;
+          height: 100%;
+          background: #52c41a;
+        }
+
+        /* Focus visível para navegação por teclado */
+        .ant-menu-item:focus-visible,
+        .ant-menu-submenu-title:focus-visible {
+          outline: 2px solid #1677ff;
+          outline-offset: -2px;
+        }
+
+        /* Grupos de menu com destaque */
+        .ant-menu-submenu-title {
+          font-weight: 500;
+          letter-spacing: 0.3px;
+        }
+
+        /* Melhor contraste na sidebar */
+        .ant-menu-dark .ant-menu-item {
+          color: rgba(255, 255, 255, 0.85);
+        }
+
+        .ant-menu-dark .ant-menu-item-selected {
+          background: rgba(102, 126, 234, 0.15) !important;
+        }
+
+        /* Botão de usuário com melhor acessibilidade */
         .sidebar-user-footer:hover {
           background: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .sidebar-user-footer:focus {
+          outline: 2px solid #1677ff;
+          outline-offset: -2px;
         }
       `}</style>
     </AntLayout>
