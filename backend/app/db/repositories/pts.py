@@ -318,6 +318,11 @@ def update_pts(db: Session, id_pts: int, pts_data: PTSCreate) -> PTS:
 
     vigencia = pts_data.pts_vigencia or calcular_vigencia()
 
+    # Atualiza nr_atendimento para manter o vínculo com o atendimento atual,
+    # garantindo que o status-batch encontre o PTS pelo cd_atendimento do dia.
+    if pts_data.nr_atendimento:
+        db_pts.nr_atendimento = pts_data.nr_atendimento
+
     db_pts.ds_queixa_principal = pts_data.queixa_principal
     db_pts.fl_def_visual = int(pts_data.def_associada_visual)
     db_pts.fl_def_intelectual = int(pts_data.def_associada_intelectual)
@@ -369,6 +374,5 @@ def update_pts(db: Session, id_pts: int, pts_data: PTSCreate) -> PTS:
 
     db.commit()
     db.refresh(db_pts)
-    return db_pts
     return db_pts
 
