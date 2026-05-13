@@ -68,6 +68,7 @@ interface DiagPrincipalRow {
 // ── tipo linha de terapia indicada ───────────────────────────────────────────
 interface TerapiaRow {
   key: number
+  cd_terapia: string | undefined
   terapia: string | undefined
   tipo_atendimento: string | undefined
   periodicidade: string | undefined
@@ -171,7 +172,7 @@ export default function PTSPage() {
   )
   const [objetivos, setObjetivos] = useState<ObjetivosState>(criarObjetivosIniciais)
   const [usuarioMe, setUsuarioMe] = useState<User | null>(null)
-  const [terapias, setTerapias] = useState<TerapiaRow[]>([{ key: 1, terapia: undefined, tipo_atendimento: undefined, periodicidade: undefined, qtde_sessoes: undefined }])
+  const [terapias, setTerapias] = useState<TerapiaRow[]>([{ key: 1, cd_terapia: undefined, terapia: undefined, tipo_atendimento: undefined, periodicidade: undefined, qtde_sessoes: undefined }])
   const [diagPrincipais, setDiagPrincipais] = useState<DiagPrincipalRow[]>([{ key: 1, diagnostico: undefined }])
   const [opcoesDiagPrincipais, setOpcoesDiagPrincipais] = useState<string[]>([])
   const [opcoesDiagTerapeuticos, setOpcoesDiagTerapeuticos] = useState<string[]>([])
@@ -289,7 +290,7 @@ export default function PTSPage() {
     setTerapias(
       (d.terapias_indicadas ?? []).length > 0
         ? d.terapias_indicadas
-        : [{ key: 1, terapia: undefined, tipo_atendimento: undefined, periodicidade: undefined, qtde_sessoes: undefined }]
+        : [{ key: 1, cd_terapia: undefined, terapia: undefined, tipo_atendimento: undefined, periodicidade: undefined, qtde_sessoes: undefined }]
     )
     setDiagnosticosArea(
       (d.diagnosticos_area ?? {}) as Record<Area, string | undefined>
@@ -1438,11 +1439,11 @@ export default function PTSPage() {
                     allowClear
                     showSearch
                     optionFilterProp="label"
-                    options={opcoesTerapiasIndicadas.map((e) => ({ label: e.ds, value: e.ds }))}
-                    value={row.terapia}
-                    onChange={(v) => {
-                      const meses = obterMesesPrazo(prazoEstimado)
-                      setTerapias((prev) => prev.map((r) => r.key === row.key ? { ...r, terapia: v } : r))
+                    options={opcoesTerapiasIndicadas.map((e) => ({ label: e.ds, value: e.cd }))}
+                    value={row.cd_terapia}
+                    onChange={(cd) => {
+                      const item = opcoesTerapiasIndicadas.find((e) => e.cd === cd)
+                      setTerapias((prev) => prev.map((r) => r.key === row.key ? { ...r, cd_terapia: cd, terapia: item?.ds } : r))
                     }}
                   />
                 ),

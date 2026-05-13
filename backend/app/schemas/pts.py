@@ -13,6 +13,7 @@ class PTSObjetivoMomento(BaseModel):
 
 class PTSTerapiaRow(BaseModel):
     key: int
+    cd_terapia: Optional[str] = None
     terapia: Optional[str] = None
     tipo_atendimento: Optional[str] = None
     periodicidade: Optional[str] = None

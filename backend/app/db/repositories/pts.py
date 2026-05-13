@@ -119,7 +119,8 @@ def pts_to_dict(pts: PTS) -> dict:
         "terapias_indicadas": [
             {
                 "key": i + 1,
-                "terapia": r.ds_terapia,
+                "cd_terapia":       r.cd_terapia,
+                "terapia":          r.ds_terapia,
                 "tipo_atendimento": r.ds_tipo_atendimento,
                 "periodicidade":    r.ds_periodicidade,
                 "qtde_sessoes":     r.nr_qtde_sessoes,
@@ -202,7 +203,7 @@ def _inserir_filhos(db: Session, id_pts: int, vigencia: str, pts_data: PTSCreate
             db.add(PTSTerapia(
                 id_pts=id_pts,
                 nr_ordem=i+1,
-                cd_terapia="0",
+                cd_terapia=terapia.cd_terapia or "0",
                 ds_terapia=terapia.terapia,
                 cd_tipo_atendimento="0",
                 ds_tipo_atendimento=terapia.tipo_atendimento,
