@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Layout as AntLayout, Menu, Button, theme, Avatar, Typography, Tooltip, Space, Modal, Descriptions, Badge, Tag, Divider } from 'antd'
+import { Layout as AntLayout, Button, theme, Avatar, Typography, Tooltip, Space, Modal, Descriptions, Badge, Tag, Divider } from 'antd'
 import {
   DashboardOutlined,
   LogoutOutlined,
@@ -68,6 +68,76 @@ export default function AppLayout() {
 
   return (
     <AntLayout style={{ minHeight: '100vh' }}>
+      <style>{`
+        .menu-item-button {
+          position: relative;
+          overflow: hidden;
+        }
+        
+        .menu-item-button::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+          transition: left 0.5s ease;
+        }
+        
+        .menu-item-button:hover::before {
+          left: 100%;
+        }
+        
+        .menu-item-button:hover {
+          background: rgba(102, 126, 234, 0.2) !important;
+          transform: translateX(4px);
+          box-shadow: inset 3px 0 8px rgba(102, 126, 234, 0.3);
+        }
+        
+        .menu-item-button:focus-visible {
+          outline: 2px solid #667eea;
+          outline-offset: -2px;
+          background: rgba(102, 126, 234, 0.25) !important;
+          transform: translateX(4px);
+        }
+        
+        .menu-group-summary {
+          position: relative;
+          transition: all 0.3s ease;
+        }
+        
+        .menu-group-summary:hover {
+          color: #fff !important;
+          background: rgba(102, 126, 234, 0.1);
+          transform: translateX(2px);
+        }
+        
+        .menu-group-summary:focus-visible {
+          outline: 2px solid #667eea;
+          outline-offset: 2px;
+          background: rgba(102, 126, 234, 0.15);
+        }
+        
+        .menu-item-button:focus-visible svg,
+        .menu-group-summary:focus-visible svg {
+          outline: none;
+        }
+        
+        .menu-group-summary::marker {
+          color: #667eea;
+        }
+        
+        /* Efeito de ripple no clique */
+        .menu-item-button:active {
+          transform: translateX(3px) scale(0.98);
+        }
+        
+        details[open] > .menu-group-summary {
+          color: #fff !important;
+          background: rgba(102, 126, 234, 0.12);
+        }
+      `}</style>
       {/* Skip link para acessibilidade */}
       <a 
         href="#main-content"
@@ -138,21 +208,128 @@ export default function AppLayout() {
           </Space>
         </div>
 
-        <Menu
-          theme="dark"
-          mode="inline"
-          selectedKeys={[location.pathname]}
-          defaultOpenKeys={['grupo-exames', 'grupo-pts']}
-          items={menuItems}
-          style={{
-            background: 'transparent',
-            paddingTop: 12,
-            borderRight: 0,
-          }}
-          onClick={({ key }) => {
-            if (!key.startsWith('grupo-')) navigate(key)
-          }}
-        />
+        <nav aria-label="Menu principal de navegação">
+          <ul style={{ listStyle: 'none', padding: '12px 0', margin: 0 }}>
+            {menuItems.map((item) => (
+              <li key={item.key} style={{ margin: 0 }}>
+                {item.children ? (
+                  // Grupo com submenu
+                  <details
+                    open={true}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <summary
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '8px 16px',
+                        color: 'rgba(255,255,255,0.65)',
+                        cursor: 'pointer',
+                        fontSize: 14,
+                        userSelect: 'none',
+                        outline: 'none',
+                      }}
+                      className="menu-group-summary"
+                      aria-expanded="true"
+                      aria-label={`${item.label}, grupo com submenu`}
+                    >
+                      <span style={{ marginRight: 8, display: 'flex', alignItems: 'center' }}>
+                        {item.icon}
+                      </span>
+                      {!collapsed && <span>{item.label}</span>}
+                    </summary>
+                    <ul style={{ listStyle: 'none', padding: '0 0 0 24px', margin: 0 }}>
+                      {item.children.map((child) => (
+                        <li key={child.key} style={{ margin: 0 }}>
+                          <button
+                            onClick={() => navigate(child.key)}
+                            aria-current={location.pathname === child.key ? 'page' : undefined}
+                            aria-label={child.label}
+                            style={{
+                              width: '100%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              padding: '8px 16px',
+                              border: 'none',
+                              background: location.pathname === child.key ? 'rgba(102, 126, 234, 0.15)' : 'transparent',
+                              color: location.pathname === child.key ? '#fff' : 'rgba(255,255,255,0.65)',
+                              cursor: 'pointer',
+                              fontSize: 14,
+                              transition: 'all 0.3s ease',
+                              textAlign: 'left',
+                              borderLeft: location.pathname === child.key ? '3px solid #667eea' : '3px solid transparent',
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!location.pathname.includes(child.key)) {
+                                e.currentTarget.style.background = 'rgba(102, 126, 234, 0.2)'
+                                e.currentTarget.style.color = '#fff'
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!location.pathname.includes(child.key)) {
+                                e.currentTarget.style.background = 'transparent'
+                                e.currentTarget.style.color = 'rgba(255,255,255,0.65)'
+                              }
+                            }}
+                            className="menu-item-button"
+                          >
+                            <span style={{ marginRight: 8, display: 'flex', alignItems: 'center' }}>
+                              {child.icon}
+                            </span>
+                            {!collapsed && <span>{child.label}</span>}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                ) : (
+                  // Item simples sem submenu
+                  <button
+                    onClick={() => navigate(item.key)}
+                    aria-current={location.pathname === item.key ? 'page' : undefined}
+                    aria-label={item.label}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '8px 16px',
+                      border: 'none',
+                      background: location.pathname === item.key ? 'rgba(102, 126, 234, 0.15)' : 'transparent',
+                      color: location.pathname === item.key ? '#fff' : 'rgba(255,255,255,0.65)',
+                      cursor: 'pointer',
+                      fontSize: 14,
+                      transition: 'all 0.3s ease',
+                      textAlign: 'left',
+                      borderLeft: location.pathname === item.key ? '3px solid #667eea' : '3px solid transparent',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!location.pathname.includes(item.key)) {
+                        e.currentTarget.style.background = 'rgba(102, 126, 234, 0.2)'
+                        e.currentTarget.style.color = '#fff'
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!location.pathname.includes(item.key)) {
+                        e.currentTarget.style.background = 'transparent'
+                        e.currentTarget.style.color = 'rgba(255,255,255,0.65)'
+                      }
+                    }}
+                    className="menu-item-button"
+                  >
+                    <span style={{ marginRight: 8, display: 'flex', alignItems: 'center' }}>
+                      {item.icon}
+                    </span>
+                    {!collapsed && <span>{item.label}</span>}
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </nav>
 
         {/* Rodapé com dados do usuário */}
         {!collapsed && usuario && (

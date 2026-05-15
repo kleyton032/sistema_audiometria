@@ -198,6 +198,9 @@ export default function PTSPage() {
   const prazoEstimado = Form.useWatch('intervencao_prazo', form)
   // Observador reativo para vigência (necessário para passar ao ObjetivosEspecialidades)
   const vigenciaAtual = Form.useWatch('pts_vigencia', form)
+  // Observadores para "Não se aplica" que desabilitam outras opções
+  const condNaoSeAplica = Form.useWatch('cond_nao_se_aplica', form)
+  const opmeNaoSeAplica = Form.useWatch('opme_nao_se_aplica', form)
 
   // Memo para valores iniciais estáveis
   const initialValues = React.useMemo(() => ({
@@ -325,6 +328,39 @@ export default function PTSPage() {
     getPTSDiagnosticosArea(66).then((v) => setOpcoesDiagArea((p) => ({ ...p, fisica: v }))).catch(() => null)
     getPTSDiagnosticosArea(68).then((v) => setOpcoesDiagArea((p) => ({ ...p, auditiva: v }))).catch(() => null)
   }, [])
+
+  // Reação quando "Não se aplica" é marcado na seção de Condições
+  useEffect(() => {
+    if (condNaoSeAplica) {
+      form.setFieldsValue({
+        cond_nao_escuta: false,
+        cond_nao_fala: false,
+        cond_nao_enxerga: false,
+        cond_agitacao: false,
+        cond_agressividade: false,
+        cond_nao_anda: false,
+        cond_nao_fica_sozinho: false,
+        cond_sem_ctrl_cervical: false,
+        cond_sem_ctrl_tronco: false,
+      })
+    }
+  }, [condNaoSeAplica, form])
+
+  // Reação quando "Não se aplica" é marcado na seção de OPME
+  useEffect(() => {
+    if (opmeNaoSeAplica) {
+      form.setFieldsValue({
+        opme_cadeira: false,
+        opme_bengala: false,
+        opme_muleta: false,
+        opme_andador: false,
+        opme_protese: false,
+        opme_com_alta: false,
+        opme_com_baixa: false,
+        opme_orteses: false,
+      })
+    }
+  }, [opmeNaoSeAplica, form])
 
   // ── colunas tabela diagnóstico por área ───────────────────────────────────
   const colsDiagArea: ColumnsType<DiagnosticoAreaRow> = [
@@ -696,15 +732,6 @@ export default function PTSPage() {
         </Card>
       )}
 
-      <Alert
-        role="status"
-        type="info"
-        showIcon
-        message="Módulo em implantação — fase de testes"
-        description="Este módulo está disponível para validação. As seções de objetivos, condutas e PDF serão adicionadas nas próximas etapas."
-        banner
-      />
-
       <Form 
         form={form} 
         layout="vertical" 
@@ -950,14 +977,16 @@ export default function PTSPage() {
             ].map(([name, label]) => (
               <Col key={name} xs={24} sm={12} md={8} lg={6}>
                 <Form.Item name={name as keyof PTSFormValues} valuePropName="checked" style={{ marginBottom: 4 }}>
-                  <Checkbox>{label}</Checkbox>
+                  <Checkbox disabled={condNaoSeAplica && name !== 'cond_nao_se_aplica'}>
+                    {label}
+                  </Checkbox>
                 </Form.Item>
               </Col>
             ))}
           </Row>
           <Divider style={{ margin: '8px 0' }} />
           <Form.Item label="Outra Condição:" name="cond_outra" style={{ marginBottom: 0 }}>
-            <Input placeholder="Descreva outra condição..." />
+            <Input placeholder="Descreva outra condição..." disabled={condNaoSeAplica} />
           </Form.Item>
         </Card>
 
@@ -982,14 +1011,16 @@ export default function PTSPage() {
             ].map(([name, label]) => (
               <Col key={name} xs={24} sm={12} md={8}>
                 <Form.Item name={name as keyof PTSFormValues} valuePropName="checked" style={{ marginBottom: 4 }}>
-                  <Checkbox>{label}</Checkbox>
+                  <Checkbox disabled={opmeNaoSeAplica && name !== 'opme_nao_se_aplica'}>
+                    {label}
+                  </Checkbox>
                 </Form.Item>
               </Col>
             ))}
           </Row>
           <Divider style={{ margin: '8px 0' }} />
           <Form.Item label="Outros OPME:" name="opme_outros" style={{ marginBottom: 0 }}>
-            <Input placeholder="Descreva outros OPME..." />
+            <Input placeholder="Descreva outros OPME..." disabled={opmeNaoSeAplica} />
           </Form.Item>
         </Card>
 
@@ -1300,7 +1331,7 @@ export default function PTSPage() {
             </Col>
             <Col flex="220px">
               <Form.Item name="intervencao_prazo" style={{ marginBottom: 0 }}>
-                <Input placeholder="Ex: 03 (Três) Meses" />
+                <Input placeholder="Ex: 03 (Três) Meses" disabled aria-label="Prazo máximo estimado fixo em 06 (Seis) Meses" />
               </Form.Item>
             </Col>
           </Row>

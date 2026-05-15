@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
   Card,
-  DatePicker,
   Table,
   Tag,
   Typography,
@@ -10,6 +9,8 @@ import {
   Badge,
   Alert,
   Tooltip,
+  Input,
+  notification,
 } from 'antd'
 import {
   ReloadOutlined,
@@ -55,6 +56,7 @@ export default function PtsPacientesPage() {
   const [data, setData]         = useState<AgendaItem[]>([])
   const [total, setTotal]       = useState(0)
   const [dataRef, setDataRef]   = useState<Dayjs>(dayjs())
+  const [inputValue, setInputValue] = useState<string>(dayjs().format('DD/MM/YYYY'))
   const [ptsStatus, setPtsStatus] = useState<Record<string, { id_pts: number; fl_finalizado: number } | null>>({})
 
   function abrirPTS(record: AgendaItem) {
@@ -209,10 +211,52 @@ export default function PtsPacientesPage() {
     fetchAgenda(dataRef)
   }, [])
 
-  const handleDateChange = (d: Dayjs | null) => {
-    if (d) {
-      setDataRef(d)
-      fetchAgenda(d)
+  const handleDateInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const valor = e.currentTarget.value.trim()
+    setInputValue(valor)
+  }
+
+  const handlePesquisar = () => {
+    const valor = inputValue.trim()
+    
+    if (!valor || valor.length < 10) {
+      notification.error({
+        message: 'Data inválida',
+        description: 'Use o formato DD/MM/YYYY (ex: 14/05/2026)',
+        duration: 3,
+      })
+      setInputValue(dataRef.format('DD/MM/YYYY'))
+      return
+    }
+    
+    // Tenta parsear diferentes formatos: DD/MM/YYYY ou DDMMYYYY
+    let parsed: Dayjs | null = null
+    
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(valor)) {
+      // Formato DD/MM/YYYY
+      parsed = dayjs(valor, 'DD/MM/YYYY')
+    } else if (/^\d{8}$/.test(valor)) {
+      // Formato DDMMYYYY
+      const partes = valor.match(/(\d{2})(\d{2})(\d{4})/)
+      if (partes) {
+        parsed = dayjs(`${partes[3]}-${partes[2]}-${partes[1]}`, 'YYYY-MM-DD')
+      }
+    } else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(valor)) {
+      // Formato D/M/YYYY ou DD/M/YYYY
+      parsed = dayjs(valor, 'D/M/YYYY')
+    }
+    
+    if (parsed && parsed.isValid()) {
+      setDataRef(parsed)
+      setInputValue(parsed.format('DD/MM/YYYY'))
+      fetchAgenda(parsed)
+    } else {
+      notification.error({
+        message: 'Data inválida',
+        description: 'Use o formato DD/MM/YYYY (ex: 14/05/2026)',
+        duration: 3,
+      })
+      setInputValue(dataRef.format('DD/MM/YYYY'))
     }
   }
 
@@ -221,23 +265,38 @@ export default function PtsPacientesPage() {
       <Title level={1}>Pacientes — PTS</Title>
 
       <Card style={{ marginBottom: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
-        <Space wrap style={{ marginBottom: 16 }}>
-          <CalendarOutlined style={{ fontSize: 16, color: '#667eea' }} />
-          <Text strong>Data de referência:</Text>
-          <DatePicker
-            value={dataRef}
-            onChange={handleDateChange}
-            format="DD/MM/YYYY"
-            allowClear={false}
-            aria-label="Data de referência para consulta da agenda"
-          />
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={() => fetchAgenda(dataRef)}
-            loading={loading}
-          >
-            Atualizar
-          </Button>
+        <Space wrap style={{ marginBottom: 16 }} align="center">
+          <CalendarOutlined style={{ fontSize: 16, color: '#667eea' }} aria-hidden="true" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <Text strong>Data de referência:</Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Digite no formato DD/MM/YYYY
+            </Text>
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <Input
+              type="text"
+              placeholder="DD/MM/YYYY"
+              value={inputValue}
+              onChange={handleDateInputChange}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handlePesquisar()
+                }
+              }}
+              aria-label="Digite a data no formato DD/MM/YYYY e clique em Pesquisar"
+              style={{ width: 160 }}
+              maxLength={10}
+            />
+            <Button
+              type="primary"
+              onClick={handlePesquisar}
+              loading={loading}
+              aria-label="Pesquisar pacientes pela data"
+            >
+              Pesquisar
+            </Button>
+          </div>
           {total > 0 && (
             <Tag color="blue" style={{ fontSize: 13 }}>
               {total} paciente{total !== 1 ? 's' : ''}

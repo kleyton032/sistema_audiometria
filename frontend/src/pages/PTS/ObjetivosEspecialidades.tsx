@@ -20,7 +20,7 @@ import {
 import {
   MedicineBoxOutlined,
   SoundOutlined,
-  HeartOutlined,
+  ThunderboltOutlined,
   UserOutlined,
   BookOutlined,
   TeamOutlined,
@@ -86,7 +86,7 @@ interface Especialidade {
 }
 
 const ESPECIALIDADES: Especialidade[] = [
-  { key: 'fisioterapia',        label: 'Fisioterapia',                icon: <HeartOutlined />,      color: '#52c41a' },
+  { key: 'fisioterapia',        label: 'Fisioterapia',                icon: <ThunderboltOutlined />, color: '#52c41a' },
   { key: 'fisio_aquatica',      label: 'Fisioterapia Aquática',       icon: <ExperimentOutlined />, color: '#13c2c2' },
   { key: 'fonoaudiologia',      label: 'Fonoaudiologia',              icon: <SoundOutlined />,      color: '#1677ff' },
   { key: 'terapia_ocupacional', label: 'Terapia Ocupacional',         icon: <MedicineBoxOutlined />,color: '#722ed1' },
@@ -228,7 +228,7 @@ function getEspecialidadeInfo(dsEspecialidade: string | null | undefined): { ico
     if (up.includes(label) || label.includes(up)) return { icon: esp.icon, color: esp.color, label: esp.label }
   }
   // Mapeamentos adicionais
-  if (up.includes('FISIOTERA'))     return { icon: <HeartOutlined />,          color: '#52c41a', label: 'Fisioterapia' }
+  if (up.includes('FISIOTERA'))     return { icon: <ThunderboltOutlined />,    color: '#52c41a', label: 'Fisioterapia' }
   if (up.includes('FONOAUDIO'))     return { icon: <SoundOutlined />,          color: '#1677ff', label: 'Fonoaudiologia' }
   if (up.includes('OCUPACIONAL'))   return { icon: <MedicineBoxOutlined />,    color: '#722ed1', label: 'Terapia Ocupacional' }
   if (up.includes('PSICOLOG'))      return { icon: <TeamOutlined />,           color: '#eb2f96', label: 'Psicologia' }
