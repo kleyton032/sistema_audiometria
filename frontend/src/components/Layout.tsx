@@ -10,6 +10,7 @@ import {
   SoundOutlined,
   TeamOutlined,
   UserOutlined,
+  HomeOutlined,
 } from '@ant-design/icons'
 import { useNavigate, useLocation, Outlet } from 'react-router-dom'
 import { useAuth } from '@/contexts'
@@ -31,11 +32,11 @@ export default function AppLayout() {
   const isFonoaudiologo = usuario?.nm_tip_presta === NM_TIP_FONOAUDIOLOGO
 
   const menuItems = [
-    // ── Dashboard (todos) ──────────────────────────────────────
+    // ── Início (Home Consolidada) ──────────────────────────────
     {
-      key: '/dashboard',
-      icon: <DashboardOutlined aria-hidden="true" />,
-      label: 'Dashboard - Página inicial',
+      key: '/home',
+      icon: <HomeOutlined aria-hidden="true" />,
+      label: 'Início',
     },
 
     // ── Exames Auditivos (apenas Fonoaudiólogo) ─────────────────
@@ -44,6 +45,7 @@ export default function AppLayout() {
       icon: <SoundOutlined aria-hidden="true" />,
       label: 'Exames Auditivos',
       children: [
+        { key: '/dashboard', icon: <DashboardOutlined aria-hidden="true" />, label: 'Dashboard Exames' },
         { key: '/pacientes', icon: <TeamOutlined aria-hidden="true" />, label: 'Pacientes - Audiometrias' },
         { key: '/consulta', icon: <SearchOutlined aria-hidden="true" />, label: 'Laudos - Consultas' },
       ],

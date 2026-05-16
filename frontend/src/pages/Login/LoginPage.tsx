@@ -61,7 +61,7 @@ export default function LoginPage() {
     setError(null)
     try {
       await login(username, values.password!)
-      navigate('/dashboard')
+      navigate('/home')
     } catch (err: unknown) {
       let msg = (err as any)?.response?.data?.detail
       if (Array.isArray(msg)) {
@@ -89,7 +89,7 @@ export default function LoginPage() {
 
       // Após cadastro ocorre login automático
       await login(username, values.password!)
-      navigate('/dashboard')
+      navigate('/home')
     } catch (err: unknown) {
       let msg = (err as any)?.response?.data?.detail
       if (Array.isArray(msg)) {

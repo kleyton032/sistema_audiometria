@@ -5,6 +5,7 @@ import ptBR from 'antd/locale/pt_BR'
 import { AuthProvider } from '@/contexts'
 import { ProtectedRoute, AppLayout } from '@/components'
 import { LoginPage } from '@/pages/Login'
+import { HomePage } from '@/pages/Home'
 import { DashboardPage } from '@/pages/Dashboard'
 import { AudiometriaPage } from '@/pages/Audiometria'
 import { ImitanciometriaPage } from '@/pages/Imitanciometria'
@@ -39,6 +40,7 @@ export default function App() {
                     </ProtectedRoute>
                   }
                 >
+                  <Route path="/home" element={<HomePage />} />
                   <Route path="/dashboard" element={<DashboardPage />} />
                   <Route path="/pacientes" element={<PacientesPage />} />
                   <Route path="/consulta" element={<ConsultaPage />} />
@@ -50,7 +52,7 @@ export default function App() {
                 </Route>
 
                 {/* Redirect padrão */}
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                <Route path="*" element={<Navigate to="/home" replace />} />
               </Routes>
             </BrowserRouter>
           </AuthProvider>

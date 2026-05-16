@@ -397,6 +397,7 @@ export default function PTSPage() {
           optionFilterProp="label"
           options={toOptions(opcoesDiagArea[row.area])}
           value={diagnosticosArea[row.area]}
+          disabled={ptsFinalizado}
           onChange={(v) => setDiagnosticosArea((prev) => ({ ...prev, [row.area]: v }))}
         />
       ),
@@ -423,6 +424,7 @@ export default function PTSPage() {
           optionFilterProp="label"
           options={toOptions(GRAU_DEFICIENCIA[row.area])}
           value={grauArea[row.area]}
+          disabled={ptsFinalizado}
           onChange={(v) => setGrauArea((prev) => ({ ...prev, [row.area]: v }))}
         />
       ),
@@ -754,6 +756,7 @@ export default function PTSPage() {
         layout="vertical" 
         onFinish={handleSave}
         initialValues={initialValues}
+        disabled={ptsFinalizado}
       >
 
         {/* ── SEÇÃO 1: Diagnóstico Médico Principal ── */}
@@ -765,6 +768,7 @@ export default function PTSPage() {
               <Button
                 size="small"
                 icon={<PlusOutlined />}
+                disabled={ptsFinalizado}
                 onClick={() =>
                   setDiagPrincipais((prev) => [
                     ...prev,
@@ -817,6 +821,7 @@ export default function PTSPage() {
                       size="small"
                       icon={<DeleteOutlined />}
                       aria-label="Remover diagnóstico médico principal"
+                      disabled={ptsFinalizado}
                       onClick={() =>
                         setDiagPrincipais((prev) => prev.filter((r) => r.key !== row.key))
                       }
@@ -884,6 +889,7 @@ export default function PTSPage() {
               <Button
                 size="small"
                 icon={<PlusOutlined />}
+                disabled={ptsFinalizado}
                 onClick={() =>
                   setDiagTerapeuticos((prev) => [
                     ...prev,
@@ -936,6 +942,7 @@ export default function PTSPage() {
                       size="small"
                       icon={<DeleteOutlined />}
                       aria-label="Remover diagnóstico terapêutico"
+                      disabled={ptsFinalizado}
                       onClick={() =>
                         setDiagTerapeuticos((prev) => prev.filter((r) => r.key !== row.key))
                       }
@@ -994,7 +1001,7 @@ export default function PTSPage() {
             ].map(([name, label]) => (
               <Col key={name} xs={24} sm={12} md={8} lg={6}>
                 <Form.Item name={name as keyof PTSFormValues} valuePropName="checked" style={{ marginBottom: 4 }}>
-                  <Checkbox disabled={condNaoSeAplica && name !== 'cond_nao_se_aplica'}>
+                  <Checkbox disabled={ptsFinalizado || (condNaoSeAplica && name !== 'cond_nao_se_aplica')}>
                     {label}
                   </Checkbox>
                 </Form.Item>
@@ -1003,7 +1010,7 @@ export default function PTSPage() {
           </Row>
           <Divider style={{ margin: '8px 0' }} />
           <Form.Item label="Outra Condição:" name="cond_outra" style={{ marginBottom: 0 }}>
-            <Input placeholder="Descreva outra condição..." disabled={condNaoSeAplica} />
+            <Input placeholder="Descreva outra condição..." disabled={ptsFinalizado || condNaoSeAplica} />
           </Form.Item>
         </Card>
 
@@ -1028,7 +1035,7 @@ export default function PTSPage() {
             ].map(([name, label]) => (
               <Col key={name} xs={24} sm={12} md={8}>
                 <Form.Item name={name as keyof PTSFormValues} valuePropName="checked" style={{ marginBottom: 4 }}>
-                  <Checkbox disabled={opmeNaoSeAplica && name !== 'opme_nao_se_aplica'}>
+                  <Checkbox disabled={ptsFinalizado || (opmeNaoSeAplica && name !== 'opme_nao_se_aplica')}>
                     {label}
                   </Checkbox>
                 </Form.Item>
@@ -1037,7 +1044,7 @@ export default function PTSPage() {
           </Row>
           <Divider style={{ margin: '8px 0' }} />
           <Form.Item label="Outros OPME:" name="opme_outros" style={{ marginBottom: 0 }}>
-            <Input placeholder="Descreva outros OPME..." disabled={opmeNaoSeAplica} />
+            <Input placeholder="Descreva outros OPME..." disabled={ptsFinalizado || opmeNaoSeAplica} />
           </Form.Item>
         </Card>
 
@@ -1066,6 +1073,7 @@ export default function PTSPage() {
               <Button
                 size="small"
                 icon={<PlusOutlined />}
+                disabled={ptsFinalizado}
                 onClick={() =>
                   setExtTerapias((prev) => [...prev, { key: Date.now(), diagnostico: undefined }])
                 }
@@ -1114,6 +1122,7 @@ export default function PTSPage() {
                       size="small"
                       icon={<DeleteOutlined />}
                       aria-label="Remover terapia externa"
+                      disabled={ptsFinalizado}
                       onClick={() =>
                         setExtTerapias((prev) => prev.filter((r) => r.key !== row.key))
                       }
@@ -1140,6 +1149,7 @@ export default function PTSPage() {
                   <Button
                     size="small"
                     icon={<PlusOutlined />}
+                    disabled={ptsFinalizado}
                     onClick={() =>
                       setConductaRows((prev) => [...prev, { key: Date.now(), diagnostico: undefined }])
                     }
@@ -1189,6 +1199,7 @@ export default function PTSPage() {
                           size="small"
                           icon={<DeleteOutlined />}
                           aria-label="Remover avaliação médica"
+                          disabled={ptsFinalizado}
                           onClick={() =>
                             setConductaRows((prev) => prev.filter((r) => r.key !== row.key))
                           }
@@ -1209,6 +1220,7 @@ export default function PTSPage() {
                   <Button
                     size="small"
                     icon={<PlusOutlined />}
+                    disabled={ptsFinalizado}
                     onClick={() =>
                       setMultidisciplinarRows((prev) => [...prev, { key: Date.now(), diagnostico: undefined }])
                     }
@@ -1258,6 +1270,7 @@ export default function PTSPage() {
                           size="small"
                           icon={<DeleteOutlined />}
                           aria-label="Remover item multidisciplinar"
+                          disabled={ptsFinalizado}
                           onClick={() =>
                             setMultidisciplinarRows((prev) => prev.filter((r) => r.key !== row.key))
                           }
@@ -1363,6 +1376,7 @@ export default function PTSPage() {
               <Button
                 size="small"
                 icon={<PlusOutlined />}
+                disabled={ptsFinalizado}
                 onClick={() =>
                   setInstrumentoRows((prev) => [...prev, { key: Date.now(), diagnostico: undefined }])
                 }
@@ -1392,6 +1406,7 @@ export default function PTSPage() {
                     allowClear
                     showSearch
                     optionFilterProp="label"
+                    disabled={ptsFinalizado}
                     options={opcoesInstrumentos.map((i) => ({ label: i.ds, value: i.ds }))}
                     value={row.diagnostico}
                     onChange={(v) =>
@@ -1412,6 +1427,7 @@ export default function PTSPage() {
                       size="small"
                       icon={<DeleteOutlined />}
                       aria-label="Remover instrumento de avaliação"
+                      disabled={ptsFinalizado}
                       onClick={() =>
                         setInstrumentoRows((prev) => prev.filter((r) => r.key !== row.key))
                       }
@@ -1489,6 +1505,7 @@ export default function PTSPage() {
                     optionFilterProp="label"
                     options={opcoesTerapiasIndicadas.map((e) => ({ label: e.ds, value: e.cd }))}
                     value={row.cd_terapia}
+                    disabled={ptsFinalizado}
                     onChange={(cd) => {
                       const item = opcoesTerapiasIndicadas.find((e) => e.cd === cd)
                       setTerapias((prev) => prev.map((r) => r.key === row.key ? { ...r, cd_terapia: cd, terapia: item?.ds } : r))
@@ -1508,6 +1525,7 @@ export default function PTSPage() {
                     allowClear
                     options={TIPOS_ATENDIMENTO.map(o => ({ label: o.label, value: o.label }))}
                     value={row.tipo_atendimento}
+                    disabled={ptsFinalizado}
                     onChange={(v) => {
                       setTerapias((prev) => prev.map((r) => {
                         if (r.key === row.key) {
@@ -1545,6 +1563,7 @@ export default function PTSPage() {
                     allowClear
                     options={PERIODICIDADES.map(o => ({ label: o.label, value: o.label }))}
                     value={row.periodicidade}
+                    disabled={ptsFinalizado}
                     onChange={(v) => {
                       setTerapias((prev) => prev.map((r) => {
                         if (r.key === row.key) {
@@ -1579,6 +1598,7 @@ export default function PTSPage() {
                     max={999}
                     style={{ width: '100%' }}
                     value={row.qtde_sessoes}
+                    disabled={ptsFinalizado}
                     onChange={(v) => setTerapias((prev) => prev.map((r) => r.key === row.key ? { ...r, qtde_sessoes: v ?? undefined } : r))}
                   />
                 ),
@@ -1646,7 +1666,7 @@ export default function PTSPage() {
         <Row justify="end">
           <Col>
             <Space>
-              <Button onClick={() => form.resetFields()}>Limpar</Button>
+              <Button onClick={() => form.resetFields()} disabled={ptsFinalizado}>Limpar</Button>
               <Button
                 danger
                 icon={<CloseCircleOutlined />}

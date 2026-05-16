@@ -21,6 +21,24 @@ import {
   CalendarOutlined,
   FileProtectOutlined,
 } from '@ant-design/icons'
+import { 
+  DatePicker as AriaDatePicker, 
+  Label, 
+  Group, 
+  DateInput, 
+  DateSegment, 
+  Button as AriaButton, 
+  Popover as AriaPopover, 
+  Dialog, 
+  Calendar, 
+  CalendarGrid, 
+  CalendarGridHeader, 
+  CalendarHeaderCell, 
+  CalendarGridBody, 
+  CalendarCell, 
+  Heading 
+} from 'react-aria-components'
+import { CalendarDate } from '@internationalized/date'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs, { type Dayjs } from 'dayjs'
 import 'dayjs/locale/pt-br'
@@ -334,61 +352,88 @@ export default function PtsPacientesPage() {
             </span>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <Popover
-              content={
-                <DatePicker
-                  value={dataRef}
-                  onChange={handleDateChange}
-                  format="DD/MM/YYYY"
-                  picker="date"
-                  autoFocus
-                  aria-label="Selecione a data usando o calendário"
-                />
-              }
-              title="Selecionar data"
-              trigger="manual"
-              open={calendarOpen}
-              onOpenChange={setCalendarOpen}
-              placement="bottomLeft"
-            >
-              <Input
-                id="data-referencia-input"
-                placeholder="DD/MM/YYYY ou 14052026"
-                value={inputValue}
-                onChange={handleDateInputChange}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handlePesquisar()
-                  }
-                }}
-                aria-label="Campo de data de referência"
-                aria-describedby="data-referencia-descricao"
-                aria-expanded={calendarOpen}
-                aria-haspopup="dialog"
-                role="combobox"
-                style={{ width: 160 }}
-                maxLength={10}
-                suffix={
-                  <button
-                    type="button"
-                    onClick={() => setCalendarOpen(!calendarOpen)}
-                    aria-label={calendarOpen ? 'Fechar calendário' : 'Abrir calendário'}
-                    aria-expanded={calendarOpen}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      padding: '0 4px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <CalendarOutlined style={{ color: '#667eea' }} aria-hidden="true" />
-                  </button>
+            <AriaDatePicker
+              value={new CalendarDate(dataRef.year(), dataRef.month() + 1, dataRef.date())}
+              onChange={(date: CalendarDate | null) => {
+                if (date) {
+                  const djs = dayjs(`${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`)
+                  setDataRef(djs)
+                  setInputValue(djs.format('DD/MM/YYYY'))
+                  fetchAgenda(djs)
                 }
-              />
-            </Popover>
+              }}
+              aria-label="Campo de data de referência"
+            >
+              <Group style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                border: '1px solid #d9d9d9', 
+                borderRadius: 6, 
+                padding: '4px 11px',
+                background: '#fff',
+                height: 32,
+                transition: 'all 0.2s'
+              }}>
+                <DateInput style={{ display: 'flex', gap: 2, border: 'none', background: 'transparent', outline: 'none' }}>
+                  {(segment) => (
+                    <DateSegment 
+                      segment={segment} 
+                      style={{ 
+                        padding: '0 2px', 
+                        fontVariantNumeric: 'tabular-nums', 
+                        outline: 'none',
+                        color: segment.isPlaceholder ? '#bfbfbf' : 'inherit'
+                      }} 
+                    />
+                  )}
+                </DateInput>
+                <AriaButton style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 0 8px', display: 'flex' }}>
+                  <CalendarOutlined style={{ color: '#667eea' }} />
+                </AriaButton>
+              </Group>
+              <AriaPopover style={{ 
+                background: '#fff', 
+                border: '1px solid #f0f0f0', 
+                borderRadius: 8, 
+                padding: 12, 
+                boxShadow: '0 6px 16px 0 rgba(0, 0, 0, 0.08)' 
+              }}>
+                <Dialog style={{ outline: 'none' }}>
+                  <Calendar>
+                    <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                      <AriaButton slot="previous" style={{ background: 'none', border: '1px solid #d9d9d9', borderRadius: 4, cursor: 'pointer', padding: '4px 8px' }}>◀</AriaButton>
+                      <Heading style={{ margin: 0, fontWeight: 600, fontSize: 14 }} />
+                      <AriaButton slot="next" style={{ background: 'none', border: '1px solid #d9d9d9', borderRadius: 4, cursor: 'pointer', padding: '4px 8px' }}>▶</AriaButton>
+                    </header>
+                    <CalendarGrid>
+                      <CalendarGridHeader>
+                        {(day) => <CalendarHeaderCell style={{ fontSize: 12, color: '#8c8c8c', paddingBottom: 8, fontWeight: 400 }}>{day}</CalendarHeaderCell>}
+                      </CalendarGridHeader>
+                      <CalendarGridBody>
+                        {(date) => (
+                          <CalendarCell 
+                            date={date} 
+                            style={({ isSelected, isHovered }) => ({
+                              cursor: 'pointer',
+                              width: 28,
+                              height: 28,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              borderRadius: 4,
+                              fontSize: 14,
+                              background: isSelected ? '#667eea' : isHovered ? '#f5f5f5' : 'transparent',
+                              color: isSelected ? '#fff' : 'inherit',
+                              outline: 'none'
+                            })} 
+                          />
+                        )}
+                      </CalendarGridBody>
+                    </CalendarGrid>
+                  </Calendar>
+                </Dialog>
+              </AriaPopover>
+            </AriaDatePicker>
             <Button
               type="primary"
               onClick={handlePesquisar}

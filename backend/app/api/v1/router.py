@@ -1,8 +1,11 @@
 # app/api/v1/router.py
 from fastapi import APIRouter
-from app.api.v1 import auth, users, agenda, exames, pts
+from app.api.v1 import auth, users, agenda, exames, pts, home
 
 api_router = APIRouter()
+
+# Módulo 0 — Home (Dashboard)
+api_router.include_router(home.router)
 
 # Módulo 1 — Autenticação
 api_router.include_router(auth.router)
