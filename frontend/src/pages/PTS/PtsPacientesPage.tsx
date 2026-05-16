@@ -75,8 +75,14 @@ export default function PtsPacientesPage() {
   const [error, setError]       = useState<string | null>(null)
   const [data, setData]         = useState<AgendaItem[]>([])
   const [total, setTotal]       = useState(0)
-  const [dataRef, setDataRef]   = useState<Dayjs>(dayjs())
-  const [inputValue, setInputValue] = useState<string>(dayjs().format('DD/MM/YYYY'))
+  const [dataRef, setDataRef]   = useState<Dayjs>(() => {
+    const saved = sessionStorage.getItem('pts_pacientes_data_ref')
+    return saved ? dayjs(saved) : dayjs()
+  })
+  const [inputValue, setInputValue] = useState<string>(() => {
+    const saved = sessionStorage.getItem('pts_pacientes_data_ref')
+    return saved ? dayjs(saved).format('DD/MM/YYYY') : dayjs().format('DD/MM/YYYY')
+  })
   const [ptsStatus, setPtsStatus] = useState<Record<string, { id_pts: number; fl_finalizado: number } | null>>({})
   const [calendarOpen, setCalendarOpen] = useState(false)
 
@@ -207,6 +213,7 @@ export default function PtsPacientesPage() {
     setLoading(true)
     setError(null)
     try {
+      sessionStorage.setItem('pts_pacientes_data_ref', d.toISOString())
       const result = await getAgendaDoPacientes(d.format('YYYY-MM-DD'))
       setData(result.items)
       setTotal(result.total)
