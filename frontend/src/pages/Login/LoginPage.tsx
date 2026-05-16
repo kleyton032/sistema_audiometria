@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Form, Input, Button, Card, Typography, Alert, Space } from 'antd'
-import { UserOutlined, LockOutlined, AudioOutlined } from '@ant-design/icons'
+import { UserOutlined, LockOutlined, MedicineBoxOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts'
 import { checkMvCode, registerUser, type PrestadorMVInfo } from '@/api/authService'
@@ -31,8 +31,10 @@ export default function LoginPage() {
       const values = await form.validateFields(['username'])
       setLoading(true)
       setError(null)
-      const data = await checkMvCode(values.username!)
-      setUsername(values.username!)
+      const normalizedUsername = values.username!.toLowerCase().trim()
+      setUsername(normalizedUsername)
+      
+      const data = await checkMvCode(normalizedUsername)
       
       if (data.existe_local) {
         setStep('LOGIN')
@@ -127,7 +129,7 @@ export default function LoginPage() {
       >
         <Space direction="vertical" size="large" style={{ width: '100%', textAlign: 'center' }}>
           <div>
-            <AudioOutlined style={{ fontSize: 48, color: '#667eea' }} />
+            <MedicineBoxOutlined style={{ fontSize: 48, color: '#667eea' }} />
             <Title level={1} style={{ marginTop: 8, marginBottom: 0 }}>
               CDM — Centro de Documentação Multidisciplinar
             </Title>
