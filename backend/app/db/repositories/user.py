@@ -31,15 +31,12 @@ def buscar_prestador_mv(db: Session, cd_usuario: str) -> PrestadorMVInfo | None:
             p.ds_codigo_conselho,
             tp.nm_tip_presta
         FROM
-            tip_presta      tp,
-            conselho        c,
-            prestador       p,
             dbasgu.usuarios u
-        WHERE c.cd_conselho    = tp.cd_conselho
-          AND p.cd_tip_presta  = tp.cd_tip_presta
-          AND u.cd_prestador   = p.cd_prestador
-          AND UPPER(u.cd_usuario) = UPPER(:cd_usuario)
-          AND u.sn_ativo       = 'S'
+            INNER JOIN prestador       p  ON u.cd_prestador  = p.cd_prestador
+            INNER JOIN tip_presta      tp ON p.cd_tip_presta  = tp.cd_tip_presta
+            LEFT  JOIN conselho        c  ON tp.cd_conselho   = c.cd_conselho
+        WHERE UPPER(u.cd_usuario) = UPPER(:cd_usuario)
+          AND u.sn_ativo          = 'S'
     """)
     row = db.execute(query, {"cd_usuario": cd_usuario}).first()
     if row is None:

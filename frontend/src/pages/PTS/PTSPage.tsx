@@ -59,6 +59,18 @@ import type { User } from '@/types'
 const { Title, Text } = Typography
 dayjs.locale('pt-br')
 
+// ── helper especialidade/conselho ────────────────────────────────────────────
+function formatEspecialidadeConselho(user: any): string {
+  const especialidade = user?.nm_tip_presta || user?.ds_especialidade
+  if (!especialidade) return '—'
+  const isPsicopedagogo = especialidade.toUpperCase().includes('PSICOPEDAGO')
+  if (isPsicopedagogo) return especialidade
+  const codigoConselho = user?.ds_codigo_conselho || user?.nr_conselho
+  if (!codigoConselho) return especialidade
+  const nomeConselho = user?.ds_conselho || 'Conselho'
+  return `${especialidade} / ${nomeConselho}: ${codigoConselho}`
+}
+
 // ── tipo linha diagnóstico médico principal ─────────────────────────────────
 interface DiagPrincipalRow {
   key: number
@@ -1603,15 +1615,7 @@ export default function PTSPage() {
               <Col flex="none"><Text strong>Especialidade/Conselho:</Text></Col>
               <Col flex="1">
                 <Input
-                  value={
-                    [
-                      usuarioMe?.nm_tip_presta || usuarioMe?.ds_especialidade,
-                      (usuarioMe?.ds_codigo_conselho || usuarioMe?.nr_conselho)
-                        ? `${usuarioMe?.ds_conselho || 'Conselho'}: ${usuarioMe?.ds_codigo_conselho || usuarioMe?.nr_conselho}`
-                        : undefined
-                    ]
-                      .filter(Boolean).join('/') || '—'
-                  }
+                  value={formatEspecialidadeConselho(usuarioMe)}
                   disabled
                   style={{ maxWidth: 480 }}
                 />

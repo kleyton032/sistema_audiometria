@@ -5,6 +5,18 @@ import { AREA_LABEL, Area } from './data/listas';
 
 const { Title, Text } = Typography;
 
+// ── helper especialidade/conselho ────────────────────────────────────────────
+function formatEspecialidadeConselho(user: any): string {
+  const especialidade = user?.nm_tip_presta || user?.ds_especialidade
+  if (!especialidade) return '—'
+  const isPsicopedagogo = especialidade.toUpperCase().includes('PSICOPEDAGO')
+  if (isPsicopedagogo) return especialidade
+  const codigoConselho = user?.ds_codigo_conselho || user?.nr_conselho
+  if (!codigoConselho) return especialidade
+  const nomeConselho = user?.ds_conselho || 'Conselho'
+  return `${especialidade} / ${nomeConselho}: ${codigoConselho}`
+}
+
 export interface PTSPrintData {
   paciente: any;
   formValues: any;
@@ -221,9 +233,37 @@ export default function PTSPrintView({ data }: Props) {
         </div>
       )}
 
-      <div style={{ textAlign: 'center', marginBottom: 24, borderBottom: '2px solid #ccc', paddingBottom: 16, position: 'relative', zIndex: 1 }}>
-        <Title level={3} style={{ margin: 0 }}>Projeto Terapêutico Singular (PTS)</Title>
-        <Text type="secondary">Preenchimento do Projeto Terapêutico Singular do Paciente</Text>
+      {/* Cabeçalho com logos FAV e CER IV */}
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between',
+        marginBottom: 24, 
+        paddingBottom: 16,
+        borderBottom: '3px solid #1e5aa8',
+        position: 'relative', 
+        zIndex: 1,
+        minHeight: 80
+      }}>
+        {/* Logo FAV - Esquerda */}
+        <div style={{ flex: '0 0 140px', textAlign: 'center' }}>
+          <img src="/logo-fav.png" alt="FAV - CER IV" style={{ height: 70, objectFit: 'contain' }} />
+        </div>
+
+        {/* Título Central */}
+        <div style={{ flex: 1, textAlign: 'center' }}>
+          <Title level={2} style={{ margin: '0 0 4px 0', color: '#1e5aa8' }}>
+            Projeto Terapêutico Singular
+          </Title>
+          <Title level={3} style={{ margin: 0, color: '#1e5aa8' }}>
+            (PTS)
+          </Title>
+        </div>
+
+        {/* Logo CER IV - Direita */}
+        <div style={{ flex: '0 0 160px', textAlign: 'center' }}>
+          <img src="/logo-ceriv.png" alt="Menina dos Olhos - CER IV" style={{ height: 100, objectFit: 'contain' }} />
+        </div>
       </div>
 
       <Row gutter={16} style={{ marginBottom: 24 }}>
@@ -235,37 +275,12 @@ export default function PTSPrintView({ data }: Props) {
         <Col span={12} style={{ textAlign: 'right' }}>
           <Text strong>Data:</Text> {dayjs().format('DD/MM/YYYY HH:mm:ss')}<br/>
           <Text strong>Prestador:</Text> {usuarioMe?.nm_usuario || '—'}<br/>
-          <Text strong>Especialidade/Conselho:</Text> {[
-            usuarioMe?.nm_tip_presta || usuarioMe?.ds_especialidade,
-            (usuarioMe?.ds_codigo_conselho || usuarioMe?.nr_conselho)
-              ? `${usuarioMe?.ds_conselho || 'Conselho'}: ${usuarioMe?.ds_codigo_conselho || usuarioMe?.nr_conselho}`
-              : undefined
-          ].filter(Boolean).join('/') || '—'}
+          <Text strong>Especialidade/Conselho:</Text> {formatEspecialidadeConselho(usuarioMe)}
         </Col>
       </Row>
 
-      {validDiagPrincipais.length > 0 && (
-        <Section title="01. Diagnóstico Médico Principal (CID-10)">
-          <ul style={{ margin: 0, paddingLeft: 20 }}>
-            {validDiagPrincipais.map((d, i) => <li key={i}>{d.diagnostico}</li>)}
-          </ul>
-        </Section>
-      )}
-
-      {hasDiagArea && (
-        <Section title="02. Diagnóstico Médico Específico por Área">
-          <Row gutter={[16, 8]}>
-            {areasKeys.map(a => diagnosticosArea[a] ? (
-              <Col span={12} key={a}>
-                <Text strong>{AREA_LABEL[a]}:</Text> {diagnosticosArea[a]}
-              </Col>
-            ) : null)}
-          </Row>
-        </Section>
-      )}
-
       {hasGrauArea && (
-        <Section title="03. Classificação do Grau de Deficiência">
+        <Section title="Classificação do Grau de Deficiência">
           <Row gutter={[16, 8]}>
             {areasKeys.map(a => grauArea[a] ? (
               <Col span={12} key={a}>
@@ -277,47 +292,33 @@ export default function PTSPrintView({ data }: Props) {
       )}
 
       {formValues.queixa_principal && (
-        <Section title="04. Queixas Principais e Histórico">
+        <Section title="Queixas Principais e Histórico">
           <Text style={{ whiteSpace: 'pre-wrap' }}>{formValues.queixa_principal}</Text>
         </Section>
       )}
 
-      {validDiagTerapeuticos.length > 0 && (
-        <Section title="05. Diagnóstico Terapêutico Multidisciplinar">
-          <ul style={{ margin: 0, paddingLeft: 20 }}>
-            {validDiagTerapeuticos.map((d, i) => <li key={i}>{d.diagnostico}</li>)}
-          </ul>
-        </Section>
-      )}
-
       {deficiencias.length > 0 && (
-        <Section title="06. Deficiência(s) Associada(s)">
+        <Section title="Deficiência(s) Associada(s)">
           {deficiencias.map(d => d.label).join(', ')}
         </Section>
       )}
 
       {(condicoes.length > 0 || formValues.cond_outra) && (
-        <Section title="07. Condições Gerais do Paciente">
+        <Section title="Condições Gerais do Paciente">
           {condicoes.length > 0 && <div>{condicoes.map(c => c.label).join(', ')}</div>}
           {formValues.cond_outra && <div><strong>Outra Condição:</strong> {formValues.cond_outra}</div>}
         </Section>
       )}
 
       {(opmes.length > 0 || formValues.opme_outros) && (
-        <Section title="08. Uso de OPME">
+        <Section title="Uso de OPME">
           {opmes.length > 0 && <div>{opmes.map(o => o.label).join(', ')}</div>}
           {formValues.opme_outros && <div><strong>Outros OPME:</strong> {formValues.opme_outros}</div>}
         </Section>
       )}
 
-      {formValues.cer_terapias_texto && (
-        <Section title="09. Terapias em Andamento no CER IV">
-          <Text style={{ whiteSpace: 'pre-wrap' }}>{formValues.cer_terapias_texto}</Text>
-        </Section>
-      )}
-
       {(validExtTerapias.length > 0 || formValues.ext_nao_realiza) && (
-        <Section title="10. Terapias Externas (Fisio, Fono, Psic, Outros)">
+        <Section title="Terapias Externas (Fisio, Fono, Psic, Outros)">
           {formValues.ext_nao_realiza ? (
             <Text>Não Realiza</Text>
           ) : (
@@ -328,70 +329,40 @@ export default function PTSPrintView({ data }: Props) {
         </Section>
       )}
 
-      {validConductaRows.length > 0 && (
-        <Section title="11. Conduta: Avaliação Médica">
-          <ul style={{ margin: 0, paddingLeft: 20 }}>
-            {validConductaRows.map((d, i) => <li key={i}>{d.diagnostico}</li>)}
-          </ul>
-        </Section>
-      )}
-
-      {validMultiRows.length > 0 && (
-        <Section title="12. Conduta: Atendimento Multidisciplinar">
-          <ul style={{ margin: 0, paddingLeft: 20 }}>
-            {validMultiRows.map((d, i) => <li key={i}>{d.diagnostico}</li>)}
-          </ul>
-        </Section>
-      )}
-
       {objetivosContent && (
-        <Section title="13. Plano de Metas e Objetivos por Especialidade">
+        <Section title="Plano de Metas e Objetivos por Especialidade">
           {objetivosContent}
         </Section>
       )}
 
       {formValues.observacoes_gerais && (
-        <Section title="14. Observações Complementares">
+        <Section title="Observações Complementares">
           <Text style={{ whiteSpace: 'pre-wrap' }}>{formValues.observacoes_gerais}</Text>
         </Section>
       )}
 
-      {formValues.conduta_interdisciplinar && (
-        <Section title="15. Conduta Interdisciplinar e Articulação">
-          <Text style={{ whiteSpace: 'pre-wrap' }}>{formValues.conduta_interdisciplinar}</Text>
-        </Section>
-      )}
-
       {formValues.intervencao_descricao && (
-        <Section title="16. Intervenção">
+        <Section title="Intervenção">
           <Text style={{ whiteSpace: 'pre-wrap' }}>{formValues.intervencao_descricao}</Text>
         </Section>
       )}
 
       {formValues.intervencao_prazo && (
-        <Section title="17. Prazo Estimado">
+        <Section title="Prazo Estimado">
           <div><strong>Prazo estimado:</strong> {formValues.intervencao_prazo}</div>
         </Section>
       )}
 
       {validInstruRows.length > 0 && (
-        <Section title="18. Instrumentos e Escalas de Avaliação">
+        <Section title="Instrumentos e Escalas de Avaliação">
           <ul style={{ margin: 0, paddingLeft: 20 }}>
             {validInstruRows.map((d, i) => <li key={i}>{d.diagnostico}</li>)}
           </ul>
         </Section>
       )}
 
-      {programas.length > 0 && (
-        <Section title="19. Programas Específicos de Acompanhamento">
-          <ul style={{ margin: 0, paddingLeft: 20 }}>
-            {programas.map((p, i) => <li key={i}>{p.label}</li>)}
-          </ul>
-        </Section>
-      )}
-
       {validTerapias.length > 0 && (
-        <Section title="20. Prescrição de Terapias Indicadas">
+        <Section title="Prescrição de Terapias Indicadas">
           {validTerapias.map((t, i) => (
             <div key={i} style={{ 
               marginBottom: 12, 
@@ -414,6 +385,31 @@ export default function PTSPrintView({ data }: Props) {
           ))}
         </Section>
       )}
+
+      {/* Seção de Assinatura do Prestador */}
+      <div style={{ marginTop: 60, borderTop: '2px solid #1e5aa8', paddingTop: 32, pageBreakInside: 'avoid' }}>
+        <div style={{ textAlign: 'center', marginBottom: 40 }}>
+          <Title level={4} style={{ margin: '0 0 20px 0', color: '#1e5aa8' }}>Informações do Prestador</Title>
+          
+          <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+            <Col span={24}>
+              <div style={{ textAlign: 'left', borderLeft: '3px solid #1e5aa8', paddingLeft: 16 }}>
+                <div style={{ marginBottom: 8 }}>
+                  <Text strong>Prestador:</Text> {usuarioMe?.nm_usuario || '—'}
+                </div>
+                <div>
+                  <Text strong>Especialidade/Conselho:</Text> {formatEspecialidadeConselho(usuarioMe)}
+                </div>
+              </div>
+            </Col>
+          </Row>
+
+          <div style={{ marginTop: 40, minHeight: 80 }}>
+            <div style={{ borderTop: '1px solid #333', width: '60%', margin: '0 auto 8px' }}></div>
+            <Text strong style={{ fontSize: 12 }}>Assinatura do Prestador</Text>
+          </div>
+        </div>
+      </div>
 
       <div style={{ marginTop: 40, borderTop: '1px solid #ccc', paddingTop: 16, textAlign: 'center', fontSize: 12, color: '#666' }}>
         <strong>LGPD — Lei Geral de Proteção de Dados</strong><br />
