@@ -215,7 +215,7 @@ function LinhaObjetivoAtual({
           allowClear
           showSearch
           optionFilterProp="label"
-          options={listaOpcoes.map((v) => ({ label: v, value: v }))}
+          options={Array.from(new Set(listaOpcoes || [])).map((v) => ({ label: v, value: v }))}
           value={item.objetivo}
           onChange={(v) => onChange('objetivo', v)}
         />

@@ -20,8 +20,8 @@ class PTSTerapiaRow(BaseModel):
 
 class PTSCreate(BaseModel):
     # Identificação básica
-    cd_paciente: str
-    nr_atendimento: str
+    cd_paciente: Optional[str] = None
+    nr_atendimento: Optional[str] = None
     
     # Seção 4 - Queixa principal
     queixa_principal: Optional[str] = None

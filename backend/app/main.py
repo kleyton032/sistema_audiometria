@@ -27,3 +27,4 @@ app.include_router(api_router, prefix="/api/v1")
 def health_check():
     """Checks whether the API is up and running."""
     return {"status": "ok", "version": "1.0.0"}
+

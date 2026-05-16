@@ -14,7 +14,7 @@ class Settings(BaseSettings):
 
     ORACLE_TEST_USER: str = "system"
     ORACLE_TEST_PASSWORD: str = "oracle"
-    ORACLE_TEST_DSN: str = "localhost:1521/FREEPDB1"
+    ORACLE_TEST_DSN: str = "oracle-test:1521/?service_name=FREEPDB1" if os.getenv("RUNNING_IN_DOCKER") else "localhost:1521/?service_name=FREEPDB1"
 
 
     SECRET_KEY: str

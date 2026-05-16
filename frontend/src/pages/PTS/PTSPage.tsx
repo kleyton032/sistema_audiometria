@@ -18,6 +18,7 @@ import {
   InputNumber,
   DatePicker,
   Popconfirm,
+  message,
 } from 'antd'
 import { SaveOutlined, FileTextOutlined, PlusOutlined, DeleteOutlined, CheckCircleOutlined, CloseCircleOutlined, ArrowLeftOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
@@ -259,10 +260,12 @@ export default function PTSPage() {
   }))
 
   // ── submit ────────────────────────────────────────────────────────────────
-  const handleSave = (values: PTSFormValues) => {
+  const handleSave = async (values: PTSFormValues, finalizeAfterSave = false) => {
     setSalvandoPTS(true)
     const payload = {
       ...values,
+      cd_paciente: String(paciente.cd_paciente || ''),
+      nr_atendimento: String(paciente.cd_atendimento || ''),
       diagnosticos_principais: diagPrincipais.map((r) => r.diagnostico).filter(Boolean),
       diagnosticos_terapeuticos: diagTerapeuticos.map((r) => r.diagnostico).filter(Boolean),
       cer_terapias: extTerapias.map((r) => r.diagnostico).filter(Boolean),
@@ -273,43 +276,62 @@ export default function PTSPage() {
       grau_area: grauArea,
       objetivos,
       terapias_indicadas: terapias,
-      prestador: usuarioMe?.nm_usuario,
-      especialidade_conselho: [
-        usuarioMe?.nm_tip_presta || usuarioMe?.ds_especialidade,
-        (usuarioMe?.ds_codigo_conselho || usuarioMe?.nr_conselho)
-          ? `${usuarioMe?.ds_conselho || 'Conselho'}: ${usuarioMe?.ds_codigo_conselho || usuarioMe?.nr_conselho}`
-          : undefined,
-      ].filter(Boolean).join('/'),
+      pts_vigencia: values.pts_vigencia || undefined,
+      pts_nao_concluido: !!values.pts_nao_concluido,
     }
-    // TODO: remover prestador e especialidade_conselho se backend pegar do token
     
-    savePTS(payload)
-      .then((resp) => {
+    try {
+      const resp = await savePTS(payload)
+      if (typeof message !== 'undefined') {
         message.success(resp.mensagem)
-        setIdPtsSalvo(resp.id_pts)
-      })
-      .catch((error) => {
-        console.error('Erro ao salvar PTS:', error)
-        message.error('Erro ao salvar PTS. Verifique o console para mais detalhes.')
-      })
-      .finally(() => {
-        setSalvandoPTS(false)
-      })
+      } else {
+        alert(resp.mensagem)
+      }
+      setIdPtsSalvo(resp.id_pts)
+      
+      if (finalizeAfterSave) {
+        await executarFinalizacao(resp.id_pts)
+      }
+    } catch (error) {
+      console.error('Erro ao salvar PTS:', error)
+      if (typeof message !== 'undefined') {
+        message.error('Erro ao salvar PTS. Verifique o console.')
+      }
+    } finally {
+      setSalvandoPTS(false)
+    }
+  }
+
+  const executarFinalizacao = async (idPts: number) => {
+    setFinalizandoPTS(true)
+    try {
+      const resp = await finalizarPTS(idPts)
+      if (typeof message !== 'undefined') {
+        message.success(resp.mensagem || 'PTS finalizado com sucesso!')
+      }
+      navigate('/pts/pacientes')
+    } catch (error) {
+      console.error('Erro ao finalizar PTS:', error)
+      if (typeof message !== 'undefined') {
+        message.error('Erro ao finalizar PTS. Verifique o console.')
+      }
+    } finally {
+      setFinalizandoPTS(false)
+    }
   }
 
   const handleFinalizar = async () => {
     if (idPtsSalvo === null) {
-      // Se ainda não foi salvo, salva primeiro
-      form.submit()
+      // Se não salvou ainda, valida o form e salva com flag de finalizar depois
+      try {
+        const values = await form.validateFields()
+        handleSave(values, true)
+      } catch (err) {
+        message.warning('Por favor, preencha os campos obrigatórios antes de finalizar.')
+      }
       return
     }
-    setFinalizandoPTS(true)
-    try {
-      await finalizarPTS(idPtsSalvo)
-      // TODO: feedback de sucesso (notification)
-    } finally {
-      setFinalizandoPTS(false)
-    }
+    await executarFinalizacao(idPtsSalvo)
   }
 
   const SectionHeader = ({ title, children, id }: { title: string; children?: React.ReactNode; id?: string }) => (

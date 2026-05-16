@@ -164,18 +164,29 @@ def salvar_pts(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    session = get_db_session(user, db)
     try:
+        session = get_db_session(user, db)
         db_pts = create_pts(db=session, pts_data=pts_data, id_usuario=user.id_usuario)
         session.commit()
         return {"status": "success", "mensagem": "PTS salvo com sucesso.", "id_pts": db_pts.id_pts}
     except Exception as e:
-        print(f"Erro ao salvar PTS: {e}")
-        session.rollback()
-        raise HTTPException(status_code=500, detail=f"Erro interno ao salvar PTS: {str(e)}")
+        import traceback
+        erro_real = str(e)
+        print("ERRO REAL AO SALVAR PTS:", erro_real)
+        print(traceback.format_exc())
+        try:
+            if 'session' in locals() and user.nm_login == 'testesoul':
+                session.rollback()
+        except Exception as rollback_err:
+            print("Erro durante o rollback:", str(rollback_err))
+            
+        raise HTTPException(status_code=500, detail=f"Erro seguro ao salvar: {erro_real}")
     finally:
-        if user.nm_login == 'testesoul':
-            session.close()
+        if 'session' in locals() and user.nm_login == 'testesoul':
+            try:
+                session.close()
+            except:
+                pass
 
 
 @router.post(
@@ -201,8 +212,11 @@ def finalizar_pts(
             'mensagem': f'PTS {id_pts} finalizado. Terapias inseridas na fila de espera.',
         }
     except Exception as e:
-        session.rollback()
-        raise HTTPException(status_code=500, detail=f"Erro ao finalizar PTS: {str(e)}")
+        if current_user.nm_login == 'testesoul':
+            session.rollback()
+        import traceback
+        print(traceback.format_exc()) # Log no console do servidor
+        raise HTTPException(status_code=500, detail=f"Erro detalhado: {str(e)}")
     finally:
         if current_user.nm_login == 'testesoul':
             session.close()
