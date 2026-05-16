@@ -713,7 +713,7 @@ export default function PTSPage() {
           </Space>
           <Button
             icon={<ArrowLeftOutlined />}
-            onClick={() => navigate('/pts/pacientes')}
+            onClick={() => navigate('/pts/pacientes', { state: { fromPTS: true } })}
             style={{ background: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.4)', color: '#fff' }}
           >
             Voltar para lista

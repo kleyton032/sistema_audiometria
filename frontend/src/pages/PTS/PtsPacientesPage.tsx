@@ -42,7 +42,7 @@ import { CalendarDate } from '@internationalized/date'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs, { type Dayjs } from 'dayjs'
 import 'dayjs/locale/pt-br'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { getAgendaDoPacientes, type AgendaItem } from '@/api/agendaService'
 import { getPTSStatusBatch } from '@/api/ptsService'
 
@@ -71,17 +71,26 @@ function encaixeBadge(sn: string | null) {
 
 export default function PtsPacientesPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const isReturning = location.state?.fromPTS
+
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState<string | null>(null)
   const [data, setData]         = useState<AgendaItem[]>([])
   const [total, setTotal]       = useState(0)
   const [dataRef, setDataRef]   = useState<Dayjs>(() => {
-    const saved = sessionStorage.getItem('pts_pacientes_data_ref')
-    return saved ? dayjs(saved) : dayjs()
+    if (isReturning) {
+      const saved = sessionStorage.getItem('pts_pacientes_data_ref')
+      if (saved) return dayjs(saved)
+    }
+    return dayjs()
   })
   const [inputValue, setInputValue] = useState<string>(() => {
-    const saved = sessionStorage.getItem('pts_pacientes_data_ref')
-    return saved ? dayjs(saved).format('DD/MM/YYYY') : dayjs().format('DD/MM/YYYY')
+    if (isReturning) {
+      const saved = sessionStorage.getItem('pts_pacientes_data_ref')
+      if (saved) return dayjs(saved).format('DD/MM/YYYY')
+    }
+    return dayjs().format('DD/MM/YYYY')
   })
   const [ptsStatus, setPtsStatus] = useState<Record<string, { id_pts: number; fl_finalizado: number } | null>>({})
   const [calendarOpen, setCalendarOpen] = useState(false)

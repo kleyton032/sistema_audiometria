@@ -45,7 +45,6 @@ export default function AppLayout() {
       icon: <SoundOutlined aria-hidden="true" />,
       label: 'Exames Auditivos',
       children: [
-        { key: '/dashboard', icon: <DashboardOutlined aria-hidden="true" />, label: 'Dashboard Exames' },
         { key: '/pacientes', icon: <TeamOutlined aria-hidden="true" />, label: 'Pacientes - Audiometrias' },
         { key: '/consulta', icon: <SearchOutlined aria-hidden="true" />, label: 'Laudos - Consultas' },
       ],
@@ -55,7 +54,7 @@ export default function AppLayout() {
     {
       key: 'grupo-pts',
       icon: <FileProtectOutlined aria-hidden="true" />,
-      label: 'Plano Terapêutico Singular (PTS)',
+      label: 'Projeto Terapêutico Singular (PTS)',
       children: [
         { key: '/pts/pacientes', icon: <TeamOutlined aria-hidden="true" />, label: 'Pacientes PTS' },
         { key: '/pts/dashboard', icon: <DashboardOutlined aria-hidden="true" />, label: 'Dashboard PTS' },
