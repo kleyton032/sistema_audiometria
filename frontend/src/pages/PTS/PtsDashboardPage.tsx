@@ -245,7 +245,7 @@ export default function PtsDashboardPage() {
       title: 'PTS Completo',
       key: 'completo',
       width: 120,
-      align: 'center',
+      align: 'center' as const,
       render: (_: any, record: any) => (
         <Button 
           icon={<FileTextOutlined />} 
@@ -273,7 +273,7 @@ export default function PtsDashboardPage() {
       title: 'Imprimir',
       key: 'acoes',
       width: 100,
-      align: 'center',
+      align: 'center' as const,
       render: (_: any, record: any) => (
         <Button 
           icon={<PrinterOutlined />} 
