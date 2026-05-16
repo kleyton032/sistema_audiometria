@@ -16,7 +16,6 @@ class Settings(BaseSettings):
     ORACLE_TEST_PASSWORD: str = "oracle"
     ORACLE_TEST_DSN: str = "oracle-test:1521/?service_name=FREEPDB1" if os.getenv("RUNNING_IN_DOCKER") else "localhost:1521/?service_name=FREEPDB1"
 
-
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480  # 8 horas — duração de um turno de trabalho

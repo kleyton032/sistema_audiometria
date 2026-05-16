@@ -57,9 +57,13 @@ export async function finalizarPTS(idPts: number): Promise<{ status: string; men
   return data
 }
 
-export async function cancelarPTS(idPts: number): Promise<{ status: string; mensagem: string }> {
+export async function cancelarPTS(
+  idPts: number,
+  payload: { ds_motivo: string; ds_detalhe?: string }
+): Promise<{ status: string; mensagem: string }> {
   const { data } = await api.post<{ status: string; mensagem: string }>(
     `/pts/${idPts}/cancelar`,
+    payload
   )
   return data
 }
@@ -71,10 +75,76 @@ export async function savePTS(payload: any): Promise<{ status: string; mensagem:
   return data
 }
 
+export async function updatePTS(idPts: number, payload: any): Promise<{ status: string; mensagem: string; id_pts: number }> {
+  const { data } = await api.put<{ status: string; mensagem: string; id_pts: number }>(
+    `/pts/${idPts}`,
+    payload
+  )
+  return data
+}
+
+export async function getPTSById(idPts: number): Promise<any> {
+  const { data } = await api.get(`/pts/load/${idPts}`)
+  return data
+}
+
+export async function getPTSStatusBatch(cdAtendimentos: (number | string)[]): Promise<Record<string, { id_pts: number; fl_finalizado: number } | null>> {
+  if (cdAtendimentos.length === 0) return {}
+  const { data } = await api.get('/pts/status-batch', {
+    params: { cd_pacientes: cdAtendimentos.join(',') },
+  })
+  return data
+}
+
 export async function getPTSObjetivosPorEspecialidade(dsEspecialidade: string): Promise<string[]> {
   const { data } = await api.get<{ id_objetivo: number; ds_objetivo: string }[]>(
     '/pts/objetivos-por-especialidade',
     { params: { ds_especialidade: dsEspecialidade } },
   )
   return data.map((d) => d.ds_objetivo)
+}
+
+export async function getPTSDashboardStats(): Promise<{ total_pts: number; finalizados: number; em_rascunho: number; cancelados: number }> {
+  const { data } = await api.get('/pts/dashboard/stats')
+  return data
+}
+
+export async function getPTSDashboardReport(): Promise<any[]> {
+  const { data } = await api.get('/pts/dashboard/report')
+  return data
+}
+
+export interface OutroPTSObjetivo {
+  objetivo: string | null
+  status: string | null
+  motivo: string | null
+}
+
+export interface OutroPTSItem {
+  id_pts: number
+  nm_prestador: string
+  ds_especialidade_profissional: string
+  fl_finalizado: number
+  fl_ativo: number
+  objetivos: Record<string, {
+    anterior: OutroPTSObjetivo[]
+    atual: OutroPTSObjetivo[]
+  }>
+}
+
+export async function getOutrosPTSVigencia(
+  nrAtendimento: string | number,
+  cdPaciente: string | number,
+  vigencia: string,
+  idPtsExcluir: number
+): Promise<OutroPTSItem[]> {
+  const { data } = await api.get<OutroPTSItem[]>('/pts/outros-pts-vigencia', {
+    params: {
+      nr_atendimento: String(nrAtendimento),
+      cd_paciente: String(cdPaciente),
+      vigencia,
+      id_pts_excluir: idPtsExcluir,
+    },
+  })
+  return data
 }

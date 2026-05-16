@@ -16,6 +16,6 @@ api_router.include_router(agenda.router)
 # Módulo 4 — Exames audiológicos
 api_router.include_router(exames.router)
 
-# Módulo 5 — PTS (Programa Terapêutico Singular)
+# Módulo 5 — PTS (Projeto Terapêutico Singular)
 api_router.include_router(pts.router)
 

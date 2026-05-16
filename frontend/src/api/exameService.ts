@@ -38,9 +38,15 @@ export interface ExameAudiometriaCreate {
   od_mask_lrf?: number | null; od_mask_iprf?: number | null
   oe_mask_va?: number | null; oe_mask_vo?: number | null
   oe_mask_lrf?: number | null; oe_mask_iprf?: number | null
-  // Sem resposta (NR)
-  od_va_nr?: number; oe_va_nr?: number
-  od_vo_nr?: number; oe_vo_nr?: number
+  // Sem resposta por frequência (NR)
+  od_va_250_nr?: number; od_va_500_nr?: number; od_va_1000_nr?: number
+  od_va_2000_nr?: number; od_va_3000_nr?: number; od_va_4000_nr?: number
+  od_va_6000_nr?: number; od_va_8000_nr?: number
+  od_vo_500_nr?: number; od_vo_1000_nr?: number; od_vo_2000_nr?: number; od_vo_4000_nr?: number
+  oe_va_250_nr?: number; oe_va_500_nr?: number; oe_va_1000_nr?: number
+  oe_va_2000_nr?: number; oe_va_3000_nr?: number; oe_va_4000_nr?: number
+  oe_va_6000_nr?: number; oe_va_8000_nr?: number
+  oe_vo_500_nr?: number; oe_vo_1000_nr?: number; oe_vo_2000_nr?: number; oe_vo_4000_nr?: number
   // Classificação
   nr_media_od?: number | null; nr_media_oe?: number | null
   ds_class_od?: string | null; ds_class_oe?: string | null
@@ -74,8 +80,14 @@ export interface ResultadoAudioResponse {
   od_mask_lrf?: number | null; od_mask_iprf?: number | null
   oe_mask_va?: number | null; oe_mask_vo?: number | null
   oe_mask_lrf?: number | null; oe_mask_iprf?: number | null
-  od_va_nr?: number; oe_va_nr?: number
-  od_vo_nr?: number; oe_vo_nr?: number
+  od_va_250_nr?: number; od_va_500_nr?: number; od_va_1000_nr?: number
+  od_va_2000_nr?: number; od_va_3000_nr?: number; od_va_4000_nr?: number
+  od_va_6000_nr?: number; od_va_8000_nr?: number
+  od_vo_500_nr?: number; od_vo_1000_nr?: number; od_vo_2000_nr?: number; od_vo_4000_nr?: number
+  oe_va_250_nr?: number; oe_va_500_nr?: number; oe_va_1000_nr?: number
+  oe_va_2000_nr?: number; oe_va_3000_nr?: number; oe_va_4000_nr?: number
+  oe_va_6000_nr?: number; oe_va_8000_nr?: number
+  oe_vo_500_nr?: number; oe_vo_1000_nr?: number; oe_vo_2000_nr?: number; oe_vo_4000_nr?: number
   nr_media_od?: number | null; nr_media_oe?: number | null
   ds_class_od?: string | null; ds_class_oe?: string | null
   ds_tipo_od?: string | null; ds_tipo_oe?: string | null

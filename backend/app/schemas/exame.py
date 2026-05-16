@@ -75,11 +75,15 @@ class ExameAudiometriaCreate(BaseModel):
     oe_mask_lrf:  Optional[float] = None
     oe_mask_iprf: Optional[float] = None
 
-    # Sem resposta (NR)
-    od_va_nr: int = 0
-    oe_va_nr: int = 0
-    od_vo_nr: int = 0
-    oe_vo_nr: int = 0
+    # Sem resposta por frequência (NR)
+    od_va_250_nr: int = 0;  od_va_500_nr: int = 0;  od_va_1000_nr: int = 0
+    od_va_2000_nr: int = 0; od_va_3000_nr: int = 0; od_va_4000_nr: int = 0
+    od_va_6000_nr: int = 0; od_va_8000_nr: int = 0
+    od_vo_500_nr: int = 0;  od_vo_1000_nr: int = 0; od_vo_2000_nr: int = 0; od_vo_4000_nr: int = 0
+    oe_va_250_nr: int = 0;  oe_va_500_nr: int = 0;  oe_va_1000_nr: int = 0
+    oe_va_2000_nr: int = 0; oe_va_3000_nr: int = 0; oe_va_4000_nr: int = 0
+    oe_va_6000_nr: int = 0; oe_va_8000_nr: int = 0
+    oe_vo_500_nr: int = 0;  oe_vo_1000_nr: int = 0; oe_vo_2000_nr: int = 0; oe_vo_4000_nr: int = 0
 
     # Classificação
     nr_media_od: Optional[float] = None
@@ -153,11 +157,15 @@ class ResultadoAudioResponse(BaseModel):
     oe_mask_lrf:  Optional[float] = None
     oe_mask_iprf: Optional[float] = None
 
-    # Sem resposta (NR)
-    od_va_nr: int = 0
-    oe_va_nr: int = 0
-    od_vo_nr: int = 0
-    oe_vo_nr: int = 0
+    # Sem resposta por frequência (NR)
+    od_va_250_nr: int = 0;  od_va_500_nr: int = 0;  od_va_1000_nr: int = 0
+    od_va_2000_nr: int = 0; od_va_3000_nr: int = 0; od_va_4000_nr: int = 0
+    od_va_6000_nr: int = 0; od_va_8000_nr: int = 0
+    od_vo_500_nr: int = 0;  od_vo_1000_nr: int = 0; od_vo_2000_nr: int = 0; od_vo_4000_nr: int = 0
+    oe_va_250_nr: int = 0;  oe_va_500_nr: int = 0;  oe_va_1000_nr: int = 0
+    oe_va_2000_nr: int = 0; oe_va_3000_nr: int = 0; oe_va_4000_nr: int = 0
+    oe_va_6000_nr: int = 0; oe_va_8000_nr: int = 0
+    oe_vo_500_nr: int = 0;  oe_vo_1000_nr: int = 0; oe_vo_2000_nr: int = 0; oe_vo_4000_nr: int = 0
 
     nr_media_od: Optional[float] = None
     nr_media_oe: Optional[float] = None

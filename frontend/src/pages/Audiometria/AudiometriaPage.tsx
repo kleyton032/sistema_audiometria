@@ -26,7 +26,7 @@ const { TextArea } = Input
 
 // ── Helpers de conversão ──────────────────────────────────────────────────────
 
-const emptyThresholds = () => ({ airConduction: {}, boneConduction: {}, airNR: false, boneNR: false })
+const emptyThresholds = () => ({ airConduction: {}, boneConduction: {}, airNR: {}, boneNR: {} })
 const emptySpeech = () => ({
   srt: null, sdt: null,
   irf: null, irfIntensity: null,
@@ -60,8 +60,15 @@ function resultadoToData(r: ResultadoAudioResponse): AudiometryData {
         500: r.od_vo_500 ?? undefined, 1000: r.od_vo_1000 ?? undefined,
         2000: r.od_vo_2000 ?? undefined, 4000: r.od_vo_4000 ?? undefined,
       },
-      airNR: !!(r.od_va_nr),
-      boneNR: !!(r.od_vo_nr),
+      airNR: {
+        250: !!(r.od_va_250_nr), 500: !!(r.od_va_500_nr), 1000: !!(r.od_va_1000_nr),
+        2000: !!(r.od_va_2000_nr), 3000: !!(r.od_va_3000_nr), 4000: !!(r.od_va_4000_nr),
+        6000: !!(r.od_va_6000_nr), 8000: !!(r.od_va_8000_nr),
+      },
+      boneNR: {
+        500: !!(r.od_vo_500_nr), 1000: !!(r.od_vo_1000_nr),
+        2000: !!(r.od_vo_2000_nr), 4000: !!(r.od_vo_4000_nr),
+      },
     },
     leftEar: {
       airConduction: {
@@ -74,8 +81,15 @@ function resultadoToData(r: ResultadoAudioResponse): AudiometryData {
         500: r.oe_vo_500 ?? undefined, 1000: r.oe_vo_1000 ?? undefined,
         2000: r.oe_vo_2000 ?? undefined, 4000: r.oe_vo_4000 ?? undefined,
       },
-      airNR: !!(r.oe_va_nr),
-      boneNR: !!(r.oe_vo_nr),
+      airNR: {
+        250: !!(r.oe_va_250_nr), 500: !!(r.oe_va_500_nr), 1000: !!(r.oe_va_1000_nr),
+        2000: !!(r.oe_va_2000_nr), 3000: !!(r.oe_va_3000_nr), 4000: !!(r.oe_va_4000_nr),
+        6000: !!(r.oe_va_6000_nr), 8000: !!(r.oe_va_8000_nr),
+      },
+      boneNR: {
+        500: !!(r.oe_vo_500_nr), 1000: !!(r.oe_vo_1000_nr),
+        2000: !!(r.oe_vo_2000_nr), 4000: !!(r.oe_vo_4000_nr),
+      },
     },
     speechRight: {
       srt: r.od_lrf ?? null,
@@ -152,10 +166,30 @@ function dataToPayload(
     od_mask_lrf: data.maskingRight.lrf, od_mask_iprf: data.maskingRight.iprf,
     oe_mask_va: data.maskingLeft.va, oe_mask_vo: data.maskingLeft.vo,
     oe_mask_lrf: data.maskingLeft.lrf, oe_mask_iprf: data.maskingLeft.iprf,
-    od_va_nr: data.rightEar.airNR  ? 1 : 0,
-    oe_va_nr: data.leftEar.airNR   ? 1 : 0,
-    od_vo_nr: data.rightEar.boneNR ? 1 : 0,
-    oe_vo_nr: data.leftEar.boneNR  ? 1 : 0,
+    od_va_250_nr: ac[250] != null && data.rightEar.airNR?.[250] ? 1 : 0,
+    od_va_500_nr: ac[500] != null && data.rightEar.airNR?.[500] ? 1 : 0,
+    od_va_1000_nr: ac[1000] != null && data.rightEar.airNR?.[1000] ? 1 : 0,
+    od_va_2000_nr: ac[2000] != null && data.rightEar.airNR?.[2000] ? 1 : 0,
+    od_va_3000_nr: ac[3000] != null && data.rightEar.airNR?.[3000] ? 1 : 0,
+    od_va_4000_nr: ac[4000] != null && data.rightEar.airNR?.[4000] ? 1 : 0,
+    od_va_6000_nr: ac[6000] != null && data.rightEar.airNR?.[6000] ? 1 : 0,
+    od_va_8000_nr: ac[8000] != null && data.rightEar.airNR?.[8000] ? 1 : 0,
+    od_vo_500_nr: bc[500] != null && data.rightEar.boneNR?.[500] ? 1 : 0,
+    od_vo_1000_nr: bc[1000] != null && data.rightEar.boneNR?.[1000] ? 1 : 0,
+    od_vo_2000_nr: bc[2000] != null && data.rightEar.boneNR?.[2000] ? 1 : 0,
+    od_vo_4000_nr: bc[4000] != null && data.rightEar.boneNR?.[4000] ? 1 : 0,
+    oe_va_250_nr: acL[250] != null && data.leftEar.airNR?.[250] ? 1 : 0,
+    oe_va_500_nr: acL[500] != null && data.leftEar.airNR?.[500] ? 1 : 0,
+    oe_va_1000_nr: acL[1000] != null && data.leftEar.airNR?.[1000] ? 1 : 0,
+    oe_va_2000_nr: acL[2000] != null && data.leftEar.airNR?.[2000] ? 1 : 0,
+    oe_va_3000_nr: acL[3000] != null && data.leftEar.airNR?.[3000] ? 1 : 0,
+    oe_va_4000_nr: acL[4000] != null && data.leftEar.airNR?.[4000] ? 1 : 0,
+    oe_va_6000_nr: acL[6000] != null && data.leftEar.airNR?.[6000] ? 1 : 0,
+    oe_va_8000_nr: acL[8000] != null && data.leftEar.airNR?.[8000] ? 1 : 0,
+    oe_vo_500_nr: bcL[500] != null && data.leftEar.boneNR?.[500] ? 1 : 0,
+    oe_vo_1000_nr: bcL[1000] != null && data.leftEar.boneNR?.[1000] ? 1 : 0,
+    oe_vo_2000_nr: bcL[2000] != null && data.leftEar.boneNR?.[2000] ? 1 : 0,
+    oe_vo_4000_nr: bcL[4000] != null && data.leftEar.boneNR?.[4000] ? 1 : 0,
     nr_media_od: ptaRight, nr_media_oe: ptaLeft,
     ds_class_od: data.hearingLossGrade ?? null,
     ds_class_oe: data.hearingLossGrade ?? null,
@@ -329,7 +363,7 @@ export default function AudiometriaPage({ cdPaciente, cdAtendimento }: Audiometr
             />
             {ptaRight !== null && (
               <div style={{ marginTop: 16, padding: '12px', backgroundColor: '#fafafa', borderRadius: 6 }}>
-                <Text strong>PTA: {ptaRight} dBHL</Text>{' '}
+                <Text strong>Média Quadritonal: {ptaRight} dBHL</Text>{' '}
                 <Tag color={gradeRight === 'Normal' ? 'green' : 'orange'}>{gradeRight}</Tag>
               </div>
             )}
@@ -354,7 +388,7 @@ export default function AudiometriaPage({ cdPaciente, cdAtendimento }: Audiometr
             />
             {ptaLeft !== null && (
               <div style={{ marginTop: 16, padding: '12px', backgroundColor: '#fafafa', borderRadius: 6 }}>
-                <Text strong>PTA: {ptaLeft} dBHL</Text>{' '}
+                <Text strong>Média Quadritonal: {ptaLeft} dBHL</Text>{' '}
                 <Tag color={gradeLeft === 'Normal' ? 'green' : 'orange'}>{gradeLeft}</Tag>
               </div>
             )}

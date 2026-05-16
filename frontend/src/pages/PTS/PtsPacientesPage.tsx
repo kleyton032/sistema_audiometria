@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
   Card,
-  DatePicker,
   Table,
   Tag,
   Typography,
@@ -10,6 +9,10 @@ import {
   Badge,
   Alert,
   Tooltip,
+  Input,
+  DatePicker,
+  Popover,
+  notification,
 } from 'antd'
 import {
   ReloadOutlined,
@@ -23,6 +26,7 @@ import dayjs, { type Dayjs } from 'dayjs'
 import 'dayjs/locale/pt-br'
 import { useNavigate } from 'react-router-dom'
 import { getAgendaDoPacientes, type AgendaItem } from '@/api/agendaService'
+import { getPTSStatusBatch } from '@/api/ptsService'
 
 dayjs.locale('pt-br')
 
@@ -54,13 +58,19 @@ export default function PtsPacientesPage() {
   const [data, setData]         = useState<AgendaItem[]>([])
   const [total, setTotal]       = useState(0)
   const [dataRef, setDataRef]   = useState<Dayjs>(dayjs())
+  const [inputValue, setInputValue] = useState<string>(dayjs().format('DD/MM/YYYY'))
+  const [ptsStatus, setPtsStatus] = useState<Record<string, { id_pts: number; fl_finalizado: number } | null>>({})
+  const [calendarOpen, setCalendarOpen] = useState(false)
 
   function abrirPTS(record: AgendaItem) {
+    const status = record.cd_atendimento != null ? ptsStatus[String(record.cd_atendimento)] : null
     navigate('/pts', {
       state: {
         nm_paciente:    record.nm_paciente,
         cd_paciente:    record.cd_paciente,
         cd_atendimento: record.cd_atendimento,
+        id_pts:         status?.id_pts ?? null,
+        fl_finalizado:  status?.fl_finalizado ?? 0,
       },
     })
   }
@@ -146,23 +156,32 @@ export default function PtsPacientesPage() {
       key: 'preencher_pts',
       width: 150,
       fixed: 'right',
-      render: (_, record) => (
-        <Tooltip title={!record.cd_atendimento ? "Aguardando recepção (sem código de atendimento)" : undefined}>
-          <Button
-            type="primary"
-            size="small"
-            icon={<FileProtectOutlined />}
-            disabled={!record.cd_atendimento}
-            onClick={() => abrirPTS(record)}
-            style={{ 
-              background: !record.cd_atendimento ? undefined : '#667eea', 
-              borderColor: !record.cd_atendimento ? undefined : '#667eea' 
-            }}
-          >
-            Preencher PTS
-          </Button>
-        </Tooltip>
-      ),
+      render: (_, record) => {
+        const status = record.cd_atendimento != null ? ptsStatus[String(record.cd_atendimento)] : null
+        const finalizado = status?.fl_finalizado === 1
+        const temPTS     = status != null
+        return (
+          <Space direction="vertical" size={4} align="center">
+            <Tooltip title={!record.cd_atendimento ? "Aguardando recepção (sem código de atendimento)" : undefined}>
+              <Button
+                type="primary"
+                size="small"
+                icon={<FileProtectOutlined />}
+                disabled={!record.cd_atendimento}
+                onClick={() => abrirPTS(record)}
+                style={{
+                  background: !record.cd_atendimento ? undefined : finalizado ? '#52c41a' : '#667eea',
+                  borderColor: !record.cd_atendimento ? undefined : finalizado ? '#52c41a' : '#667eea',
+                }}
+              >
+                {finalizado ? 'Ver PTS' : temPTS ? 'Editar PTS' : 'Preencher PTS'}
+              </Button>
+            </Tooltip>
+            {finalizado && <Tag color="success" style={{ fontSize: 10, margin: 0 }}>Finalizado</Tag>}
+            {temPTS && !finalizado && <Tag color="processing" style={{ fontSize: 10, margin: 0 }}>Em andamento</Tag>}
+          </Space>
+        )
+      },
     },
   ]
 
@@ -173,6 +192,13 @@ export default function PtsPacientesPage() {
       const result = await getAgendaDoPacientes(d.format('YYYY-MM-DD'))
       setData(result.items)
       setTotal(result.total)
+      // Busca status PTS para todos os pacientes da agenda
+      const ids = result.items
+        .map((i) => i.cd_atendimento)
+        .filter((id): id is number => id != null)
+      if (ids.length > 0) {
+        getPTSStatusBatch(ids).then(setPtsStatus).catch(() => null)
+      }
     } catch (err: unknown) {
       const msg =
         (err as any)?.response?.data?.detail ?? 'Erro ao buscar agenda do MV.'
@@ -188,10 +214,101 @@ export default function PtsPacientesPage() {
     fetchAgenda(dataRef)
   }, [])
 
-  const handleDateChange = (d: Dayjs | null) => {
-    if (d) {
-      setDataRef(d)
-      fetchAgenda(d)
+  const handleDateChange = (date: Dayjs | null) => {
+    if (date && date.isValid()) {
+      setDataRef(date)
+      setInputValue(date.format('DD/MM/YYYY'))
+      setCalendarOpen(false)
+      fetchAgenda(date)
+    }
+  }
+
+  const handleDateInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let valor = e.currentTarget.value.trim()
+    
+    // Remove tudo que não for número ou barra
+    valor = valor.replace(/[^\d/]/g, '')
+    
+    // Se o usuário digitar só números, aplica a máscara automaticamente
+    if (!/\//g.test(valor) && valor.length > 0) {
+      // Remove qualquer caractere não numérico
+      const apenasNumeros = valor.replace(/\D/g, '')
+      
+      if (apenasNumeros.length > 0) {
+        // Aplica máscara DD/MM/YYYY
+        if (apenasNumeros.length <= 2) {
+          valor = apenasNumeros
+        } else if (apenasNumeros.length <= 4) {
+          valor = `${apenasNumeros.slice(0, 2)}/${apenasNumeros.slice(2)}`
+        } else if (apenasNumeros.length <= 8) {
+          valor = `${apenasNumeros.slice(0, 2)}/${apenasNumeros.slice(2, 4)}/${apenasNumeros.slice(4)}`
+        } else {
+          // Limita a 8 dígitos
+          valor = `${apenasNumeros.slice(0, 2)}/${apenasNumeros.slice(2, 4)}/${apenasNumeros.slice(4, 8)}`
+        }
+      }
+    } else if (/\//g.test(valor)) {
+      // Se já tem barras, remove e reaplica a máscara
+      const apenasNumeros = valor.replace(/\D/g, '')
+      if (apenasNumeros.length > 0) {
+        if (apenasNumeros.length <= 2) {
+          valor = apenasNumeros
+        } else if (apenasNumeros.length <= 4) {
+          valor = `${apenasNumeros.slice(0, 2)}/${apenasNumeros.slice(2)}`
+        } else if (apenasNumeros.length <= 8) {
+          valor = `${apenasNumeros.slice(0, 2)}/${apenasNumeros.slice(2, 4)}/${apenasNumeros.slice(4)}`
+        } else {
+          valor = `${apenasNumeros.slice(0, 2)}/${apenasNumeros.slice(2, 4)}/${apenasNumeros.slice(4, 8)}`
+        }
+      }
+    }
+    
+    setInputValue(valor)
+  }
+
+  const handlePesquisar = () => {
+    const valor = inputValue.trim()
+
+    if (!valor) {
+      notification.error({
+        message: 'Data inválida',
+        description: 'Digite uma data no formato DD/MM/YYYY',
+        duration: 3,
+      })
+      return
+    }
+
+    // Remove barras para normalizar
+    const apenasNumeros = valor.replace(/\D/g, '')
+
+    // Tenta parsear diferentes formatos
+    let parsed: Dayjs | null = null
+
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(valor)) {
+      // Formato DD/MM/YYYY
+      parsed = dayjs(valor, 'DD/MM/YYYY')
+    } else if (/^\d{8}$/.test(apenasNumeros)) {
+      // Formato DDMMYYYY
+      const dia = apenasNumeros.slice(0, 2)
+      const mes = apenasNumeros.slice(2, 4)
+      const ano = apenasNumeros.slice(4, 8)
+      parsed = dayjs(`${ano}-${mes}-${dia}`, 'YYYY-MM-DD')
+    } else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(valor)) {
+      // Formato D/M/YYYY ou DD/M/YYYY
+      parsed = dayjs(valor, 'D/M/YYYY')
+    }
+
+    if (parsed && parsed.isValid()) {
+      setDataRef(parsed)
+      setInputValue(parsed.format('DD/MM/YYYY'))
+      fetchAgenda(parsed)
+    } else {
+      notification.error({
+        message: 'Data inválida',
+        description: 'Use o formato DD/MM/YYYY (ex: 14/05/2026)',
+        duration: 3,
+      })
+      setInputValue(dataRef.format('DD/MM/YYYY'))
     }
   }
 
@@ -200,25 +317,93 @@ export default function PtsPacientesPage() {
       <Title level={1}>Pacientes — PTS</Title>
 
       <Card style={{ marginBottom: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
-        <Space wrap style={{ marginBottom: 16 }}>
-          <CalendarOutlined style={{ fontSize: 16, color: '#667eea' }} />
-          <Text strong>Data de referência:</Text>
-          <DatePicker
-            value={dataRef}
-            onChange={handleDateChange}
-            format="DD/MM/YYYY"
-            allowClear={false}
-            aria-label="Data de referência para consulta da agenda"
-          />
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={() => fetchAgenda(dataRef)}
-            loading={loading}
-          >
-            Atualizar
-          </Button>
+        <Space 
+          wrap 
+          style={{ marginBottom: 16 }} 
+          align="center"
+          role="region"
+          aria-label="Filtro de data para busca de pacientes"
+        >
+          <CalendarOutlined style={{ fontSize: 16, color: '#667eea' }} aria-hidden="true" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label htmlFor="data-referencia-input" style={{ fontWeight: 600, margin: 0 }}>
+              Data de referência:
+            </label>
+            <span id="data-referencia-descricao" style={{ fontSize: 12, color: '#8c8c8c' }}>
+              DD/MM/YYYY ou números (ex: 14052026)
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <Popover
+              content={
+                <DatePicker
+                  value={dataRef}
+                  onChange={handleDateChange}
+                  format="DD/MM/YYYY"
+                  picker="date"
+                  autoFocus
+                  aria-label="Selecione a data usando o calendário"
+                />
+              }
+              title="Selecionar data"
+              trigger="manual"
+              open={calendarOpen}
+              onOpenChange={setCalendarOpen}
+              placement="bottomLeft"
+            >
+              <Input
+                id="data-referencia-input"
+                placeholder="DD/MM/YYYY ou 14052026"
+                value={inputValue}
+                onChange={handleDateInputChange}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handlePesquisar()
+                  }
+                }}
+                aria-label="Campo de data de referência"
+                aria-describedby="data-referencia-descricao"
+                aria-expanded={calendarOpen}
+                aria-haspopup="dialog"
+                role="combobox"
+                style={{ width: 160 }}
+                maxLength={10}
+                suffix={
+                  <button
+                    type="button"
+                    onClick={() => setCalendarOpen(!calendarOpen)}
+                    aria-label={calendarOpen ? 'Fechar calendário' : 'Abrir calendário'}
+                    aria-expanded={calendarOpen}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '0 4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <CalendarOutlined style={{ color: '#667eea' }} aria-hidden="true" />
+                  </button>
+                }
+              />
+            </Popover>
+            <Button
+              type="primary"
+              onClick={handlePesquisar}
+              loading={loading}
+              aria-label="Pesquisar pacientes pela data de referência selecionada"
+            >
+              Pesquisar
+            </Button>
+          </div>
           {total > 0 && (
-            <Tag color="blue" style={{ fontSize: 13 }}>
+            <Tag 
+              color="blue" 
+              style={{ fontSize: 13 }}
+              aria-label={`Total de ${total} paciente${total !== 1 ? 's' : ''} encontrado${total !== 1 ? 's' : ''}`}
+            >
               {total} paciente{total !== 1 ? 's' : ''}
             </Tag>
           )}
@@ -232,12 +417,15 @@ export default function PtsPacientesPage() {
             closable
             onClose={() => setError(null)}
             style={{ marginBottom: 16 }}
+            role="alert"
+            aria-live="assertive"
+            aria-atomic="true"
           />
         )}
 
         <Table<AgendaItem>
           rowKey={(r) =>
-            `${r.cd_item_agendamento ?? ''}-${r.cd_paciente ?? ''}-${r.hr_agenda ?? ''}`
+            `${r.cd_atendimento ?? '0'}-${r.cd_item_agendamento ?? '0'}-${r.cd_paciente ?? '0'}`
           }
           columns={columns}
           dataSource={data}
@@ -246,6 +434,7 @@ export default function PtsPacientesPage() {
           pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (t) => `${t} registros` }}
           locale={{ emptyText: 'Nenhum paciente agendado para esta data.' }}
           scroll={{ x: 'max-content' }}
+          aria-label="Lista de pacientes agendados com status de PTS"
         />
       </Card>
     </div>

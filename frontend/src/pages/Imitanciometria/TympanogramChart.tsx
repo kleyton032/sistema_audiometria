@@ -8,6 +8,7 @@ import {
   Legend,
   ResponsiveContainer,
   ReferenceLine,
+  ReferenceDot,
 } from 'recharts'
 import type { TympanogramData } from '@/types'
 
@@ -18,12 +19,11 @@ interface Props {
 }
 
 /**
- * Gera curva timpanométrica com gaussiana assimétrica (cauda neg. mais suave que a pos.),
- * seguindo o padrão clínico real observado em timpanogramas.
- *
- * Gaussiana assimétrica:
- *   sigma_left  → cauda para pressões negativas (mais suave / longa)
- *   sigma_right → queda para pressões positivas (mais íngreme / curta)
+ * Gera curva timpanométrica 226 Hz com perfil assimétrico:
+ * - lado esquerdo (pressões negativas): subida gradual
+ * - lado direito (pressões positivas): queda rápida
+ * O perfil usa exponencial generalizada para gerar pico mais pontudo,
+ * visualmente mais próximo do traçado de equipamentos clínicos.
  */
 function generateCurve(data: TympanogramData): { pressure: number; compliance: number }[] {
   if (data.curve.length > 0) return data.curve
@@ -32,59 +32,82 @@ function generateCurve(data: TympanogramData): { pressure: number; compliance: n
   // Baseline = volume do canal auditivo (piso da curva nas pressões extremas)
   const baseline = data.earCanalVolume ?? 0.2
 
-  function asymGaussian(p: number, mu: number, sL: number, sR: number): number {
-    const s = p < mu ? sL : sR
-    return Math.exp(-0.5 * Math.pow((p - mu) / s, 2))
+  // Exponencial generalizada assimétrica: beta menor deixa o pico mais agudo.
+  function asymProfile(
+    p: number,
+    mu: number,
+    sL: number,
+    sR: number,
+    betaL: number,
+    betaR: number
+  ): number {
+    const d = Math.abs(p - mu)
+    if (p <= mu) {
+      return Math.exp(-Math.pow(d / sL, betaL))
+    }
+    return Math.exp(-Math.pow(d / sR, betaR))
   }
 
   let amplitude: number
   let mu: number
-  let sL: number // sigma lado negativo (cauda longa)
-  let sR: number // sigma lado positivo (queda íngreme)
+  let sL: number // largura lado negativo (p <= mu)
+  let sR: number // largura lado positivo (p > mu)
+  let betaL: number // forma do lado negativo
+  let betaR: number // forma do lado positivo
 
   switch (data.type) {
     case 'A':
-      // Pico central normal — assimétrico: cauda neg. suave, pos. mais íngreme
-      amplitude = Math.max((data.staticCompliance ?? 0.9) - baseline, 0.3)
-      mu = data.peakPressure ?? 0
-      sL = 100
-      sR = 60
+      // Tipo A (normal): pico pontudo com subida longa à esquerda e queda rápida à direita.
+      amplitude = Math.max((data.staticCompliance ?? 0.8) - baseline, 0.05)
+      mu = data.peakPressure ?? -20
+      sL = 125
+      sR = 34
+      betaL = 1.55
+      betaR = 1.7
       break
     case 'As':
-      // Rigidez — mesma forma de A, mas amplitude muito reduzida
+      // Tipo As: mesma topologia de A, porém com menor amplitude.
       amplitude = Math.max((data.staticCompliance ?? 0.35) - baseline, 0.05)
-      mu = data.peakPressure ?? 0
-      sL = 100
-      sR = 60
+      mu = data.peakPressure ?? -10
+      sL = 120
+      sR = 34
+      betaL = 1.6
+      betaR = 1.75
       break
     case 'Ad':
-      // Hipermobilidade — espigão estreitíssimo e alto (sai do gráfico)
-      amplitude = Math.max((data.staticCompliance ?? 2.5) - baseline, 1.0)
-      mu = data.peakPressure ?? 0
-      sL = 12
-      sR = 10
+      // Tipo Ad: pico muito alto e estreito.
+      amplitude = Math.max((data.staticCompliance ?? 2.4) - baseline, 1.0)
+      mu = data.peakPressure ?? -15
+      sL = 16
+      sR = 12
+      betaL = 1.45
+      betaR = 1.6
       break
     case 'B':
-      // Efusão / obstrução — quase linha reta, levíssimo bojo
+      // Tipo B: linha quase plana, sem pico definido.
       amplitude = Math.max((data.staticCompliance ?? 0.1) - baseline, 0.02)
       mu = data.peakPressure ?? 0
       sL = 300
       sR = 300
+      betaL = 2.0
+      betaR = 2.0
       break
     case 'C':
-      // Disfunção tubária — forma idêntica a A, deslocada para ~-200 daPa
-      amplitude = Math.max((data.staticCompliance ?? 0.9) - baseline, 0.3)
-      mu = data.peakPressure ?? -200
-      sL = 100
-      sR = 60
+      // Tipo C: deslocada para pressão negativa, com cauda prolongada à direita.
+      amplitude = Math.max((data.staticCompliance ?? 0.9) - baseline, 0.05)
+      mu = data.peakPressure ?? -180
+      sL = 60
+      sR = 110
+      betaL = 1.7
+      betaR = 1.45
       break
     default:
       return []
   }
 
   const points: { pressure: number; compliance: number }[] = []
-  for (let p = -400; p <= 200; p += 10) {
-    const compliance = baseline + amplitude * asymGaussian(p, mu, sL, sR)
+  for (let p = -600; p <= 400; p += 5) {
+    const compliance = baseline + amplitude * asymProfile(p, mu, sL, sR, betaL, betaR)
     points.push({ pressure: p, compliance: Math.round(compliance * 1000) / 1000 })
   }
 
@@ -109,10 +132,33 @@ export default function TympanogramChart({ rightEar, leftEar, title }: Props) {
       leftCompliance: leftCurve.find((p) => p.pressure === pressure)?.compliance,
     }))
 
-  // Domínio Y dinâmico baseado no pico máximo real
+  // Ponto de pico:
+  //   - X = peakPressure exato do usuário
+  //   - Y = compliance da curva gerada (ponto fica SOBRE a curva)
+  //   - labelCompliance = staticCompliance do usuário (valor real do exame)
+  const findPeak = (curve: { pressure: number; compliance: number }[], ear: TympanogramData) => {
+    if (!ear.type || ear.type === 'B' || curve.length === 0) return null
+    if (ear.peakPressure == null) return null
+    const mu = ear.peakPressure
+    const closest = curve.reduce((best, pt) =>
+      Math.abs(pt.pressure - mu) < Math.abs(best.pressure - mu) ? pt : best
+    )
+    return {
+      pressure: mu,
+      compliance: closest.compliance,
+      labelCompliance: ear.staticCompliance ?? closest.compliance,
+    }
+  }
+  const rightPeak = findPeak(rightCurve, rightEar)
+  const leftPeak = findPeak(leftCurve, leftEar)
+
+  // Domínio Y dinâmico: começa próximo ao baseline (como o equipamento), não em 0
   const allValues = [...rightCurve, ...leftCurve].map((p) => p.compliance)
   const maxVal = allValues.length > 0 ? Math.max(...allValues) : 2
-  const yMax = Math.ceil(maxVal * 10) / 10 + 0.2
+  const minVal = allValues.length > 0 ? Math.min(...allValues) : 0
+  const yMax = Math.ceil(maxVal * 10) / 10 + 0.1
+  // Base do eixo Y: 10% abaixo do mínimo ou 0, o que for maior — equivale ao auto-scale do equipamento
+  const yMin = Math.max(0, Math.floor(minVal * 10) / 10 - 0.1)
 
   const typeLabel = (ear: TympanogramData) =>
     ear.type ? ` (Tipo ${ear.type})` : ''
@@ -126,12 +172,12 @@ export default function TympanogramChart({ rightEar, leftEar, title }: Props) {
           <XAxis
             dataKey="pressure"
             type="number"
-            domain={[-400, 200]}
-            ticks={[-400, -300, -200, -100, 0, 100, 200]}
+            domain={[-600, 400]}
+            ticks={[-600, -400, -200, 0, 200, 400]}
             label={{ value: 'Pressão (daPa)', position: 'insideBottom', offset: -15 }}
           />
           <YAxis
-            domain={[0, yMax]}
+            domain={[yMin, yMax]}
             tickFormatter={(v: number) => v.toFixed(1)}
             label={{
               value: 'Complacência (ml)',
@@ -159,6 +205,41 @@ export default function TympanogramChart({ rightEar, leftEar, title }: Props) {
           />
           {/* Linha de referência em 0 daPa */}
           <ReferenceLine x={0} stroke="#999" strokeDasharray="3 3" label={{ value: '0', position: 'top', fontSize: 10 }} />
+
+          {/* Ponto de pico OD */}
+          {rightPeak && (
+            <ReferenceDot
+              x={rightPeak.pressure}
+              y={rightPeak.compliance}
+              r={5}
+              fill="#e74c3c"
+              stroke="#fff"
+              strokeWidth={1.5}
+              label={{
+                value: `${rightPeak.pressure} daPa | ${rightPeak.labelCompliance} ml`,
+                position: 'top',
+                fontSize: 11,
+                fill: '#e74c3c',
+              }}
+            />
+          )}
+          {/* Ponto de pico OE */}
+          {leftPeak && (
+            <ReferenceDot
+              x={leftPeak.pressure}
+              y={leftPeak.compliance}
+              r={5}
+              fill="#2980b9"
+              stroke="#fff"
+              strokeWidth={1.5}
+              label={{
+                value: `${leftPeak.pressure} daPa | ${leftPeak.labelCompliance} ml`,
+                position: 'top',
+                fontSize: 11,
+                fill: '#2980b9',
+              }}
+            />
+          )}
 
           {/* OD — linha contínua vermelha */}
           <Line

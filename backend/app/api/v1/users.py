@@ -58,3 +58,26 @@ def get_user(
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
     return _user_to_response(user)
+
+
+@router.get(
+    "/debug/prestador",
+    summary="DEBUG: Testar busca de prestador no MV",
+)
+def debug_prestador(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """DEBUG APENAS: Testa a sincronização de prestador do MV para o usuário logado."""
+    from app.db.repositories.user import buscar_prestador_mv
+    
+    cd_usuario_mv = current_user.cd_usuario_mv or current_user.nm_login
+    prestador = buscar_prestador_mv(db, cd_usuario_mv)
+    
+    return {
+        "usuario_id": current_user.id_usuario,
+        "nm_login": current_user.nm_login,
+        "cd_usuario_mv": cd_usuario_mv,
+        "prestador_encontrado": prestador is not None,
+        "prestador": prestador.model_dump() if prestador else None,
+    }

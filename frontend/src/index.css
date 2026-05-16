@@ -24,6 +24,12 @@ body {
   }
 
   .print-only {
+    position: static !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    overflow: visible !important;
+    z-index: auto !important;
     display: block !important;
   }
 
@@ -40,4 +46,23 @@ body {
     margin: 0 !important;
     padding: 0 !important;
   }
+}
+
+/* Ocultar elementos de impressão por padrão na tela — usando off-screen para manter renderizado */
+.print-only {
+  position: absolute !important;
+  top: 0 !important;
+  width: 800px !important;
+  overflow: hidden !important;
+  z-index: -1 !important;
+}
+ /* Fallback for inset in older browsers (Chromium < 87) */
+.ant-modal-wrap,
+.ant-modal-mask,
+.ant-drawer-mask,
+.ant-drawer-wrap {
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
 }

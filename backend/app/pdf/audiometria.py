@@ -37,31 +37,47 @@ def _audiograma_base64(resultado, exame=None) -> str:
     mask_oe_va  = bool(getattr(r, "oe_mask_va",  None))
     mask_od_vo  = bool(getattr(r, "od_mask_vo",  None))
     mask_oe_vo  = bool(getattr(r, "oe_mask_vo",  None))
-    nr_od_va    = bool(getattr(r, "od_va_nr",    0))
-    nr_oe_va    = bool(getattr(r, "oe_va_nr",    0))
-    nr_od_vo    = bool(getattr(r, "od_vo_nr",    0))
-    nr_oe_vo    = bool(getattr(r, "oe_vo_nr",    0))
+    nr_od_va = [bool(getattr(r, f"od_va_{f}_nr", 0)) for f in freqs_va]
+    nr_oe_va = [bool(getattr(r, f"oe_va_{f}_nr", 0)) for f in freqs_va]
+    nr_od_vo = [bool(getattr(r, f"od_vo_{f}_nr", 0)) for f in freqs_vo]
+    nr_oe_vo = [bool(getattr(r, f"oe_vo_{f}_nr", 0)) for f in freqs_vo]
 
     od_va_marker = "^"   if mask_od_va else "o"
     oe_va_marker = "s"   if mask_oe_va else "x"
     od_vo_marker = "$[$" if mask_od_vo else "<"
     oe_vo_marker = "$]$" if mask_oe_vo else ">"
 
-    def _plot_line(ax, vals, xs, color, marker, label, connect=True):
-        pts = [(x, y) for x, y in zip(xs, vals) if y is not None]
-        if not pts:
+    def _plot_line(ax, vals, xs, color, marker, label, connect=True, nr=None):
+        if nr is None:
+            nr = [False] * len(vals)
+        all_pts = [(x, y) for x, y in zip(xs, vals) if y is not None]
+        sym_pts = [(x, y) for x, y, n in zip(xs, vals, nr) if y is not None and not n]
+        if not all_pts:
             return
-        xs_p, ys_p = zip(*pts)
-        lw = 1.8 if connect else 0
-        ax.plot(xs_p, ys_p, linestyle="-", color=color, label=label,
-                marker=marker, markersize=8, markeredgewidth=2.2,
-                linewidth=lw, markerfacecolor="white" if marker not in ("x", "<", ">") else color)
+        if connect:
+            xs_l, ys_l = zip(*all_pts)
+            ax.plot(xs_l, ys_l, linestyle="-", color=color, linewidth=1.8, zorder=1)
+            if sym_pts:
+                xs_s, ys_s = zip(*sym_pts)
+                ax.plot(xs_s, ys_s, linestyle="None", color=color, label=label,
+                        marker=marker, markersize=8, markeredgewidth=2.2, zorder=2,
+                        markerfacecolor="white" if marker not in ("x", "<", ">") else color)
+            else:
+                ax.plot([], [], linestyle="-", color=color, label=label, linewidth=1.8)
+        else:
+            if sym_pts:
+                xs_s, ys_s = zip(*sym_pts)
+                ax.plot(xs_s, ys_s, linestyle="None", color=color, label=label,
+                        marker=marker, markersize=8, markeredgewidth=2.2,
+                        markerfacecolor="white" if marker not in ("x", "<", ">") else color)
+            else:
+                ax.plot([], [], linestyle="None", color=color, marker=marker, label=label)
 
-    def _plot_nr(ax, xs_all, nr_flag, color):
-        if not nr_flag:
-            return
-        for x in xs_all:
-            ax.annotate("", xy=(x, 118), xytext=(x, 108),
+    def _plot_nr(ax, xs_all, vals, nr_flags, color):
+        for x, y, is_nr in zip(xs_all, vals, nr_flags):
+            if not is_nr or y is None:
+                continue
+            ax.annotate("", xy=(x, y + 10), xytext=(x, y - 2),
                         arrowprops=dict(arrowstyle="-|>", color=color, lw=2))
 
     def _configure_ax(ax, title, color, show_ylabel=True):
@@ -83,27 +99,27 @@ def _audiograma_base64(resultado, exame=None) -> str:
     # ── Ouvido Direito (ax_od) ─────────────────────────────────────────────
     od_va = [_get(r, f"od_va_{f}") for f in freqs_va]
     _plot_line(ax_od, od_va, x_va, "#e74c3c", od_va_marker,
-               f"VA {'(△ mascarado)' if mask_od_va else '(O)'}")
-    _plot_nr(ax_od, x_va, nr_od_va, "#e74c3c")
+               f"VA {'(△ mascarado)' if mask_od_va else '(O)'}", nr=nr_od_va)
+    _plot_nr(ax_od, x_va, od_va, nr_od_va, "#e74c3c")
 
     od_vo = [_get(r, f"od_vo_{f}") for f in freqs_vo]
     _plot_line(ax_od, od_vo, x_vo, "#e74c3c", od_vo_marker,
                f"VO {'([)' if mask_od_vo else '(<)'}",
-               connect=False)
-    _plot_nr(ax_od, x_vo, nr_od_vo, "#e74c3c")
+               connect=False, nr=nr_od_vo)
+    _plot_nr(ax_od, x_vo, od_vo, nr_od_vo, "#e74c3c")
     _configure_ax(ax_od, "Ouvido Direito", "#e74c3c", show_ylabel=True)
 
     # ── Ouvido Esquerdo (ax_oe) ────────────────────────────────────────────
     oe_va = [_get(r, f"oe_va_{f}") for f in freqs_va]
     _plot_line(ax_oe, oe_va, x_va, "#2980b9", oe_va_marker,
-               f"VA {'(□ mascarado)' if mask_oe_va else '(X)'}")
-    _plot_nr(ax_oe, x_va, nr_oe_va, "#2980b9")
+               f"VA {'(□ mascarado)' if mask_oe_va else '(X)'}", nr=nr_oe_va)
+    _plot_nr(ax_oe, x_va, oe_va, nr_oe_va, "#2980b9")
 
     oe_vo = [_get(r, f"oe_vo_{f}") for f in freqs_vo]
     _plot_line(ax_oe, oe_vo, x_vo, "#2980b9", oe_vo_marker,
                f"VO {'(])' if mask_oe_vo else '(>)'}",
-               connect=False)
-    _plot_nr(ax_oe, x_vo, nr_oe_vo, "#2980b9")
+               connect=False, nr=nr_oe_vo)
+    _plot_nr(ax_oe, x_vo, oe_vo, nr_oe_vo, "#2980b9")
     _configure_ax(ax_oe, "Ouvido Esquerdo", "#2980b9", show_ylabel=False)
 
     fig.tight_layout()

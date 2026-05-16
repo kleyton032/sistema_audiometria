@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   Card,
@@ -19,15 +19,23 @@ import {
   DatePicker,
   Popconfirm,
   message,
+  Modal,
+  Result,
+  Spin,
+  notification,
 } from 'antd'
-import { SaveOutlined, FileTextOutlined, PlusOutlined, DeleteOutlined, CheckCircleOutlined, CloseCircleOutlined, ArrowLeftOutlined } from '@ant-design/icons'
+import { SaveOutlined, FileTextOutlined, PlusOutlined, DeleteOutlined, CheckCircleOutlined, CloseCircleOutlined, ArrowLeftOutlined, PrinterOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import 'dayjs/locale/pt-br'
 import ObjetivosEspecialidades, {
   criarObjetivosIniciais,
+  validarObjetivos,
+  getMinhasEspecialidades,
   type ObjetivosState,
+  type ObjetivoErro,
 } from './ObjetivosEspecialidades'
 import type { ColumnsType } from 'antd/es/table'
+import PTSPrintView from './PTSPrintView'
 import {
   DIAGNOSTICOS_PRINCIPAIS,
   DIAGNOSTICOS_AREA,
@@ -46,11 +54,24 @@ import {
   type CerGrupo,
   type Area,
 } from './data/listas'
-import { getMe, getPTSDiagnosticosPrincipais, getPTSDiagnosticosArea, getPTSDiagnosticosTerapeuticos, getPTSEspecialidades, getPTSItensMultidisciplinar, getPTSTerapiasIndicadas, getPTSInstrumentosAvaliacao, finalizarPTS, cancelarPTS, savePTS } from '@/api'
+import { getMe, getPTSDiagnosticosPrincipais, getPTSDiagnosticosArea, getPTSDiagnosticosTerapeuticos, getPTSEspecialidades, getPTSItensMultidisciplinar, getPTSTerapiasIndicadas, getPTSInstrumentosAvaliacao, finalizarPTS, cancelarPTS, savePTS, updatePTS, getPTSById } from '@/api'
 import type { User } from '@/types'
 
 const { Title, Text } = Typography
 dayjs.locale('pt-br')
+
+// ── helper especialidade/conselho ────────────────────────────────────────────
+function formatEspecialidadeConselho(user: any): string {
+  const p = user?.prestador || user;
+  const especialidade = p?.nm_tip_presta || p?.ds_especialidade
+  if (!especialidade) return '—'
+  const isPsicopedagogo = especialidade.toUpperCase().includes('PSICOPEDAGO')
+  if (isPsicopedagogo) return especialidade
+  const codigoConselho = p?.ds_codigo_conselho || p?.nr_conselho
+  if (!codigoConselho) return especialidade
+  const nomeConselho = p?.ds_conselho || 'Conselho'
+  return `${especialidade} / ${nomeConselho}: ${codigoConselho}`
+}
 
 // ── tipo linha diagnóstico médico principal ─────────────────────────────────
 interface DiagPrincipalRow {
@@ -61,6 +82,7 @@ interface DiagPrincipalRow {
 // ── tipo linha de terapia indicada ───────────────────────────────────────────
 interface TerapiaRow {
   key: number
+  cd_terapia: string | undefined
   terapia: string | undefined
   tipo_atendimento: string | undefined
   periodicidade: string | undefined
@@ -146,6 +168,8 @@ interface PacienteState {
   nm_paciente:    string | null
   cd_paciente:    number | null
   cd_atendimento: number | null
+  id_pts:         number | null
+  fl_finalizado:  number | null
 }
 
 export default function PTSPage() {
@@ -162,7 +186,7 @@ export default function PTSPage() {
   )
   const [objetivos, setObjetivos] = useState<ObjetivosState>(criarObjetivosIniciais)
   const [usuarioMe, setUsuarioMe] = useState<User | null>(null)
-  const [terapias, setTerapias] = useState<TerapiaRow[]>([{ key: 1, terapia: undefined, tipo_atendimento: undefined, periodicidade: undefined, qtde_sessoes: undefined }])
+  const [terapias, setTerapias] = useState<TerapiaRow[]>([{ key: 1, cd_terapia: undefined, terapia: undefined, tipo_atendimento: undefined, periodicidade: undefined, qtde_sessoes: undefined }])
   const [diagPrincipais, setDiagPrincipais] = useState<DiagPrincipalRow[]>([{ key: 1, diagnostico: undefined }])
   const [opcoesDiagPrincipais, setOpcoesDiagPrincipais] = useState<string[]>([])
   const [opcoesDiagTerapeuticos, setOpcoesDiagTerapeuticos] = useState<string[]>([])
@@ -177,7 +201,36 @@ export default function PTSPage() {
   const [salvandoPTS, setSalvandoPTS] = useState(false)
   const [finalizandoPTS, setFinalizandoPTS] = useState(false)
   const [cancelandoPTS, setCancelandoPTS] = useState(false)
-  const [idPtsSalvo, setIdPtsSalvo] = useState<number | null>(null)
+  const [printTrigger, setPrintTrigger] = useState(0)
+  const [idPtsSalvo, setIdPtsSalvo] = useState<number | null>(() => paciente.id_pts ?? null)
+  const [ptsFinalizado, setPtsFinalizado] = useState(() => (paciente.fl_finalizado ?? 0) === 1)
+  const [idUsuarioAutor, setIdUsuarioAutor] = useState<number | null>(null)
+  const [errosObjetivos, setErrosObjetivos] = useState<Record<string, { anterior: (ObjetivoErro | null)[]; atual: (ObjetivoErro | null)[] }>>({})
+
+
+  // Observador para o campo de prazo da seção 16
+  const prazoEstimado = Form.useWatch('intervencao_prazo', form)
+  // Observador reativo para vigência (necessário para passar ao ObjetivosEspecialidades)
+  const vigenciaAtual = Form.useWatch('pts_vigencia', form)
+  // Observadores para "Não se aplica" que desabilitam outras opções
+  const condNaoSeAplica = Form.useWatch('cond_nao_se_aplica', form)
+  const opmeNaoSeAplica = Form.useWatch('opme_nao_se_aplica', form)
+
+  // Memo para valores iniciais estáveis
+  const initialValues = React.useMemo(() => ({
+    intervencao_prazo: '06 (Seis) Meses',
+    pts_vigencia: dayjs().format('YYYY-MM')
+  }), [])
+
+  // Helper para extrair número de meses do texto (ex: "06 (Seis) Meses" -> 6)
+  const obterMesesPrazo = (texto: string | undefined): number => {
+    if (!texto) return 0
+    const match = texto.match(/(\d+)/)
+    return match ? parseInt(match[1], 10) : 0
+  }
+  const [modalResultado, setModalResultado] = useState<{ visivel: boolean; status: 'success' | 'error'; titulo: string; mensagem: string }>(
+    { visivel: false, status: 'success', titulo: '', mensagem: '' }
+  )
   const [opcoesInstrumentos, setOpcoesInstrumentos] = useState<{ cd: string; ds: string }[]>([])
   const [opcoesDiagArea, setOpcoesDiagArea] = useState<Record<Area, string[]>>({
     visual: [],
@@ -185,6 +238,96 @@ export default function PTSPage() {
     fisica: [],
     auditiva: [],
   })
+  const [carregandoDados, setCarregandoDados] = useState(false)
+  const [modalCancelamento, setModalCancelamento] = useState(false)
+  const [formCancel] = Form.useForm()
+
+  // ── carrega dados do PTS existente ao montar ──────────────────────────────
+  function popularFormulario(d: any) {
+    // Campos escalares do formulário antd
+    form.setFieldsValue({
+      queixa_principal:          d.queixa_principal,
+      def_associada_visual:      d.def_associada_visual,
+      def_associada_intelectual: d.def_associada_intelectual,
+      def_associada_fisica:      d.def_associada_fisica,
+      def_associada_auditiva:    d.def_associada_auditiva,
+      cond_nao_se_aplica:        d.cond_nao_se_aplica,
+      cond_nao_escuta:           d.cond_nao_escuta,
+      cond_nao_fala:             d.cond_nao_fala,
+      cond_nao_enxerga:          d.cond_nao_enxerga,
+      cond_agitacao:             d.cond_agitacao,
+      cond_agressividade:        d.cond_agressividade,
+      cond_nao_anda:             d.cond_nao_anda,
+      cond_nao_fica_sozinho:     d.cond_nao_fica_sozinho,
+      cond_sem_ctrl_cervical:    d.cond_sem_ctrl_cervical,
+      cond_sem_ctrl_tronco:      d.cond_sem_ctrl_tronco,
+      cond_outra:                d.cond_outra,
+      opme_nao_se_aplica:        d.opme_nao_se_aplica,
+      opme_cadeira:              d.opme_cadeira,
+      opme_bengala:              d.opme_bengala,
+      opme_muleta:               d.opme_muleta,
+      opme_andador:              d.opme_andador,
+      opme_protese:              d.opme_protese,
+      opme_com_alta:             d.opme_com_alta,
+      opme_com_baixa:            d.opme_com_baixa,
+      opme_orteses:              d.opme_orteses,
+      opme_outros:               d.opme_outros,
+      cer_terapias_texto:        d.cer_terapias_texto,
+      ext_nao_realiza:           d.ext_nao_realiza,
+      observacoes_gerais:        d.observacoes_gerais,
+      conduta_interdisciplinar:  d.conduta_interdisciplinar,
+      intervencao_prazo:         d.intervencao_prazo,
+      intervencao_descricao:     d.intervencao_descricao,
+      prog_nao_se_aplica:        d.prog_nao_se_aplica,
+      prog_glaucoma:             d.prog_glaucoma,
+      prog_catarata:             d.prog_catarata,
+      prog_alem_olhar:           d.prog_alem_olhar,
+      prog_zika:                 d.prog_zika,
+      prog_apoio_familiar:       d.prog_apoio_familiar,
+      prog_tea:                  d.prog_tea,
+      prog_intervencao_precoce:  d.prog_intervencao_precoce,
+      prog_rop:                  d.prog_rop,
+      prog_pronas_tea:           d.prog_pronas_tea,
+      prog_pronas_doencas_raras: d.prog_pronas_doencas_raras,
+      pts_vigencia:              d.pts_vigencia,
+      pts_nao_concluido:         d.pts_nao_concluido,
+    })
+    setIdUsuarioAutor(d.id_usuario ?? null)
+    // Listas gerenciadas por estado
+    const toRows = (arr: string[]): DiagPrincipalRow[] =>
+      arr.length > 0
+        ? arr.map((v, i) => ({ key: i + 1, diagnostico: v }))
+        : [{ key: 1, diagnostico: undefined }]
+    setDiagPrincipais(toRows(d.diagnosticos_principais ?? []))
+    setDiagTerapeuticos(toRows(d.diagnosticos_terapeuticos ?? []))
+    setExtTerapias(toRows(d.cer_terapias ?? []))
+    setConductaRows(toRows(d.conduta_avaliacao_medica ?? []))
+    setMultidisciplinarRows(toRows(d.conduta_multidisciplinar ?? []))
+    setInstrumentoRows(toRows(d.instrumentos ?? []))
+    setTerapias(
+      (d.terapias_indicadas ?? []).length > 0
+        ? d.terapias_indicadas
+        : [{ key: 1, cd_terapia: undefined, terapia: undefined, tipo_atendimento: undefined, periodicidade: undefined, qtde_sessoes: undefined }]
+    )
+    setDiagnosticosArea(
+      (d.diagnosticos_area ?? {}) as Record<Area, string | undefined>
+    )
+    setGrauArea((d.grau_area ?? {}) as Record<Area, string | undefined>)
+    setObjetivos({ ...criarObjetivosIniciais(), ...(d.objetivos ?? {}) })
+    setIdPtsSalvo(d.id_pts)
+    setPtsFinalizado(d.fl_finalizado === 1)
+  }
+
+  useEffect(() => {
+    if (paciente.id_pts) {
+      setCarregandoDados(true)
+      getPTSById(paciente.id_pts)
+        .then(popularFormulario)
+        .catch((e) => console.error('Erro ao carregar PTS:', e))
+        .finally(() => setCarregandoDados(false))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     getMe().then(setUsuarioMe).catch(() => null)
@@ -199,6 +342,39 @@ export default function PTSPage() {
     getPTSDiagnosticosArea(66).then((v) => setOpcoesDiagArea((p) => ({ ...p, fisica: v }))).catch(() => null)
     getPTSDiagnosticosArea(68).then((v) => setOpcoesDiagArea((p) => ({ ...p, auditiva: v }))).catch(() => null)
   }, [])
+
+  // Reação quando "Não se aplica" é marcado na seção de Condições
+  useEffect(() => {
+    if (condNaoSeAplica) {
+      form.setFieldsValue({
+        cond_nao_escuta: false,
+        cond_nao_fala: false,
+        cond_nao_enxerga: false,
+        cond_agitacao: false,
+        cond_agressividade: false,
+        cond_nao_anda: false,
+        cond_nao_fica_sozinho: false,
+        cond_sem_ctrl_cervical: false,
+        cond_sem_ctrl_tronco: false,
+      })
+    }
+  }, [condNaoSeAplica, form])
+
+  // Reação quando "Não se aplica" é marcado na seção de OPME
+  useEffect(() => {
+    if (opmeNaoSeAplica) {
+      form.setFieldsValue({
+        opme_cadeira: false,
+        opme_bengala: false,
+        opme_muleta: false,
+        opme_andador: false,
+        opme_protese: false,
+        opme_com_alta: false,
+        opme_com_baixa: false,
+        opme_orteses: false,
+      })
+    }
+  }, [opmeNaoSeAplica, form])
 
   // ── colunas tabela diagnóstico por área ───────────────────────────────────
   const colsDiagArea: ColumnsType<DiagnosticoAreaRow> = [
@@ -261,6 +437,22 @@ export default function PTSPage() {
 
   // ── submit ────────────────────────────────────────────────────────────────
   const handleSave = async (values: PTSFormValues, finalizeAfterSave = false) => {
+    // Validação de objetivos antes de salvar
+    const minhasEsps = getMinhasEspecialidades(usuarioMe)
+    const val = validarObjetivos(objetivos, minhasEsps)
+    if (val.temErro) {
+      setErrosObjetivos(val.erros)
+      notification.error({
+        message: 'Objetivos Incompletos',
+        description: `Por favor, preencha todos os campos obrigatórios nos objetivos das especialidades: ${val.especialidadesComErro.join(', ')}.`,
+        duration: 8,
+      })
+      // Faz scroll até a seção de objetivos
+      document.getElementById('sec-objetivos')?.scrollIntoView({ behavior: 'smooth' })
+      return
+    }
+    setErrosObjetivos({})
+
     setSalvandoPTS(true)
     const payload = {
       ...values,
@@ -281,22 +473,18 @@ export default function PTSPage() {
     }
     
     try {
-      const resp = await savePTS(payload)
-      if (typeof message !== 'undefined') {
-        message.success(resp.mensagem)
-      } else {
-        alert(resp.mensagem)
-      }
+      const resp = await (idPtsSalvo !== null ? updatePTS(idPtsSalvo, payload) : savePTS(payload))
       setIdPtsSalvo(resp.id_pts)
       
-      if (finalizeAfterSave) {
+      if (!finalizeAfterSave) {
+        setModalResultado({ visivel: true, status: 'success', titulo: 'PTS Salvo', mensagem: resp.mensagem })
+      } else {
         await executarFinalizacao(resp.id_pts)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao salvar PTS:', error)
-      if (typeof message !== 'undefined') {
-        message.error('Erro ao salvar PTS. Verifique o console.')
-      }
+      const msg = error?.response?.data?.detail ?? 'Erro ao salvar PTS. Tente novamente.'
+      setModalResultado({ visivel: true, status: 'error', titulo: 'Erro ao Salvar', mensagem: msg })
     } finally {
       setSalvandoPTS(false)
     }
@@ -306,21 +494,34 @@ export default function PTSPage() {
     setFinalizandoPTS(true)
     try {
       const resp = await finalizarPTS(idPts)
-      if (typeof message !== 'undefined') {
-        message.success(resp.mensagem || 'PTS finalizado com sucesso!')
-      }
+      setPtsFinalizado(true)
+      setModalResultado({ visivel: true, status: 'success', titulo: 'PTS Finalizado', mensagem: resp.mensagem || 'PTS finalizado com sucesso!' })
       navigate('/pts/pacientes')
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao finalizar PTS:', error)
-      if (typeof message !== 'undefined') {
-        message.error('Erro ao finalizar PTS. Verifique o console.')
-      }
+      const msg = error?.response?.data?.detail ?? 'Erro ao finalizar PTS. Tente novamente.'
+      setModalResultado({ visivel: true, status: 'error', titulo: 'Erro ao Finalizar', mensagem: msg })
     } finally {
       setFinalizandoPTS(false)
     }
   }
 
   const handleFinalizar = async () => {
+    // Validação de objetivos antes de finalizar
+    const minhasEsps = getMinhasEspecialidades(usuarioMe)
+    const val = validarObjetivos(objetivos, minhasEsps)
+    if (val.temErro) {
+      setErrosObjetivos(val.erros)
+      notification.error({
+        message: 'Objetivos Incompletos',
+        description: `Por favor, preencha todos os campos obrigatórios nos objetivos das especialidades: ${val.especialidadesComErro.join(', ')}.`,
+        duration: 8,
+      })
+      document.getElementById('sec-objetivos')?.scrollIntoView({ behavior: 'smooth' })
+      return
+    }
+    setErrosObjetivos({})
+
     if (idPtsSalvo === null) {
       // Se não salvou ainda, valida o form e salva com flag de finalizar depois
       try {
@@ -347,21 +548,149 @@ export default function PTSPage() {
     </div>
   )
 
-  const handleCancelar = async () => {
+  const handleCancelar = async (values: { ds_motivo: string; ds_detalhe?: string }) => {
     if (idPtsSalvo === null) return
     setCancelandoPTS(true)
     try {
-      await cancelarPTS(idPtsSalvo)
+      await cancelarPTS(idPtsSalvo, values)
       setIdPtsSalvo(null)
+      setPtsFinalizado(false)
+      setModalCancelamento(false)
       form.resetFields()
-      // TODO: feedback de sucesso (notification)
+      setModalResultado({
+        visivel: true,
+        status: 'success',
+        titulo: 'PTS Cancelado',
+        mensagem: 'O PTS foi cancelado e os itens foram removidos da fila de espera.'
+      })
+    } catch (error: any) {
+      console.error('Erro ao cancelar PTS:', error)
+      const msg = error?.response?.data?.detail ?? 'Erro ao cancelar PTS.'
+      setModalResultado({
+        visivel: true,
+        status: 'error',
+        titulo: 'Erro no Cancelamento',
+        mensagem: msg
+      })
     } finally {
       setCancelandoPTS(false)
     }
   }
 
+  const handleImprimir = () => {
+    setPrintTrigger(prev => prev + 1)
+    setTimeout(() => {
+      const el = document.getElementById('pts-print-content')
+      if (!el) {
+        window.print()
+        return
+      }
+
+      // Coleta todo o CSS do documento (Ant Design + styles inline)
+      const linkStyles = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+        .map((link) => `<link rel="stylesheet" href="${(link as HTMLLinkElement).href}">`)
+        .join('\n')
+
+      const inlineStyles = Array.from(document.querySelectorAll('style'))
+        .map((s) => `<style>${s.textContent}</style>`)
+        .join('\n')
+
+      const w = window.open('', '_blank', 'width=900,height=700,scrollbars=yes')
+      if (!w) {
+        alert('Permita popups neste site para imprimir o PTS.')
+        return
+      }
+
+      w.document.write(`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>PTS - Projeto Terapêutico Singular</title>
+  ${linkStyles}
+  ${inlineStyles}
+  <style>
+    body { background: white !important; color: black !important; margin: 0; }
+    @page { margin: 1.5cm; }
+    @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+  </style>
+</head>
+<body>
+  ${el.innerHTML}
+  <script>
+    window.onload = function() {
+      setTimeout(function() {
+        window.print();
+        window.onafterprint = function() { window.close(); };
+      }, 500);
+    };
+  <\/script>
+</body></html>`)
+      w.document.close()
+    }, 600)
+  }
+
   return (
+    <>
+    <div className="no-print">
+    <Spin spinning={carregandoDados} tip="Carregando dados do PTS...">
     <Space direction="vertical" style={{ width: '100%' }} size="large">
+      <Modal
+        open={modalResultado.visivel}
+        footer={
+          <Button type="primary" onClick={() => setModalResultado((p) => ({ ...p, visivel: false }))}>
+            OK
+          </Button>
+        }
+        onCancel={() => setModalResultado((p) => ({ ...p, visivel: false }))}
+        style={{ top: 20 }}
+        width={480}
+      >
+        <Result
+          status={modalResultado.status}
+          title={modalResultado.titulo}
+          subTitle={modalResultado.mensagem}
+        />
+      </Modal>
+
+      {/* Modal de Justificativa de Cancelamento */}
+      <Modal
+        title="Justificativa de Cancelamento"
+        open={modalCancelamento}
+        onCancel={() => setModalCancelamento(false)}
+        onOk={() => formCancel.submit()}
+        confirmLoading={cancelandoPTS}
+        okText="Confirmar Cancelamento"
+        cancelText="Desistir"
+        okButtonProps={{ danger: true }}
+        style={{ top: 20 }}
+      >
+        <Form
+          form={formCancel}
+          layout="vertical"
+          onFinish={handleCancelar}
+        >
+          <Form.Item
+            name="ds_motivo"
+            label="Motivo do Cancelamento"
+            rules={[{ required: true, message: 'Por favor, selecione um motivo.' }]}
+          >
+            <Select placeholder="Selecione o motivo...">
+              <Select.Option value="ERRO_PREENCHIMENTO">Erro de Preenchimento</Select.Option>
+              <Select.Option value="MUDANCA_CONDUTA">Mudança de Conduta Terapêutica</Select.Option>
+              <Select.Option value="SOLICITACAO_PACIENTE">Solicitação do Paciente/Família</Select.Option>
+              <Select.Option value="DUPLICIDADE">Registro em Duplicidade</Select.Option>
+              <Select.Option value="OUTROS">Outros</Select.Option>
+            </Select>
+          </Form.Item>
+          <Form.Item
+            name="ds_detalhe"
+            label="Detalhes / Observações"
+            rules={[{ required: true, message: 'Por favor, descreva o motivo do cancelamento.' }]}
+          >
+            <Input.TextArea rows={4} placeholder="Descreva detalhadamente o porquê do cancelamento..." />
+          </Form.Item>
+        </Form>
+      </Modal>
       {/* Cabeçalho */}
       <Card
         variant="borderless"
@@ -373,10 +702,10 @@ export default function PTSPage() {
             <FileTextOutlined style={{ fontSize: 28, color: '#fff' }} />
             <div>
               <Title level={1} style={{ color: '#fff', margin: 0 }}>
-                PTS — Programa Terapêutico Singular
+                PTS — Projeto Terapêutico Singular
               </Title>
               <Text style={{ color: 'rgba(255,255,255,0.85)' }}>
-                Preenchimento do Programa Terapêutico Singular do paciente
+                Preenchimento do Projeto Terapêutico Singular do paciente
               </Text>
             </div>
           </Space>
@@ -420,16 +749,12 @@ export default function PTSPage() {
         </Card>
       )}
 
-      <Alert
-        role="status"
-        type="info"
-        showIcon
-        message="Módulo em implantação — fase de testes"
-        description="Este módulo está disponível para validação. As seções de objetivos, condutas e PDF serão adicionadas nas próximas etapas."
-        banner
-      />
-
-      <Form form={form} layout="vertical" onFinish={handleSave}>
+      <Form 
+        form={form} 
+        layout="vertical" 
+        onFinish={handleSave}
+        initialValues={initialValues}
+      >
 
         {/* ── SEÇÃO 1: Diagnóstico Médico Principal ── */}
         <Card
@@ -669,14 +994,16 @@ export default function PTSPage() {
             ].map(([name, label]) => (
               <Col key={name} xs={24} sm={12} md={8} lg={6}>
                 <Form.Item name={name as keyof PTSFormValues} valuePropName="checked" style={{ marginBottom: 4 }}>
-                  <Checkbox>{label}</Checkbox>
+                  <Checkbox disabled={condNaoSeAplica && name !== 'cond_nao_se_aplica'}>
+                    {label}
+                  </Checkbox>
                 </Form.Item>
               </Col>
             ))}
           </Row>
           <Divider style={{ margin: '8px 0' }} />
           <Form.Item label="Outra Condição:" name="cond_outra" style={{ marginBottom: 0 }}>
-            <Input placeholder="Descreva outra condição..." />
+            <Input placeholder="Descreva outra condição..." disabled={condNaoSeAplica} />
           </Form.Item>
         </Card>
 
@@ -701,14 +1028,16 @@ export default function PTSPage() {
             ].map(([name, label]) => (
               <Col key={name} xs={24} sm={12} md={8}>
                 <Form.Item name={name as keyof PTSFormValues} valuePropName="checked" style={{ marginBottom: 4 }}>
-                  <Checkbox>{label}</Checkbox>
+                  <Checkbox disabled={opmeNaoSeAplica && name !== 'opme_nao_se_aplica'}>
+                    {label}
+                  </Checkbox>
                 </Form.Item>
               </Col>
             ))}
           </Row>
           <Divider style={{ margin: '8px 0' }} />
           <Form.Item label="Outros OPME:" name="opme_outros" style={{ marginBottom: 0 }}>
-            <Input placeholder="Descreva outros OPME..." />
+            <Input placeholder="Descreva outros OPME..." disabled={opmeNaoSeAplica} />
           </Form.Item>
         </Card>
 
@@ -840,7 +1169,7 @@ export default function PTSPage() {
                         allowClear
                         showSearch
                         optionFilterProp="label"
-                        options={opcoesEspecialidades.map((e) => ({ label: e.ds, value: e.cd }))}
+                        options={opcoesEspecialidades.map((e) => ({ label: e.ds, value: e.ds }))}
                         value={row.diagnostico}
                         onChange={(v) =>
                           setConductaRows((prev) =>
@@ -909,7 +1238,7 @@ export default function PTSPage() {
                         allowClear
                         showSearch
                         optionFilterProp="label"
-                        options={opcoesMultidisciplinar.map((e) => ({ label: e.ds, value: e.cd }))}
+                        options={opcoesMultidisciplinar.map((e) => ({ label: e.ds, value: e.ds }))}
                         value={row.diagnostico}
                         onChange={(v) =>
                           setMultidisciplinarRows((prev) =>
@@ -958,7 +1287,16 @@ export default function PTSPage() {
             style={{ marginBottom: 12 }}
             message="Clique na especialidade para expandir. Alterne entre &lsquo;Objetivos Atuais&rsquo; e &lsquo;Objetivos Anteriores (evolução)&rsquo; dentro de cada painel."
           />
-          <ObjetivosEspecialidades value={objetivos} onChange={setObjetivos} />
+          <ObjetivosEspecialidades
+            value={objetivos}
+            onChange={setObjetivos}
+            ptsFinalizado={ptsFinalizado}
+            nrAtendimento={paciente.cd_atendimento}
+            cdPaciente={paciente.cd_paciente}
+            vigencia={vigenciaAtual || dayjs().format('YYYY-MM')}
+            idPtsAtual={idPtsSalvo ?? -1}
+            erros={errosObjetivos}
+          />
         </Card>
 
         {/* ── SEÇÃO 14: Observações Gerais ── */}
@@ -989,22 +1327,31 @@ export default function PTSPage() {
         <Card
           role="region"
           aria-labelledby="sec-intervencao"
-          title={<SectionHeader title="16. Intervenção e Prazo Estimado" id="sec-intervencao" />}
+          title={<SectionHeader title="16. Intervenção" id="sec-intervencao" />}
           style={{ marginBottom: 16 }}
         >
-          <Row gutter={[16, 8]} align="middle" style={{ marginBottom: 12 }}>
+          <Form.Item name="intervencao_descricao" style={{ marginBottom: 0 }}>
+            <Input.TextArea rows={4} placeholder="Descreva a intervenção..." />
+          </Form.Item>
+        </Card>
+
+        {/* ── SEÇÃO 17: Prazo Estimado ── */}
+        <Card
+          role="region"
+          aria-labelledby="sec-prazo"
+          title={<SectionHeader title="17. Prazo Estimado" id="sec-prazo" />}
+          style={{ marginBottom: 16 }}
+        >
+          <Row gutter={[16, 8]} align="middle">
             <Col flex="none">
               <Text strong>Prazo máximo estimado:</Text>
             </Col>
             <Col flex="220px">
               <Form.Item name="intervencao_prazo" style={{ marginBottom: 0 }}>
-                <Input placeholder="Ex: 03 (Três) Meses" />
+                <Input placeholder="Ex: 03 (Três) Meses" disabled aria-label="Prazo máximo estimado fixo em 06 (Seis) Meses" />
               </Form.Item>
             </Col>
           </Row>
-          <Form.Item name="intervencao_descricao" style={{ marginBottom: 0 }}>
-            <Input.TextArea rows={3} placeholder="Descreva a intervenção..." />
-          </Form.Item>
         </Card>
 
         {/* ── SEÇÃO 17: Instrumentos usados na avaliação ── */}
@@ -1012,7 +1359,7 @@ export default function PTSPage() {
           role="region"
           aria-labelledby="sec-instrumentos"
           title={
-            <SectionHeader title="17. Instrumentos e Escalas de Avaliação" id="sec-instrumentos">
+            <SectionHeader title="18. Instrumentos e Escalas de Avaliação" id="sec-instrumentos">
               <Button
                 size="small"
                 icon={<PlusOutlined />}
@@ -1079,7 +1426,7 @@ export default function PTSPage() {
         <Card 
           role="region" 
           aria-labelledby="sec-prog-especifico"
-          title={<SectionHeader title="18. Programas Específicos de Acompanhamento" id="sec-prog-especifico" />}
+          title={<SectionHeader title="19. Programas Específicos de Acompanhamento" id="sec-prog-especifico" />}
           style={{ marginBottom: 16 }}
         >
           <Row gutter={[0, 0]} align="top">
@@ -1117,20 +1464,7 @@ export default function PTSPage() {
           role="region"
           aria-labelledby="sec-terapias-indicadas"
           title={
-            <SectionHeader title="19. Prescrição de Terapias Indicadas" id="sec-terapias-indicadas">
-              <Button
-                size="small"
-                icon={<PlusOutlined />}
-                onClick={() =>
-                  setTerapias((prev) => [
-                    ...prev,
-                    { key: Date.now(), terapia: undefined, tipo_atendimento: undefined, periodicidade: undefined, qtde_sessoes: undefined },
-                  ])
-                }
-              >
-                Adicionar linha
-              </Button>
-            </SectionHeader>
+            <SectionHeader title="20. Prescrição de Terapias Indicadas" id="sec-terapias-indicadas" />
           }
           style={{ marginBottom: 16 }}
           styles={{ body: { padding: 0 } }}
@@ -1154,8 +1488,11 @@ export default function PTSPage() {
                     showSearch
                     optionFilterProp="label"
                     options={opcoesTerapiasIndicadas.map((e) => ({ label: e.ds, value: e.cd }))}
-                    value={row.terapia}
-                    onChange={(v) => setTerapias((prev) => prev.map((r) => r.key === row.key ? { ...r, terapia: v } : r))}
+                    value={row.cd_terapia}
+                    onChange={(cd) => {
+                      const item = opcoesTerapiasIndicadas.find((e) => e.cd === cd)
+                      setTerapias((prev) => prev.map((r) => r.key === row.key ? { ...r, cd_terapia: cd, terapia: item?.ds } : r))
+                    }}
                   />
                 ),
               },
@@ -1169,9 +1506,30 @@ export default function PTSPage() {
                     placeholder="Selecione..."
                     aria-label="Tipo de atendimento da terapia"
                     allowClear
-                    options={TIPOS_ATENDIMENTO}
+                    options={TIPOS_ATENDIMENTO.map(o => ({ label: o.label, value: o.label }))}
                     value={row.tipo_atendimento}
-                    onChange={(v) => setTerapias((prev) => prev.map((r) => r.key === row.key ? { ...r, tipo_atendimento: v } : r))}
+                    onChange={(v) => {
+                      setTerapias((prev) => prev.map((r) => {
+                        if (r.key === row.key) {
+                          const meses = obterMesesPrazo(prazoEstimado)
+                          let novaQtde = r.qtde_sessoes
+                          
+                          // Sugere quantidade apenas se tiver prazo definido
+                          if (meses > 0 && v) {
+                            if (r.periodicidade === 'Semanal') novaQtde = meses * 4
+                            else if (r.periodicidade === 'Quinzenal') novaQtde = meses * 2
+                            else if (r.periodicidade === 'Mensal') novaQtde = meses * 1
+                            else if (r.periodicidade === 'Bimestral') novaQtde = Math.ceil(meses / 2)
+                            else if (r.periodicidade === 'Trimestral') novaQtde = Math.ceil(meses / 3)
+                            else if (r.periodicidade === 'Semestral') novaQtde = Math.ceil(meses / 6)
+                            else if (r.periodicidade === 'Anual') novaQtde = 1
+                          }
+
+                          return { ...r, tipo_atendimento: v, qtde_sessoes: novaQtde }
+                        }
+                        return r
+                      }))
+                    }}
                   />
                 ),
               },
@@ -1185,9 +1543,29 @@ export default function PTSPage() {
                     placeholder="Selecione..."
                     aria-label="Periodicidade da terapia"
                     allowClear
-                    options={PERIODICIDADES}
+                    options={PERIODICIDADES.map(o => ({ label: o.label, value: o.label }))}
                     value={row.periodicidade}
-                    onChange={(v) => setTerapias((prev) => prev.map((r) => r.key === row.key ? { ...r, periodicidade: v } : r))}
+                    onChange={(v) => {
+                      setTerapias((prev) => prev.map((r) => {
+                        if (r.key === row.key) {
+                          const meses = obterMesesPrazo(prazoEstimado)
+                          let novaQtde = r.qtde_sessoes
+                          
+                          if (meses > 0) {
+                            if (v === 'Semanal') novaQtde = meses * 4
+                            else if (v === 'Quinzenal') novaQtde = meses * 2
+                            else if (v === 'Mensal') novaQtde = meses * 1
+                            else if (v === 'Bimestral') novaQtde = Math.ceil(meses / 2)
+                            else if (v === 'Trimestral') novaQtde = Math.ceil(meses / 3)
+                            else if (v === 'Semestral') novaQtde = Math.ceil(meses / 6)
+                            else if (v === 'Anual') novaQtde = 1
+                          }
+
+                          return { ...r, periodicidade: v, qtde_sessoes: novaQtde }
+                        }
+                        return r
+                      }))
+                    }}
                   />
                 ),
               },
@@ -1205,22 +1583,6 @@ export default function PTSPage() {
                   />
                 ),
               },
-              {
-                title: '',
-                width: 48,
-                render: (_: unknown, row) => (
-                  terapias.length > 1 ? (
-                    <Button
-                      type="text"
-                      danger
-                      size="small"
-                      icon={<DeleteOutlined />}
-                      aria-label="Remover terapia indicada"
-                      onClick={() => setTerapias((prev) => prev.filter((r) => r.key !== row.key))}
-                    />
-                  ) : null
-                ),
-              },
             ]}
           />
         </Card>
@@ -1229,19 +1591,10 @@ export default function PTSPage() {
         <Card 
           role="region" 
           aria-labelledby="sec-vigencia"
-          title={<SectionHeader title="20. Vigência e Responsabilidade Técnica" id="sec-vigencia" />}
+          title={<SectionHeader title="21. Vigência e Responsabilidade Técnica" id="sec-vigencia" />}
           style={{ marginBottom: 16 }}
         >
           <Space direction="vertical" style={{ width: '100%' }} size={12}>
-            {/* Não concluído */}
-            <Form.Item name="pts_nao_concluido" valuePropName="checked" style={{ marginBottom: 0 }}>
-              <Checkbox>
-                <Text style={{ color: '#cf1322', fontWeight: 600 }}>PTS não concluído</Text>
-              </Checkbox>
-            </Form.Item>
-
-            <Divider style={{ margin: '4px 0' }} />
-
             {/* Data automática */}
             <Row gutter={[16, 8]} align="middle">
               <Col flex="none"><Text strong>Data:</Text></Col>
@@ -1267,15 +1620,7 @@ export default function PTSPage() {
               <Col flex="none"><Text strong>Especialidade/Conselho:</Text></Col>
               <Col flex="1">
                 <Input
-                  value={
-                    [
-                      usuarioMe?.nm_tip_presta || usuarioMe?.ds_especialidade,
-                      (usuarioMe?.ds_codigo_conselho || usuarioMe?.nr_conselho)
-                        ? `${usuarioMe?.ds_conselho || 'Conselho'}: ${usuarioMe?.ds_codigo_conselho || usuarioMe?.nr_conselho}`
-                        : undefined
-                    ]
-                      .filter(Boolean).join('/') || '—'
-                  }
+                  value={formatEspecialidadeConselho(usuarioMe)}
                   disabled
                   style={{ maxWidth: 480 }}
                 />
@@ -1302,30 +1647,40 @@ export default function PTSPage() {
           <Col>
             <Space>
               <Button onClick={() => form.resetFields()}>Limpar</Button>
-              <Popconfirm
-                title="Cancelar PTS"
-                description="Todos os itens inseridos na fila de espera serão removidos. Confirma?"
-                okText="Sim, cancelar"
-                cancelText="Não"
-                okButtonProps={{ danger: true }}
-                disabled={idPtsSalvo === null}
-                onConfirm={handleCancelar}
+              <Button
+                danger
+                icon={<CloseCircleOutlined />}
+                loading={cancelandoPTS}
+                disabled={idPtsSalvo === null || (idUsuarioAutor !== null && usuarioMe?.id_usuario !== idUsuarioAutor)}
+                onClick={() => {
+                  formCancel.resetFields()
+                  setModalCancelamento(true)
+                }}
+                title={
+                  idPtsSalvo === null 
+                    ? 'Salve o PTS antes de cancelar' 
+                    : (idUsuarioAutor !== null && usuarioMe?.id_usuario !== idUsuarioAutor)
+                      ? 'Apenas o autor deste PTS pode cancelá-lo'
+                      : 'Cancela o PTS e remove itens da fila de espera'
+                }
               >
-                <Button
-                  danger
-                  icon={<CloseCircleOutlined />}
-                  loading={cancelandoPTS}
-                  disabled={idPtsSalvo === null}
-                  title={idPtsSalvo === null ? 'Salve o PTS antes de cancelar' : 'Cancela o PTS e remove itens da fila de espera'}
-                >
-                  Cancelar PTS
-                </Button>
-              </Popconfirm>
+                Cancelar PTS
+              </Button>
+              <Button
+                icon={<PrinterOutlined />}
+                onClick={handleImprimir}
+                disabled={!ptsFinalizado || salvandoPTS || finalizandoPTS}
+                title={!ptsFinalizado ? 'Finalize o PTS para habilitar a impressão' : (salvandoPTS || finalizandoPTS ? 'Aguarde...' : undefined)}
+              >
+                Imprimir
+              </Button>
               <Button
                 type="primary"
                 htmlType="submit"
                 icon={<SaveOutlined />}
                 loading={salvandoPTS}
+                disabled={ptsFinalizado}
+                title={ptsFinalizado ? 'PTS já finalizado — não é possível editar' : undefined}
               >
                 Salvar PTS
               </Button>
@@ -1335,7 +1690,8 @@ export default function PTSPage() {
                 icon={<CheckCircleOutlined />}
                 loading={finalizandoPTS}
                 onClick={handleFinalizar}
-                title="Salva o PTS e insere as terapias na fila de espera"
+                disabled={ptsFinalizado}
+                title={ptsFinalizado ? 'PTS já finalizado' : 'Salva o PTS e insere as terapias na fila de espera'}
               >
                 Finalizar PTS
               </Button>
@@ -1343,7 +1699,36 @@ export default function PTSPage() {
           </Col>
         </Row>
 
+
       </Form>
     </Space>
+    </Spin>
+    </div>
+
+    {/* Componente de impressão FORA do no-print para não ser escondido pelo @media print */}
+    <div className="print-only">
+      <div id="pts-print-content">
+        <PTSPrintView
+          key={printTrigger}
+          data={{
+            paciente,
+            formValues: form.getFieldsValue(true),
+            diagPrincipais,
+            diagnosticosArea,
+            grauArea,
+            diagTerapeuticos,
+            extTerapias,
+            conductaRows,
+            multidisciplinarRows,
+            instrumentoRows,
+            terapias,
+            objetivos,
+            usuarioMe,
+            fl_finalizado: ptsFinalizado ? 1 : 0,
+          }}
+        />
+      </div>
+    </div>
+    </>
   )
 }

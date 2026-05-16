@@ -55,9 +55,44 @@ def get_agenda_do_dia(
         LEFT JOIN dbamv.ITEM_AGENDAMENTO IT ON V.CD_ITEM_AGENDAMENTO = IT.CD_ITEM_AGENDAMENTO
         WHERE TRUNC(V.dt_agenda) = TO_DATE(:data_ref, 'YYYY-MM-DD')
           AND V.cd_prestador = :cd_prestador
+
+        UNION ALL
+
+        SELECT
+            NULL                                    AS CD_AGENDA_CENTRAL,
+            A.DT_ATENDIMENTO                        AS HR_AGENDA,
+            TRUNC(A.DT_ATENDIMENTO)                 AS DT_AGENDA,
+            A.CD_PACIENTE,
+            P.NM_PACIENTE,
+            NULL                                    AS CD_ITEM_AGENDAMENTO,
+            NULL                                    AS DS_ITEM_AGENDAMENTO,
+            'N'                                     AS SN_FALTA,
+            'N'                                     AS SN_ATENDIDO,
+            P.NR_FONE,
+            A.CD_ATENDIMENTO,
+            A.CD_CONVENIO,
+            A.CD_PRESTADOR,
+            NULL                                    AS CD_SETOR,
+            'A'                                     AS TP_SITUACAO,
+            NULL                                    AS CD_UNIDADE_ATENDIMENTO,
+            NULL                                    AS DS_OBSERVACAO,
+            NULL                                    AS DS_CONSULTORIO,
+            'N'                                     AS SN_ENCAIXE
+        FROM dbamv.ATENDIME A
+        JOIN dbamv.PACIENTE P ON P.CD_PACIENTE = A.CD_PACIENTE
+        WHERE TRUNC(A.DT_ATENDIMENTO) = TO_DATE(:data_ref, 'YYYY-MM-DD')
+          AND A.CD_PRESTADOR = :cd_prestador
+          AND (A.CD_ATENDIMENTO NOT IN (
+                SELECT V2.CD_ATENDIMENTO
+                FROM dbamv.VDIC_RECEPCAO_AGENDA V2
+                WHERE TRUNC(V2.DT_AGENDA) = TO_DATE(:data_ref, 'YYYY-MM-DD')
+                  AND V2.CD_PRESTADOR = :cd_prestador
+                  AND V2.CD_ATENDIMENTO IS NOT NULL
+              ))
+
         ORDER BY
-            V.HR_AGENDA ASC,
-            V.CD_AGENDA_CENTRAL DESC
+            HR_AGENDA ASC,
+            CD_AGENDA_CENTRAL DESC NULLS LAST
     """)
 
     rows = db.execute(query, {

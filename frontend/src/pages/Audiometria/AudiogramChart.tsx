@@ -26,6 +26,8 @@ function buildEarData(ear: EarThresholds) {
     frequency: `${freq >= 1000 ? freq / 1000 + 'k' : freq}`,
     air: ear.airConduction[freq] ?? undefined,
     bone: ear.boneConduction[freq] ?? undefined,
+    airNR: ear.airNR?.[freq] ?? false,
+    boneNR: ear.boneNR?.[freq] ?? false,
   }))
 }
 
@@ -137,7 +139,7 @@ function NRDot(props: { cx?: number; cy?: number; value?: number; color: string 
 
 // ── Sub-gráfico por orelha ───────────────────────────────────────────────────
 
-type DotProps = { cx?: number; cy?: number; value?: number }
+type DotProps = { cx?: number; cy?: number; value?: number; payload?: { airNR?: boolean; boneNR?: boolean } }
 
 interface EarChartProps {
   ear: EarThresholds
@@ -150,28 +152,31 @@ function EarChart({ ear, side, masking }: EarChartProps) {
   const data    = buildEarData(ear)
   const maskVa  = !!(masking?.va)
   const maskVo  = !!(masking?.vo)
-  const isNR_va = !!ear.airNR
-  const isNR_vo = !!ear.boneNR
 
-  // ── dots via aérea ──────────────────────────────────────────────────────────
-  const AirDot: React.ReactElement | ((p: DotProps) => React.ReactElement | null) = isNR_va
-    ? (p: DotProps) => <NRDot {...p} color={color} />
-    : side === 'OD'
-      ? maskVa ? <RightAirMaskedDot /> : <RightAirDot />
-      : maskVa ? <LeftAirMaskedDot />  : <LeftAirDot />
+  // ── dots via aérea (por frequência) ─────────────────────────────────────────
+  const AirDot = (p: DotProps) => {
+    if (p.value == null) return null
+    if (p.payload?.airNR) return <NRDot cx={p.cx} cy={p.cy} value={p.value} color={color} />
+    if (maskVa) return side === 'OD' ? <RightAirMaskedDot {...p} /> : <LeftAirMaskedDot {...p} />
+    return side === 'OD' ? <RightAirDot {...p} /> : <LeftAirDot {...p} />
+  }
 
-  // ── dots via óssea ──────────────────────────────────────────────────────────
-  const BoneDot: React.ReactElement | ((p: DotProps) => React.ReactElement | null) = isNR_vo
-    ? (p: DotProps) => <NRDot {...p} color={color} />
-    : side === 'OD'
-      ? maskVo ? <RightBoneMaskedDot /> : <RightBoneDot />
-      : maskVo ? <LeftBoneMaskedDot />  : <LeftBoneDot />
+  // ── dots via óssea (por frequência) ─────────────────────────────────────────
+  const BoneDot = (p: DotProps) => {
+    if (p.value == null) return null
+    if (p.payload?.boneNR) return <NRDot cx={p.cx} cy={p.cy} value={p.value} color={color} />
+    if (maskVo) return side === 'OD' ? <RightBoneMaskedDot {...p} /> : <LeftBoneMaskedDot {...p} />
+    return side === 'OD' ? <RightBoneDot {...p} /> : <LeftBoneDot {...p} />
+  }
 
-  const airLabel  = isNR_va ? 'VA — NR ↓' : maskVa
+  const hasAirNR  = !!(ear.airNR  && Object.values(ear.airNR).some(Boolean))
+  const hasBoneNR = !!(ear.boneNR && Object.values(ear.boneNR).some(Boolean))
+
+  const airLabel  = hasAirNR ? 'VA — NR ↓' : maskVa
     ? (side === 'OD' ? 'VA — △ mascarado' : 'VA — □ mascarado')
     : (side === 'OD' ? 'VA — O' : 'VA — X')
 
-  const boneLabel = isNR_vo ? 'VO — NR ↓' : maskVo
+  const boneLabel = hasBoneNR ? 'VO — NR ↓' : maskVo
     ? (side === 'OD' ? 'VO — [ mascarado' : 'VO — ] mascarado')
     : (side === 'OD' ? 'VO — <' : 'VO — >')
 

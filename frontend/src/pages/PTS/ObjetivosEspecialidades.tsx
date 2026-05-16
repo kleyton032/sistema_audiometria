@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { getPTSObjetivosPorEspecialidade } from '@/api/ptsService'
+import { getPTSObjetivosPorEspecialidade, getOutrosPTSVigencia } from '@/api/ptsService'
+import type { OutroPTSItem } from '@/api/ptsService'
 import {
   Collapse,
   Segmented,
@@ -11,19 +12,26 @@ import {
   Row,
   Col,
   Badge,
+  Button,
+  Modal,
+  Tooltip,
+  Divider,
 } from 'antd'
 import {
   MedicineBoxOutlined,
   SoundOutlined,
-  HeartOutlined,
+  ThunderboltOutlined,
   UserOutlined,
   BookOutlined,
   TeamOutlined,
   ExperimentOutlined,
   ReadOutlined,
   RobotOutlined,
+  LockOutlined,
+  EyeOutlined,
 } from '@ant-design/icons'
-import type { ReactNode } from 'react'
+import React, { ReactNode, memo, useMemo, useCallback } from 'react'
+import { useAuth } from '@/contexts'
 
 const { Text } = Typography
 
@@ -78,7 +86,7 @@ interface Especialidade {
 }
 
 const ESPECIALIDADES: Especialidade[] = [
-  { key: 'fisioterapia',        label: 'Fisioterapia',                icon: <HeartOutlined />,      color: '#52c41a' },
+  { key: 'fisioterapia',        label: 'Fisioterapia',                icon: <ThunderboltOutlined />, color: '#52c41a' },
   { key: 'fisio_aquatica',      label: 'Fisioterapia Aquática',       icon: <ExperimentOutlined />, color: '#13c2c2' },
   { key: 'fonoaudiologia',      label: 'Fonoaudiologia',              icon: <SoundOutlined />,      color: '#1677ff' },
   { key: 'terapia_ocupacional', label: 'Terapia Ocupacional',         icon: <MedicineBoxOutlined />,color: '#722ed1' },
@@ -106,20 +114,150 @@ export function criarObjetivosIniciais(): ObjetivosState {
   )
 }
 
+/**
+ * Valida o estado dos objetivos e retorna um objeto com os erros encontrados por especialidade.
+ * Regras:
+ * 1. Se preencher qualquer campo na linha de anterior, objetivo e status tornam-se obrigatórios.
+ * 2. Se status exigir motivo (PARCIAL ou NAO_ALCANCADO), motivo torna-se obrigatório.
+ * 3. Se motivo for OUTROS, o texto descritivo torna-se obrigatório.
+ * 4. Para especialidades obrigatórias, PELO MENOS UM objetivo (anterior OU atual) deve estar preenchido.
+ */
+export function validarObjetivos(state: ObjetivosState, especialidadesObrigatorias: string[] = []): { 
+  temErro: boolean; 
+  erros: Record<string, { anterior: (ObjetivoErro | null)[]; atual: (ObjetivoErro | null)[] }>;
+  especialidadesComErro: string[];
+} {
+  const erros: any = {}
+  let temErroGeral = false
+  const espsComErro: string[] = []
+
+  Object.entries(state).forEach(([espKey, dados]) => {
+    const isObrigatoria = especialidadesObrigatorias.includes(espKey);
+
+    const errosAnterior = dados.anterior.map((item, idx) => {
+      const e: ObjetivoErro = {}
+      const temAlgo = !!(item.objetivo || item.status || item.motivo)
+      
+      if (temAlgo) {
+        if (!item.objetivo) e.objetivo = true
+        if (!item.status) e.status = true
+        if (exigeMotivo(item.status) && !item.motivo) e.motivo = true
+        if (item.motivo?.startsWith('OUTROS:') && item.motivo.length <= 8) e.motivo = true
+      } else if (isObrigatoria && idx === 0) {
+        // Primeira linha do objetivo anterior é obrigatória para a especialidade do usuário
+        e.objetivo = true
+        e.status = true
+      }
+
+      if (Object.keys(e).length > 0) return e
+      return null
+    })
+
+    const errosAtual = dados.atual.map((item, idx) => {
+      const e: ObjetivoErro = {}
+      if (isObrigatoria && idx === 0 && !item.objetivo) {
+        // Primeira linha do objetivo atual é obrigatória para a especialidade do usuário
+        e.objetivo = true
+      }
+      if (Object.keys(e).length > 0) return e
+      return null
+    })
+
+    // Validação adicional: Se é especialidade obrigatória, deve ter PELO MENOS UM objetivo preenchido (anterior OU atual)
+    if (isObrigatoria) {
+      const temObjetivoAnterior = dados.anterior.some(item => !!item.objetivo)
+      const temObjetivoAtual = dados.atual.some(item => !!item.objetivo)
+      
+      if (!temObjetivoAnterior && !temObjetivoAtual) {
+        // Nenhum objetivo foi preenchido - adicionar erro na primeira linha de ambos
+        if (!errosAnterior[0]) errosAnterior[0] = {}
+        if (!errosAtual[0]) errosAtual[0] = {}
+        errosAnterior[0]!.objetivo = true
+        errosAtual[0]!.objetivo = true
+      }
+    }
+
+    const espTemErro = errosAnterior.some(x => x !== null) || errosAtual.some(x => x !== null)
+    if (espTemErro) {
+      temErroGeral = true
+      erros[espKey] = { anterior: errosAnterior, atual: errosAtual }
+      const label = ESPECIALIDADES.find(e => e.key === espKey)?.label || espKey
+      espsComErro.push(label)
+    }
+  })
+
+  return { temErro: temErroGeral, erros, especialidadesComErro: espsComErro }
+}
+
+export interface ObjetivoErro {
+  objetivo?: boolean
+  status?: boolean
+  motivo?: boolean
+}
+
 // ── helpers ───────────────────────────────────────────────────────────────────
 function contarPreenchidos(items: ObjetivoItem[]): number {
   return items.filter((i) => i.objetivo).length
+}
+
+function canEditEspecialidade(espKey: string, espLabel: string, user: any): boolean {
+  if (!user) return false
+  if (user.ds_perfil === 'ADMIN') return true
+
+  const userTip = (user.nm_tip_presta || user.ds_especialidade || '').toUpperCase()
+  if (!userTip) return false
+
+  // Mapeamento flexível das especialidades do MV para as chaves do sistema
+  if ((espKey === 'fisioterapia' || espKey === 'fisio_aquatica') && userTip.includes('FISIOTERA')) return true
+  if (espKey === 'fonoaudiologia' && userTip.includes('FONOAUDIO')) return true
+  if (espKey === 'terapia_ocupacional' && userTip.includes('OCUPACIONAL')) return true
+  if (espKey === 'ed_fisica' && (userTip.includes('FISICA') || userTip.includes('FÍSICA'))) return true
+  if (espKey.startsWith('psicologia') && userTip.includes('PSICOLOG')) return true
+  if (espKey === 'psicopedagogia' && userTip.includes('PSICOPEDAGOG')) return true
+  if (espKey === 'prof_braille' && userTip.includes('BRAILLE')) return true
+
+  return false
+}
+
+// Encontra o ícone e cor da especialidade a partir do nome do profissional (vindo do banco)
+function getEspecialidadeInfo(dsEspecialidade: string | null | undefined): { icon: ReactNode; color: string; label: string } {
+  if (!dsEspecialidade) return { icon: <UserOutlined />, color: '#8c8c8c', label: 'Desconhecida' }
+  const up = dsEspecialidade.toUpperCase()
+  for (const esp of ESPECIALIDADES) {
+    const label = esp.label.toUpperCase()
+    if (up.includes(label) || label.includes(up)) return { icon: esp.icon, color: esp.color, label: esp.label }
+  }
+  // Mapeamentos adicionais
+  if (up.includes('FISIOTERA'))     return { icon: <ThunderboltOutlined />,    color: '#52c41a', label: 'Fisioterapia' }
+  if (up.includes('FONOAUDIO'))     return { icon: <SoundOutlined />,          color: '#1677ff', label: 'Fonoaudiologia' }
+  if (up.includes('OCUPACIONAL'))   return { icon: <MedicineBoxOutlined />,    color: '#722ed1', label: 'Terapia Ocupacional' }
+  if (up.includes('PSICOLOG'))      return { icon: <TeamOutlined />,           color: '#eb2f96', label: 'Psicologia' }
+  if (up.includes('PSICOPEDAGOG'))  return { icon: <BookOutlined />,           color: '#faad14', label: 'Psicopedagogia' }
+  if (up.includes('BRAILLE'))       return { icon: <ReadOutlined />,           color: '#08979c', label: 'Professor de Braille' }
+  if (up.includes('FISICA') || up.includes('FÍSICA')) return { icon: <UserOutlined />, color: '#fa8c16', label: 'Prof. Educação Física' }
+  return { icon: <UserOutlined />, color: '#8c8c8c', label: dsEspecialidade }
+}
+
+// Retorna as keys de especialidades que o usuário pode editar
+export function getMinhasEspecialidades(user: any): string[] {
+  if (!user) return []
+  if (user.ds_perfil === 'ADMIN') return ESPECIALIDADES.map(e => e.key)
+  return ESPECIALIDADES.filter(esp => canEditEspecialidade(esp.key, esp.label, user)).map(e => e.key)
 }
 
 // ── sub-componente: linha de objetivo ANTERIOR (somente status + motivo) ─────
 function LinhaObjetivoAnterior({
   numero,
   item,
+  disabled,
   onChange,
+  erro,
 }: {
   numero: number
   item: ObjetivoItem
-  onChange: (campo: keyof ObjetivoItem, valor: string | undefined) => void
+  disabled: boolean
+  onChange: (updates: Partial<ObjetivoItem>) => void
+  erro?: ObjetivoErro | null
 }) {
   return (
     <Row gutter={[12, 8]} align="top" style={{ marginBottom: 8, borderBottom: '1px solid #f0f0f0', paddingBottom: 8 }}>
@@ -135,14 +273,15 @@ function LinhaObjetivoAnterior({
         </div>
       </Col>
 
-      {/* objetivo (readonly — vem do PTS anterior) */}
+      {/* objetivo — editável na primeira vez, será carregado do PTS anterior nas renovações */}
       <Col flex="1" style={{ minWidth: 180 }}>
-        <Input
-          value={item.objetivo ?? ''}
-          disabled
-          placeholder="Objetivo do PTS anterior (carregado automaticamente)"
-          style={{ background: '#fafafa', color: '#595959' }}
+        <InputObjetivoAnterior 
+          value={item.objetivo} 
+          disabled={disabled}
+          status={erro?.objetivo ? 'error' : undefined}
+          onChange={(val) => onChange({ objetivo: val })} 
         />
+        {erro?.objetivo && <div style={{ color: '#ff4d4f', fontSize: 12, marginTop: 2 }}>Campo obrigatório</div>}
       </Col>
 
       {/* status */}
@@ -152,45 +291,121 @@ function LinhaObjetivoAnterior({
           placeholder="Status da evolução..."
           aria-label={`Status da evolução do objetivo ${numero}`}
           allowClear
+          disabled={disabled}
+          status={erro?.status ? 'error' : undefined}
           options={STATUS_EVOLUCAO}
           value={item.status}
           onChange={(v) => {
-            onChange('status', v)
-            // limpa motivo se mudou para Alcançado / Não se Aplica
-            if (!exigeMotivo(v)) onChange('motivo', undefined)
+            const updates: Partial<ObjetivoItem> = { status: v };
+            if (!exigeMotivo(v)) updates.motivo = undefined;
+            onChange(updates);
           }}
         />
+        {erro?.status && <div style={{ color: '#ff4d4f', fontSize: 12, marginTop: 2 }}>Status obrigatório</div>}
       </Col>
 
       {/* motivo — só exibido quando status exige */}
-      {exigeMotivo(item.status) && (
-        <Col flex="220px">
-          <Select
-            style={{ width: '100%' }}
-            placeholder="Motivo..."
-            aria-label={`Motivo do status do objetivo ${numero}`}
-            allowClear
-            options={MOTIVOS_NAO_ALCANCADO}
-            value={item.motivo}
-            onChange={(v) => onChange('motivo', v)}
-          />
-        </Col>
-      )}
+      {exigeMotivo(item.status) && (() => {
+        // valor selecionado no select: se começa com 'OUTROS:', seleciona 'OUTROS'
+        const selectVal = item.motivo?.startsWith('OUTROS:') ? 'OUTROS' : item.motivo
+        const outrosTexto = item.motivo?.startsWith('OUTROS:') ? item.motivo.slice(8) : ''
+        return (
+          <>
+            <Col flex="220px">
+              <Select
+                style={{ width: '100%' }}
+                placeholder="Motivo..."
+                aria-label={`Motivo do status do objetivo ${numero}`}
+                allowClear
+                disabled={disabled}
+                status={erro?.motivo ? 'error' : undefined}
+                options={MOTIVOS_NAO_ALCANCADO}
+                value={selectVal}
+                onChange={(v) => {
+                  if (!v) { onChange({ motivo: undefined }); return }
+                  onChange({ motivo: v === 'OUTROS' ? 'OUTROS: ' : v });
+                }}
+              />
+            </Col>
+            {selectVal === 'OUTROS' && (
+              <Col flex="1" style={{ minWidth: 180 }}>
+                <InputObjetivoAnterior
+                  placeholder="Descreva o motivo..."
+                  value={outrosTexto}
+                  disabled={disabled}
+                  status={erro?.motivo ? 'error' : undefined}
+                  onChange={(val) => onChange({ motivo: val ? `OUTROS: ${val}` : undefined })}
+                />
+                {erro?.motivo && <div style={{ color: '#ff4d4f', fontSize: 12, marginTop: 2 }}>Descrição obrigatória</div>}
+              </Col>
+            )}
+            {selectVal !== 'OUTROS' && erro?.motivo && (
+               <Col flex="1" style={{ minWidth: 0 }}>
+                 <div style={{ color: '#ff4d4f', fontSize: 12, marginTop: 6 }}>Motivo obrigatório</div>
+               </Col>
+            )}
+          </>
+        )
+      })()}
     </Row>
   )
 }
+
+// Componente de Input com estado local para evitar lag ao digitar
+const InputObjetivoAnterior = memo(({ 
+  value, 
+  onChange, 
+  placeholder = "Objetivo do período anterior...",
+  disabled = false,
+  status
+}: { 
+  value: string | undefined, 
+  onChange: (v: string | undefined) => void,
+  placeholder?: string,
+  disabled?: boolean,
+  status?: "" | "error" | "warning" | undefined
+}) => {
+  const [localVal, setLocalVal] = useState(value ?? '')
+
+  useEffect(() => {
+    setLocalVal(value ?? '')
+  }, [value])
+
+  return (
+    <Input
+      value={localVal}
+      placeholder={placeholder}
+      disabled={disabled}
+      status={status}
+      style={{ textTransform: 'uppercase' }}
+      onChange={(e) => setLocalVal(e.target.value.toUpperCase())}
+      onBlur={() => {
+        if (localVal !== (value ?? '')) {
+          onChange(localVal || undefined)
+        }
+      }}
+    />
+  )
+})
+
+const MemoizedLinhaObjetivoAnterior = memo(LinhaObjetivoAnterior)
+const MemoizedLinhaObjetivoAtual = memo(LinhaObjetivoAtual)
 
 // ── sub-componente: linha de objetivo ATUAL (select + descrição) ─────────────
 function LinhaObjetivoAtual({
   numero,
   item,
   listaOpcoes,
+  disabled,
   onChange,
+  erro,
 }: {
   numero: number
   item: ObjetivoItem
   listaOpcoes: string[]
-  onChange: (campo: keyof ObjetivoItem, valor: string | undefined) => void
+  disabled: boolean
+  onChange: (updates: Partial<ObjetivoItem>) => void
+  erro?: ObjetivoErro | null
 }) {
   return (
     <Row gutter={[12, 8]} align="top" style={{ marginBottom: 8, borderBottom: '1px solid #f0f0f0', paddingBottom: 8 }}>
@@ -214,23 +429,18 @@ function LinhaObjetivoAtual({
           aria-label={`Selecione o objetivo atual número ${numero}`}
           allowClear
           showSearch
+          disabled={disabled}
+          status={erro?.objetivo ? 'error' : undefined}
           optionFilterProp="label"
-          options={Array.from(new Set(listaOpcoes || [])).map((v) => ({ label: v, value: v }))}
+          options={Array.from(new Set(listaOpcoes || [])).map((v) => ({ label: v.toUpperCase(), value: v }))}
+          popupClassName="uppercase-select-options"
           value={item.objetivo}
-          onChange={(v) => onChange('objetivo', v)}
+          onChange={(v) => onChange({ objetivo: v })}
         />
+        {erro?.objetivo && <div style={{ color: '#ff4d4f', fontSize: 12, marginTop: 2 }}>Objetivo obrigatório</div>}
       </Col>
 
-      {/* texto livre */}
-      <Col span={24} style={{ paddingLeft: 44 }}>
-        <Input.TextArea
-          rows={2}
-          placeholder="Descreva o objetivo atual..."
-          value={item.descricao}
-          onChange={(e) => onChange('descricao', e.target.value)}
-          style={{ fontSize: 13 }}
-        />
-      </Col>
+
     </Row>
   )
 }
@@ -239,13 +449,28 @@ function LinhaObjetivoAtual({
 interface Props {
   value: ObjetivosState
   onChange: (next: ObjetivosState) => void
+  ptsFinalizado?: boolean
+  nrAtendimento?: string | number | null
+  cdPaciente?: string | number | null
+  vigencia?: string
+  idPtsAtual?: number | null
+  erros?: Record<string, { anterior: (ObjetivoErro | null)[]; atual: (ObjetivoErro | null)[] }>
 }
 
-export default function ObjetivosEspecialidades({ value, onChange }: Props) {
+export default function ObjetivosEspecialidades({
+  value, onChange, ptsFinalizado = false,
+  nrAtendimento, cdPaciente, vigencia, idPtsAtual,
+  erros = {},
+}: Props) {
+  const { usuario } = useAuth()
   const [objetivosPorArea, setObjetivosPorArea] = useState<Record<string, string[]>>({})
   const [momento, setMomento] = useState<Record<string, MomentoObjetivos>>(
     () => Object.fromEntries(ESPECIALIDADES.map((e) => [e.key, 'atual' as MomentoObjetivos]))
   )
+
+  // Estado para outros PTS da mesma vigência
+  const [outrosPTS, setOutrosPTS] = useState<OutroPTSItem[]>([])
+  const [modalPTS, setModalPTS] = useState<OutroPTSItem | null>(null)
 
   useEffect(() => {
     async function carregarObjetivos() {
@@ -270,97 +495,297 @@ export default function ObjetivosEspecialidades({ value, onChange }: Props) {
     carregarObjetivos()
   }, [])
 
-  function handleMomento(key: string, m: MomentoObjetivos) {
-    setMomento((prev) => ({ ...prev, [key]: m }))
-  }
+  // Carrega outros PTS da mesma vigência do paciente (com debounce via useRef para evitar loop)
+  const ultimaChamadaRef = React.useRef<string>('')
+  useEffect(() => {
+    if (!vigencia) return
+    const excluir = idPtsAtual && idPtsAtual > 0 ? idPtsAtual : -1
+    const nr = nrAtendimento ?? ''
+    const cd = cdPaciente ?? ''
+    const chave = `${nr}|${cd}|${vigencia}|${excluir}`
+    if (ultimaChamadaRef.current === chave) return  // já buscou com esses parâmetros
+    ultimaChamadaRef.current = chave
+    getOutrosPTSVigencia(nr, cd, vigencia, excluir)
+      .then(setOutrosPTS)
+      .catch((err) => console.error('Erro ao carregar outros PTS:', err))
+  }, [nrAtendimento, cdPaciente, vigencia, idPtsAtual])
 
-  function handleItem(
+  const handleMomento = useCallback((key: string, m: MomentoObjetivos) => {
+    setMomento((prev) => ({ ...prev, [key]: m }))
+  }, [])
+
+  const handleItem = useCallback((
     espKey: string,
     mom: MomentoObjetivos,
     idx: number,
-    campo: keyof ObjetivoItem,
-    val: string | undefined
-  ) {
+    updates: Partial<ObjetivoItem>
+  ) => {
     const espAtual = value[espKey]
     const lista = [...espAtual[mom]] as [ObjetivoItem, ObjetivoItem, ObjetivoItem]
-    lista[idx] = { ...lista[idx], [campo]: val }
+    lista[idx] = { ...lista[idx], ...updates }
     onChange({ ...value, [espKey]: { ...espAtual, [mom]: lista } })
-  }
+  }, [value, onChange])
 
-  const items = ESPECIALIDADES.map((esp) => {
-    const mom = momento[esp.key]
-    const lista = value[esp.key][mom]
-    const qtdAnterior = contarPreenchidos(value[esp.key].anterior)
-    const qtdAtual    = contarPreenchidos(value[esp.key].atual)
+  // Identificar as especialidades do usuário logado
+  const minhasEsps = useMemo(() => getMinhasEspecialidades(usuario), [usuario])
+  const isAdmin = usuario?.ds_perfil === 'ADMIN'
 
-    return {
-      key: esp.key,
-      label: (
-        <Space>
-          <span style={{ color: esp.color }}>{esp.icon}</span>
-          <Text strong>{esp.label}</Text>
-          {qtdAnterior > 0 && (
-            <Tag color="default" style={{ fontSize: 11 }}>
-              {qtdAnterior} anterior{qtdAnterior > 1 ? 'es' : ''}
-            </Tag>
-          )}
-          {qtdAtual > 0 && (
-            <Tag color="purple" style={{ fontSize: 11 }}>
-              {qtdAtual} atual{qtdAtual > 1 ? 'is' : ''}
-            </Tag>
-          )}
-        </Space>
-      ),
-      children: (
-        <Space direction="vertical" style={{ width: '100%' }} size={12}>
-          {/* toggle anterior / atual */}
-          <Segmented
-            options={[
-              { label: 'Objetivos Atuais', value: 'atual' },
-              { label: 'Objetivos Anteriores (evolução)', value: 'anterior' },
-            ]}
-            aria-label="Alternar entre objetivos atuais e anteriores"
-            value={mom}
-            onChange={(v) => handleMomento(esp.key, v as MomentoObjetivos)}
-            style={{ width: '100%' }}
-          />
+  // Filtrar: ADMIN vê todas, profissional vê somente a(s) sua(s)
+  const especialidadesFiltradas = useMemo(() => {
+    if (isAdmin) return ESPECIALIDADES
+    if (minhasEsps.length === 0) return ESPECIALIDADES // fallback: mostrar todas em read-only
+    return ESPECIALIDADES.filter(e => minhasEsps.includes(e.key))
+  }, [isAdmin, minhasEsps])
 
-          {mom === 'anterior' && (
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              Objetivos carregados automaticamente do último PTS (vigência anterior). Informe o status e, se necessário, o motivo.
-            </Text>
-          )}
+  const collapseItems = useMemo(() => {
+    return especialidadesFiltradas.map((esp) => {
+      const mom = momento[esp.key]
+      const lista = value[esp.key][mom]
+      const qtdAnterior = contarPreenchidos(value[esp.key].anterior)
+      const qtdAtual    = contarPreenchidos(value[esp.key].atual)
 
-          {/* 3 linhas de objetivo */}
-          {lista.map((item, idx) =>
-            mom === 'anterior' ? (
-              <LinhaObjetivoAnterior
-                key={idx}
-                numero={idx + 1}
-                item={item}
-                onChange={(campo, val) => handleItem(esp.key, mom, idx, campo, val)}
-              />
-            ) : (
-              <LinhaObjetivoAtual
-                key={idx}
-                numero={idx + 1}
-                item={item}
-                listaOpcoes={objetivosPorArea[esp.key] || []}
-                onChange={(campo, val) => handleItem(esp.key, mom, idx, campo, val)}
-              />
-            )
-          )}
-        </Space>
-      ),
+      const canEdit = canEditEspecialidade(esp.key, esp.label, usuario)
+
+      return {
+        key: esp.key,
+        label: (
+          <Space>
+            <span style={{ color: esp.color }}>{esp.icon}</span>
+            <Text strong>{esp.label}</Text>
+            {!canEdit && <LockOutlined style={{ color: '#bfbfbf' }} title="Visualização apenas" />}
+            {qtdAnterior > 0 && (
+              <Tag color="default" style={{ fontSize: 11 }}>
+                {qtdAnterior} anterior{qtdAnterior > 1 ? 'es' : ''}
+              </Tag>
+            )}
+            {qtdAtual > 0 && (
+              <Tag color="purple" style={{ fontSize: 11 }}>
+                {qtdAtual} {qtdAtual > 1 ? 'atuais' : 'atual'}
+              </Tag>
+            )}
+          </Space>
+        ),
+        children: (
+          <Space direction="vertical" style={{ width: '100%' }} size={12}>
+            {/* toggle anterior / atual */}
+            <Segmented
+              options={[
+                { label: 'Objetivos Atuais', value: 'atual' },
+                { label: 'Objetivos Anteriores (evolução)', value: 'anterior' },
+              ]}
+              aria-label="Alternar entre objetivos atuais e anteriores"
+              value={mom}
+              onChange={(v) => handleMomento(esp.key, v as MomentoObjetivos)}
+              style={{ width: '100%' }}
+            />
+
+            {mom === 'anterior' && (
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Objetivos carregados automaticamente do último PTS (vigência anterior). Informe o status e, se necessário, o motivo.
+              </Text>
+            )}
+
+            {mom === 'anterior' && ptsFinalizado && (
+              <div style={{ background: '#fff1f0', border: '1px solid #ffa39e', padding: '8px 12px', borderRadius: 4, marginBottom: 8 }}>
+                <Text type="danger" style={{ fontSize: 12 }}>
+                  <LockOutlined style={{ marginRight: 6 }} />
+                  PTS finalizado — os objetivos anteriores não podem ser editados.
+                </Text>
+              </div>
+            )}
+
+            {mom === 'atual' && ptsFinalizado && (
+              <div style={{ background: '#fff1f0', border: '1px solid #ffa39e', padding: '8px 12px', borderRadius: 4, marginBottom: 8 }}>
+                <Text type="danger" style={{ fontSize: 12 }}>
+                  <LockOutlined style={{ marginRight: 6 }} />
+                  PTS finalizado — os objetivos atuais não podem ser editados.
+                </Text>
+              </div>
+            )}
+
+            {!canEdit && (
+              <div style={{ background: '#fffbe6', border: '1px solid #ffe58f', padding: '8px 12px', borderRadius: 4, marginBottom: 8 }}>
+                <Text type="warning" style={{ fontSize: 12 }}>
+                  <LockOutlined style={{ marginRight: 6 }} />
+                  Você possui acesso apenas para visualização aos objetivos desta especialidade.
+                </Text>
+              </div>
+            )}
+
+            {/* 3 linhas de objetivo */}
+            {lista.map((item, idx) =>
+              mom === 'anterior' ? (
+                <MemoizedLinhaObjetivoAnterior
+                  key={idx}
+                  numero={idx + 1}
+                  item={item}
+                  disabled={!canEdit || ptsFinalizado}
+                  erro={erros[esp.key]?.anterior[idx]}
+                  onChange={(updates) => handleItem(esp.key, mom, idx, updates)}
+                />
+              ) : (
+                <MemoizedLinhaObjetivoAtual
+                  key={idx}
+                  numero={idx + 1}
+                  item={item}
+                  disabled={!canEdit || ptsFinalizado}
+                  listaOpcoes={objetivosPorArea[esp.key] || []}
+                  erro={erros[esp.key]?.atual[idx]}
+                  onChange={(updates) => handleItem(esp.key, mom, idx, updates)}
+                />
+              )
+            )}
+          </Space>
+        ),
+      }
+    })
+  }, [value, momento, objetivosPorArea, handleItem, handleMomento, especialidadesFiltradas, ptsFinalizado, usuario])
+
+  // Renderizar o conteúdo do modal de visualização de outro PTS
+  const renderModalContent = useCallback((pts: OutroPTSItem) => {
+    const espKeys = Object.keys(pts.objetivos)
+    if (espKeys.length === 0) {
+      return <Text type="secondary" italic>Nenhum objetivo registrado neste PTS.</Text>
     }
-  })
+    return (
+      <Space direction="vertical" style={{ width: '100%' }} size={16}>
+        {espKeys.map((espKey) => {
+          const espInfo = ESPECIALIDADES.find(e => e.key === espKey)
+          const label = espInfo?.label || espKey
+          const icon = espInfo?.icon || <UserOutlined />
+          const color = espInfo?.color || '#8c8c8c'
+          const dados = pts.objetivos[espKey]
+
+          return (
+            <div key={espKey}>
+              <Space style={{ marginBottom: 8 }}>
+                <span style={{ color }}>{icon}</span>
+                <Text strong>{label}</Text>
+              </Space>
+
+              {/* Anteriores */}
+              {dados.anterior.some(o => o.objetivo) && (
+                <>
+                  <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 4 }}>
+                    Objetivos Anteriores
+                  </Text>
+                  {dados.anterior.map((obj, idx) => obj.objetivo && (
+                    <div key={`ant-${idx}`} style={{
+                      background: '#fafafa', border: '1px solid #f0f0f0',
+                      borderRadius: 6, padding: '8px 12px', marginBottom: 6,
+                    }}>
+                      <Text style={{ fontSize: 13, textTransform: 'uppercase' }}>{idx + 1}. {obj.objetivo}</Text>
+                      {obj.status && (
+                        <Tag color={obj.status === 'ALCANCADO' ? 'green' : obj.status === 'PARCIAL' ? 'orange' : 'red'} style={{ marginLeft: 8, fontSize: 11 }}>
+                          {STATUS_EVOLUCAO.find(s => s.value === obj.status)?.label || obj.status}
+                        </Tag>
+                      )}
+                      {obj.motivo && (
+                        <Text type="secondary" style={{ fontSize: 11, display: 'block', marginTop: 2 }}>
+                          Motivo: {MOTIVOS_NAO_ALCANCADO.find(m => m.value === obj.motivo)?.label || obj.motivo}
+                        </Text>
+                      )}
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {/* Atuais */}
+              {dados.atual.some(o => o.objetivo) && (
+                <>
+                  <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 4, marginTop: 8 }}>
+                    Objetivos Atuais
+                  </Text>
+                  {dados.atual.map((obj, idx) => obj.objetivo && (
+                    <div key={`atu-${idx}`} style={{
+                      background: '#f0f5ff', border: '1px solid #d6e4ff',
+                      borderRadius: 6, padding: '8px 12px', marginBottom: 6,
+                    }}>
+                      <Text style={{ fontSize: 13, textTransform: 'uppercase' }}>{idx + 1}. {obj.objetivo}</Text>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              <Divider style={{ margin: '12px 0' }} />
+            </div>
+          )
+        })}
+      </Space>
+    )
+  }, [])
 
   return (
-    <Collapse
-      accordion={false}
-      items={items}
-      style={{ background: '#fff' }}
-      expandIconPosition="end"
-    />
+    <>
+      {/* ── Chips de outros PTS da mesma vigência ── */}
+      {outrosPTS.length > 0 && (
+        <div style={{
+          background: '#f6ffed', border: '1px solid #b7eb8f',
+          borderRadius: 8, padding: '12px 16px', marginBottom: 16,
+        }}>
+          <Text strong style={{ fontSize: 13, display: 'block', marginBottom: 8 }}>
+            <EyeOutlined style={{ marginRight: 6 }} />
+            Outros PTS deste paciente na mesma vigência:
+          </Text>
+          <Space wrap size={8}>
+            {outrosPTS.map((pts) => {
+              const info = getEspecialidadeInfo(pts.ds_especialidade_profissional)
+              return (
+                <Tooltip key={pts.id_pts} title={`Visualizar objetivos de ${pts.nm_prestador}`}>
+                  <Button
+                    size="middle"
+                    icon={<span style={{ color: info.color, marginRight: 4 }}>{info.icon}</span>}
+                    onClick={() => setModalPTS(pts)}
+                    style={{
+                      borderColor: info.color,
+                      color: '#333',
+                      borderRadius: 20,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}
+                  >
+                    {pts.nm_prestador} — {info.label}
+                  </Button>
+                </Tooltip>
+              )
+            })}
+          </Space>
+        </div>
+      )}
+
+      {/* ── Collapse de edição (filtrado por especialidade) ── */}
+      <Collapse
+        accordion={false}
+        items={collapseItems}
+        style={{ background: '#fff' }}
+        expandIconPosition="end"
+        defaultActiveKey={minhasEsps.length > 0 && !isAdmin ? minhasEsps : undefined}
+      />
+
+      {/* ── Modal de visualização de outro PTS ── */}
+      <Modal
+        open={!!modalPTS}
+        onCancel={() => setModalPTS(null)}
+        footer={
+          <Button type="primary" onClick={() => setModalPTS(null)}>
+            Fechar
+          </Button>
+        }
+        width={700}
+        style={{ top: 20 }}
+        title={
+          modalPTS ? (
+            <Space>
+              <EyeOutlined />
+              <span>Objetivos — {modalPTS.nm_prestador}</span>
+              <Tag color="blue">{getEspecialidadeInfo(modalPTS.ds_especialidade_profissional).label}</Tag>
+            </Space>
+          ) : ''
+        }
+      >
+        {modalPTS && renderModalContent(modalPTS)}
+      </Modal>
+    </>
   )
 }

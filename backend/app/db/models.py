@@ -133,11 +133,34 @@ class ResultadoAudio(Base):
     oe_mask_lrf  = Column("OE_MASK_LRF",  Numeric(5, 1))
     oe_mask_iprf = Column("OE_MASK_IPRF", Numeric(5, 1))
 
-    # Sem resposta (NR)
-    od_va_nr = Column("OD_VA_NR", Integer, default=0)   # 1 = sem resposta VA OD
-    oe_va_nr = Column("OE_VA_NR", Integer, default=0)   # 1 = sem resposta VA OE
-    od_vo_nr = Column("OD_VO_NR", Integer, default=0)   # 1 = sem resposta VO OD
-    oe_vo_nr = Column("OE_VO_NR", Integer, default=0)   # 1 = sem resposta VO OE
+    # Sem resposta por frequência (NR) — VA OD
+    od_va_250_nr  = Column("OD_VA_250_NR",  Integer, default=0)
+    od_va_500_nr  = Column("OD_VA_500_NR",  Integer, default=0)
+    od_va_1000_nr = Column("OD_VA_1000_NR", Integer, default=0)
+    od_va_2000_nr = Column("OD_VA_2000_NR", Integer, default=0)
+    od_va_3000_nr = Column("OD_VA_3000_NR", Integer, default=0)
+    od_va_4000_nr = Column("OD_VA_4000_NR", Integer, default=0)
+    od_va_6000_nr = Column("OD_VA_6000_NR", Integer, default=0)
+    od_va_8000_nr = Column("OD_VA_8000_NR", Integer, default=0)
+    # VO OD
+    od_vo_500_nr  = Column("OD_VO_500_NR",  Integer, default=0)
+    od_vo_1000_nr = Column("OD_VO_1000_NR", Integer, default=0)
+    od_vo_2000_nr = Column("OD_VO_2000_NR", Integer, default=0)
+    od_vo_4000_nr = Column("OD_VO_4000_NR", Integer, default=0)
+    # VA OE
+    oe_va_250_nr  = Column("OE_VA_250_NR",  Integer, default=0)
+    oe_va_500_nr  = Column("OE_VA_500_NR",  Integer, default=0)
+    oe_va_1000_nr = Column("OE_VA_1000_NR", Integer, default=0)
+    oe_va_2000_nr = Column("OE_VA_2000_NR", Integer, default=0)
+    oe_va_3000_nr = Column("OE_VA_3000_NR", Integer, default=0)
+    oe_va_4000_nr = Column("OE_VA_4000_NR", Integer, default=0)
+    oe_va_6000_nr = Column("OE_VA_6000_NR", Integer, default=0)
+    oe_va_8000_nr = Column("OE_VA_8000_NR", Integer, default=0)
+    # VO OE
+    oe_vo_500_nr  = Column("OE_VO_500_NR",  Integer, default=0)
+    oe_vo_1000_nr = Column("OE_VO_1000_NR", Integer, default=0)
+    oe_vo_2000_nr = Column("OE_VO_2000_NR", Integer, default=0)
+    oe_vo_4000_nr = Column("OE_VO_4000_NR", Integer, default=0)
 
     # Classificação
     nr_media_od = Column("NR_MEDIA_OD", Numeric(5, 1))
@@ -274,7 +297,11 @@ class PTS(Base):
     fl_prog_pronas_doencas_raras = Column("FL_PROG_PRONAS_DOENCAS_RARAS", Integer, default=0, nullable=False)
     
     fl_nao_concluido = Column("FL_NAO_CONCLUIDO", Integer, default=0, nullable=False)
-    
+    fl_finalizado = Column("FL_FINALIZADO", Integer, default=0, nullable=False)
+
+    ds_motivo_cancelamento = Column("DS_MOTIVO_CANCELAMENTO", String(200))
+    ds_detalhe_cancelamento = Column("DS_DETALHE_CANCELAMENTO", String(4000))
+
     dt_criacao = Column("DT_CRIACAO", Date, server_default=func.now(), nullable=False)
     dt_atualizacao = Column("DT_ATUALIZACAO", Date, onupdate=func.now())
     fl_ativo = Column("FL_ATIVO", Integer, default=1, nullable=False)
