@@ -271,10 +271,18 @@ def finalizar_pts(
 ):
     session = get_db_session(current_user, db)
     try:
-        nm_usuario = current_user.cd_usuario_mv or current_user.nm_login
+        # Resolve o cd_prestador a partir do vínculo já salvo na FAV_TB_USUARIO_PRESTADOR
+        cd_prestador = current_user.prestador.cd_prestador if current_user.prestador else None
+
+        if cd_prestador is None:
+            raise HTTPException(
+                status_code=422,
+                detail="Usuário sem cd_prestador vinculado. Faça login novamente para sincronizar."
+            )
+
         session.execute(
-            text('BEGIN PRC_FAV_PTS_INSERE_FILA(:id_pts, :nm_usuario); END;'),
-            {'id_pts': id_pts, 'nm_usuario': nm_usuario},
+            text('BEGIN PRC_FAV_PTS_INSERE_FILA(:id_pts, :cd_prestador); END;'),
+            {'id_pts': id_pts, 'cd_prestador': cd_prestador},
         )
         from app.db.models import PTS as PTSModel
         session.query(PTSModel).filter(PTSModel.id_pts == id_pts).update({"fl_finalizado": 1})
@@ -283,6 +291,8 @@ def finalizar_pts(
             'status': 'ok',
             'mensagem': f'PTS {id_pts} finalizado. Terapias inseridas na fila de espera.',
         }
+    except HTTPException:
+        raise
     except Exception as e:
         if current_user.nm_login == 'testesoul':
             session.rollback()

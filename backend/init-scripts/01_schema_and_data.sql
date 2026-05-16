@@ -331,8 +331,8 @@ BEGIN IF :NEW.ID_TERAPIA IS NULL THEN SELECT SEQ_PTS_TERAPIA.NEXTVAL INTO :NEW.I
 
 -- PROCEDURE: Insere terapias do PTS na fila de espera
 CREATE OR REPLACE PROCEDURE PRC_FAV_PTS_INSERE_FILA (
-    p_id_pts     IN FAV_TB_PTS.ID_PTS%TYPE,
-    p_nm_usuario IN VARCHAR2
+    p_id_pts       IN FAV_TB_PTS.ID_PTS%TYPE,
+    p_cd_prestador IN NUMBER
 )
 AS
     v_nr_atendimento  FAV_TB_PTS.NR_ATENDIMENTO%TYPE;
@@ -367,13 +367,14 @@ BEGIN
 
         UPDATE FAV_LISTA_ESPERA le
            SET le.TP_SITUACAO = 'C',
-               le.OBSERV      = 'Cancelado automático (PTS) - '
+               le.OBSERV      = 'Cancelado automático - Renovação PTS '
                                 || TO_CHAR(SYSDATE, 'DD/MM/YYYY HH24:MI')
-                                || NVL2(le.OBSERV, ' - ' || le.OBSERV, '')
+                                || NVL2(le.OBSERV, ' | Obs anterior: ' || le.OBSERV, '')
          WHERE le.CD_PACIENTE  = (SELECT a.CD_PACIENTE
                                     FROM ATENDIME a
                                    WHERE a.CD_ATENDIMENTO = v_cd_atendimento)
            AND le.CD_IT_AGEND  = TO_NUMBER(r.CD_TERAPIA)
+           AND le.CD_DOCUMENTO = v_cd_documento
            AND le.TP_SITUACAO IN ('S', 'G', 'M');
 
         SELECT COUNT(*)
@@ -432,7 +433,7 @@ BEGIN
                        FROM ITEM_AGENDAMENTO ia
                       WHERE ia.CD_ITEM_AGENDAMENTO = TO_NUMBER(r.CD_TERAPIA)),
                     (SELECT a.DT_ATENDIMENTO   FROM ATENDIME a  WHERE a.CD_ATENDIMENTO = v_cd_atendimento),
-                    (SELECT u.CD_PRESTADOR     FROM USUARIOS u WHERE u.CD_USUARIO     = p_nm_usuario),
+                    p_cd_prestador,
                     (SELECT a.CD_ORI_ATE       FROM ATENDIME a  WHERE a.CD_ATENDIMENTO = v_cd_atendimento),
                     (SELECT a.CD_CONVENIO      FROM ATENDIME a  WHERE a.CD_ATENDIMENTO = v_cd_atendimento),
                     (SELECT a.CD_MULTI_EMPRESA FROM ATENDIME a  WHERE a.CD_ATENDIMENTO = v_cd_atendimento),
