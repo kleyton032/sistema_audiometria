@@ -37,6 +37,7 @@ export interface PTSPrintData {
 
 interface Props {
   data: PTSPrintData;
+  full?: boolean;
 }
 
 const MAP_TIPO: Record<string, string> = {
@@ -62,7 +63,7 @@ const MAP_PERIODICIDADE: Record<string, string> = {
   '7': 'Anual',
 }
 
-export default function PTSPrintView({ data }: Props) {
+export default function PTSPrintView({ data, full = false }: Props) {
   const {
     paciente,
     formValues,
@@ -90,7 +91,7 @@ export default function PTSPrintView({ data }: Props) {
 
   // Helper para seções
   const Section = ({ title, children }: { title: string, children: React.ReactNode }) => {
-    if (!children) return null;
+    if (!children || (Array.isArray(children) && children.length === 0)) return null;
     return (
       <div style={{ marginBottom: 16 }}>
         <Title level={5} style={{ background: '#f0f0f0', padding: '4px 8px', borderLeft: '4px solid #667eea', margin: '0 0 8px 0', fontSize: 14 }}>
@@ -295,8 +296,28 @@ export default function PTSPrintView({ data }: Props) {
         </div>
       </div>
 
+      {full && validDiagPrincipais.length > 0 && (
+        <Section title="01. Diagnóstico Médico Principal (CID-10)">
+          <ul style={{ margin: 0, paddingLeft: 20 }}>
+            {validDiagPrincipais.map((d, i) => <li key={i}>{d.diagnostico}</li>)}
+          </ul>
+        </Section>
+      )}
+
+      {hasDiagArea && (
+        <Section title="02. Diagnóstico Médico Específico por Área">
+          <Row gutter={[16, 8]}>
+            {areasKeys.map(a => diagnosticosArea[a] ? (
+              <Col span={12} key={a}>
+                <Text strong>{AREA_LABEL[a]}:</Text> {diagnosticosArea[a]}
+              </Col>
+            ) : null)}
+          </Row>
+        </Section>
+      )}
+
       {hasGrauArea && (
-        <Section title="Classificação do Grau de Deficiência">
+        <Section title="03. Classificação do Grau de Deficiência">
           <Row gutter={[16, 8]}>
             {areasKeys.map(a => grauArea[a] ? (
               <Col span={12} key={a}>
@@ -308,33 +329,47 @@ export default function PTSPrintView({ data }: Props) {
       )}
 
       {formValues.queixa_principal && (
-        <Section title="Queixas Principais e Histórico">
+        <Section title="04. Queixas Principais e Histórico">
           <Text style={{ whiteSpace: 'pre-wrap' }}>{formValues.queixa_principal}</Text>
         </Section>
       )}
 
+      {full && validDiagTerapeuticos.length > 0 && (
+        <Section title="05. Diagnóstico Terapêutico Multidisciplinar">
+          <ul style={{ margin: 0, paddingLeft: 20 }}>
+            {validDiagTerapeuticos.map((d, i) => <li key={i}>{d.diagnostico}</li>)}
+          </ul>
+        </Section>
+      )}
+
       {deficiencias.length > 0 && (
-        <Section title="Deficiência(s) Associada(s)">
+        <Section title="06. Deficiência(s) Associada(s)">
           {deficiencias.map(d => d.label).join(', ')}
         </Section>
       )}
 
       {(condicoes.length > 0 || formValues.cond_outra) && (
-        <Section title="Condições Gerais do Paciente">
+        <Section title="07. Condições Gerais do Paciente">
           {condicoes.length > 0 && <div>{condicoes.map(c => c.label).join(', ')}</div>}
           {formValues.cond_outra && <div><strong>Outra Condição:</strong> {formValues.cond_outra}</div>}
         </Section>
       )}
 
       {(opmes.length > 0 || formValues.opme_outros) && (
-        <Section title="Uso de OPME">
+        <Section title="08. Uso de OPME">
           {opmes.length > 0 && <div>{opmes.map(o => o.label).join(', ')}</div>}
           {formValues.opme_outros && <div><strong>Outros OPME:</strong> {formValues.opme_outros}</div>}
         </Section>
       )}
 
+      {full && formValues.cer_terapias_texto && (
+        <Section title="09. Terapias em Andamento no CER IV">
+          <Text>{formValues.cer_terapias_texto}</Text>
+        </Section>
+      )}
+
       {(validExtTerapias.length > 0 || formValues.ext_nao_realiza) && (
-        <Section title="Terapias Externas (Fisio, Fono, Psic, Outros)">
+        <Section title="10. Especificação das Terapias Externas">
           {formValues.ext_nao_realiza ? (
             <Text>Não Realiza</Text>
           ) : (
@@ -345,32 +380,54 @@ export default function PTSPrintView({ data }: Props) {
         </Section>
       )}
 
+      {full && validConductaRows.length > 0 && (
+        <Section title="11. Conduta: Avaliação Médica">
+          <ul style={{ margin: 0, paddingLeft: 20 }}>
+            {validConductaRows.map((d, i) => <li key={i}>{d.diagnostico}</li>)}
+          </ul>
+        </Section>
+      )}
+
+      {full && validMultiRows.length > 0 && (
+        <Section title="12. Conduta: Atendimento Multidisciplinar">
+          <ul style={{ margin: 0, paddingLeft: 20 }}>
+            {validMultiRows.map((d, i) => <li key={i}>{d.diagnostico}</li>)}
+          </ul>
+        </Section>
+      )}
+
       {objetivosContent && (
-        <Section title="Plano de Metas e Objetivos por Especialidade">
+        <Section title="13. Plano de Metas e Objetivos por Especialidade">
           {objetivosContent}
         </Section>
       )}
 
       {formValues.observacoes_gerais && (
-        <Section title="Observações Complementares">
+        <Section title="14. Observações Complementares">
           <Text style={{ whiteSpace: 'pre-wrap' }}>{formValues.observacoes_gerais}</Text>
         </Section>
       )}
 
+      {full && formValues.conduta_interdisciplinar && (
+        <Section title="15. Conduta Interdisciplinar e Articulação">
+          <Text style={{ whiteSpace: 'pre-wrap' }}>{formValues.conduta_interdisciplinar}</Text>
+        </Section>
+      )}
+
       {formValues.intervencao_descricao && (
-        <Section title="Intervenção">
+        <Section title="16. Intervenção">
           <Text style={{ whiteSpace: 'pre-wrap' }}>{formValues.intervencao_descricao}</Text>
         </Section>
       )}
 
       {formValues.intervencao_prazo && (
-        <Section title="Prazo Estimado">
+        <Section title="17. Prazo Estimado">
           <div><strong>Prazo estimado:</strong> {formValues.intervencao_prazo}</div>
         </Section>
       )}
 
       {validInstruRows.length > 0 && (
-        <Section title="Instrumentos e Escalas de Avaliação">
+        <Section title="18. Instrumentos e Escalas de Avaliação">
           <ul style={{ margin: 0, paddingLeft: 20 }}>
             {validInstruRows.map((d, i) => <li key={i}>{d.diagnostico}</li>)}
           </ul>
@@ -378,7 +435,7 @@ export default function PTSPrintView({ data }: Props) {
       )}
 
       {validTerapias.length > 0 && (
-        <Section title="Prescrição de Terapias Indicadas">
+        <Section title="20. Prescrição de Terapias Indicadas">
           {validTerapias.map((t, i) => (
             <div key={i} style={{ 
               marginBottom: 12, 

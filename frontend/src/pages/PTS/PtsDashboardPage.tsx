@@ -30,6 +30,7 @@ export default function PtsDashboardPage() {
   const [previewVisible, setPreviewVisible] = useState(false)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [currentPtsData, setCurrentPtsData] = useState<any>(null)
+  const [isPreviewFull, setIsPreviewFull] = useState(false)
 
   const loadData = async () => {
     setLoading(true)
@@ -57,9 +58,10 @@ export default function PtsDashboardPage() {
     item.nm_usuario.toLowerCase().includes(searchText.toLowerCase())
   )
 
-  const handleOpenPreview = async (record: any) => {
+  const handleOpenPreview = async (record: any, full = false) => {
     setPreviewVisible(true)
     setPreviewLoading(true)
+    setIsPreviewFull(full)
     try {
       const d = await getPTSById(record.id_pts)
       
@@ -240,11 +242,21 @@ export default function PtsDashboardPage() {
       render: (text: string) => <Tooltip title={text}>{text || '—'}</Tooltip>
     },
     {
-      title: 'Objetivos Atuais',
-      dataIndex: 'objetivos',
-      key: 'objetivos',
-      ellipsis: true,
-      render: (text: string) => <Tooltip title={text}>{text || '—'}</Tooltip>
+      title: 'PTS Completo',
+      key: 'completo',
+      width: 120,
+      align: 'center',
+      render: (_: any, record: any) => (
+        <Button 
+          icon={<FileTextOutlined />} 
+          type="primary"
+          ghost
+          size="small"
+          onClick={() => handleOpenPreview(record, true)}
+        >
+          Ver Tudo
+        </Button>
+      )
     },
     {
       title: 'Status',
@@ -258,14 +270,17 @@ export default function PtsDashboardPage() {
       )
     },
     {
-      title: 'Ações',
+      title: 'Imprimir',
       key: 'acoes',
-      width: 80,
+      width: 100,
+      align: 'center',
       render: (_: any, record: any) => (
         <Button 
-          icon={<EyeOutlined />} 
+          icon={<PrinterOutlined />} 
           type="text" 
-          onClick={() => handleOpenPreview(record)}
+          onClick={() => handleOpenPreview(record, false)}
+          disabled={record.fl_finalizado !== 1}
+          title={record.fl_finalizado !== 1 ? "Disponível apenas para PTS finalizado" : "Visualizar impressão"}
         />
       )
     }
@@ -354,7 +369,7 @@ export default function PtsDashboardPage() {
       <Modal
         title={
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '95%' }}>
-            <span>Visualização do PTS</span>
+            <span>{isPreviewFull ? 'Visualização Completa (Tudo)' : 'Visualização de Impressão (Resumida)'}</span>
             <Space>
               <Button icon={<PrinterOutlined />} onClick={handlePrintFromPreview} disabled={previewLoading || !currentPtsData}>
                 Imprimir
@@ -381,7 +396,7 @@ export default function PtsDashboardPage() {
           ) : currentPtsData ? (
             <Card variant="borderless" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.1)', maxWidth: 850, margin: '0 auto' }}>
               <div id="pts-preview-content">
-                <PTSPrintView data={currentPtsData} />
+                <PTSPrintView data={currentPtsData} full={isPreviewFull} />
               </div>
             </Card>
           ) : (
