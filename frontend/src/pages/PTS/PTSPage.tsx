@@ -80,6 +80,13 @@ interface DiagPrincipalRow {
   diagnostico: string | undefined
 }
 
+// ── tipo linha de instrumento de avaliação (estende com cálculo AIMS) ────────
+interface InstrumentoRow {
+  key: number
+  diagnostico: string | undefined
+  calculo: string | undefined
+}
+
 // ── tipo linha de terapia indicada ───────────────────────────────────────────
 interface TerapiaRow {
   key: number
@@ -198,7 +205,7 @@ export default function PTSPage() {
   const [multidisciplinarRows, setMultidisciplinarRows] = useState<DiagPrincipalRow[]>([{ key: 1, diagnostico: undefined }])
   const [opcoesMultidisciplinar, setOpcoesMultidisciplinar] = useState<{ cd: string; ds: string }[]>([])
   const [opcoesTerapiasIndicadas, setOpcoesTerapiasIndicadas] = useState<{ cd: string; ds: string }[]>([])
-  const [instrumentoRows, setInstrumentoRows] = useState<DiagPrincipalRow[]>([{ key: 1, diagnostico: undefined }])
+  const [instrumentoRows, setInstrumentoRows] = useState<InstrumentoRow[]>([{ key: 1, diagnostico: undefined, calculo: undefined }])
   const [condutaStatus, setCondutaStatus] = useState<CondutaInterdisciplinarStatus | null>(null)
   const [condutaStatusLoading, setCondutaStatusLoading] = useState(false)
   const [salvandoPTS, setSalvandoPTS] = useState(false)
@@ -320,7 +327,13 @@ export default function PTSPage() {
     setExtTerapias(toRows(d.cer_terapias ?? []))
     setConductaRows(toRows(d.conduta_avaliacao_medica ?? []))
     setMultidisciplinarRows(toRows(d.conduta_multidisciplinar ?? []))
-    setInstrumentoRows(toRows(d.instrumentos ?? []))
+    setInstrumentoRows(
+      (d.instrumentos ?? []).length > 0
+        ? (d.instrumentos as { ds_instrumento: string; ds_calculo?: string | null }[]).map(
+            (inst, i) => ({ key: i + 1, diagnostico: inst.ds_instrumento, calculo: inst.ds_calculo ?? undefined })
+          )
+        : [{ key: 1, diagnostico: undefined, calculo: undefined }]
+    )
     setTerapias(
       (d.terapias_indicadas ?? []).length > 0
         ? d.terapias_indicadas
@@ -482,7 +495,9 @@ export default function PTSPage() {
       cer_terapias: extTerapias.map((r) => r.diagnostico).filter(Boolean),
       conduta_avaliacao_medica: conductaRows.map((r) => r.diagnostico).filter(Boolean),
       conduta_multidisciplinar: multidisciplinarRows.map((r) => r.diagnostico).filter(Boolean),
-      instrumentos: instrumentoRows.map((r) => r.diagnostico).filter(Boolean),
+      instrumentos: instrumentoRows
+        .filter((r) => r.diagnostico)
+        .map((r) => ({ ds_instrumento: r.diagnostico!, ds_calculo: r.calculo ?? null })),
       diagnosticos_area: diagnosticosArea,
       grau_area: grauArea,
       objetivos,
@@ -1411,7 +1426,7 @@ export default function PTSPage() {
                 icon={<PlusOutlined />}
                 disabled={ptsFinalizado}
                 onClick={() =>
-                  setInstrumentoRows((prev) => [...prev, { key: Date.now(), diagnostico: undefined }])
+                  setInstrumentoRows((prev) => [...prev, { key: Date.now(), diagnostico: undefined, calculo: undefined }])
                 }
               >
                 Adicionar
@@ -1421,7 +1436,7 @@ export default function PTSPage() {
           style={{ marginBottom: 16 }}
           styles={{ body: { padding: 0 } }}
         >
-          <Table<DiagPrincipalRow>
+          <Table<InstrumentoRow>
             dataSource={instrumentoRows}
             rowKey="key"
             pagination={false}
@@ -1432,22 +1447,44 @@ export default function PTSPage() {
               {
                 dataIndex: 'diagnostico',
                 render: (_: unknown, row) => (
-                  <Select
-                    style={{ width: '100%' }}
-                    placeholder="Selecione o instrumento..."
-                    aria-label="Instrumento usado na avaliação"
-                    allowClear
-                    showSearch
-                    optionFilterProp="label"
-                    disabled={ptsFinalizado}
-                    options={opcoesInstrumentos.map((i) => ({ label: i.ds, value: i.ds }))}
-                    value={row.diagnostico}
-                    onChange={(v) =>
-                      setInstrumentoRows((prev) =>
-                        prev.map((r) => (r.key === row.key ? { ...r, diagnostico: v } : r))
-                      )
-                    }
-                  />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '4px 0' }}>
+                    <Select
+                      style={{ width: '100%' }}
+                      placeholder="Selecione o instrumento..."
+                      aria-label="Instrumento usado na avaliação"
+                      allowClear
+                      showSearch
+                      optionFilterProp="label"
+                      disabled={ptsFinalizado}
+                      options={opcoesInstrumentos.map((i) => ({ label: i.ds, value: i.ds }))}
+                      value={row.diagnostico}
+                      onChange={(v) =>
+                        setInstrumentoRows((prev) =>
+                          prev.map((r) =>
+                            r.key === row.key
+                              ? { ...r, diagnostico: v, calculo: v === 'AIMS' ? r.calculo : undefined }
+                              : r
+                          )
+                        )
+                      }
+                    />
+                    {row.diagnostico === 'AIMS' && (
+                      <Input.TextArea
+                        rows={3}
+                        placeholder="Informe o cálculo da Escala AIMS..."
+                        aria-label="Cálculo da Escala AIMS"
+                        disabled={ptsFinalizado}
+                        value={row.calculo ?? ''}
+                        onChange={(e) =>
+                          setInstrumentoRows((prev) =>
+                            prev.map((r) =>
+                              r.key === row.key ? { ...r, calculo: e.target.value } : r
+                            )
+                          )
+                        }
+                      />
+                    )}
+                  </div>
                 ),
               },
               {

@@ -117,7 +117,8 @@ def pts_to_dict(pts: PTS) -> dict:
             r.ds_item for r in sorted(pts.condutas_multi, key=lambda x: x.nr_ordem)
         ],
         "instrumentos": [
-            r.ds_instrumento for r in sorted(pts.instrumentos, key=lambda x: x.nr_ordem)
+            {"ds_instrumento": r.ds_instrumento, "ds_calculo": r.ds_calculo}
+            for r in sorted(pts.instrumentos, key=lambda x: x.nr_ordem)
         ],
         "terapias_indicadas": [
             {
@@ -216,7 +217,12 @@ def _inserir_filhos(db: Session, id_pts: int, vigencia: str, pts_data: PTSCreate
             ))
 
     for i, inst in enumerate(pts_data.instrumentos):
-        db.add(PTSInstrumento(id_pts=id_pts, nr_ordem=i+1, ds_instrumento=inst))
+        db.add(PTSInstrumento(
+            id_pts=id_pts,
+            nr_ordem=i+1,
+            ds_instrumento=inst.ds_instrumento,
+            ds_calculo=inst.ds_calculo,
+        ))
 
     for esp, momentos in pts_data.objetivos.items():
         for i, obj in enumerate(momentos.anterior):

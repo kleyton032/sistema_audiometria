@@ -427,7 +427,14 @@ export default function PTSPrintView({ data, full = false }: Props) {
       {full && validInstruRows.length > 0 && (
         <Section title="Instrumentos e Escalas de Avaliação">
           <ul style={{ margin: 0, paddingLeft: 20 }}>
-            {validInstruRows.map((d, i) => <li key={i}>{d.diagnostico}</li>)}
+            {validInstruRows.map((d, i) => (
+              <li key={i}>
+                {d.diagnostico}
+                {d.calculo && (
+                  <span> — <strong>Cálculo AIMS:</strong> {d.calculo}</span>
+                )}
+              </li>
+            ))}
           </ul>
         </Section>
       )}

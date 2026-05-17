@@ -85,7 +85,11 @@ class PTSCreate(BaseModel):
     intervencao_descricao: Optional[str] = None
     
     # Seção 17 - Instrumentos
-    instrumentos: List[str] = []
+    class InstrumentoItem(BaseModel):
+        ds_instrumento: str
+        ds_calculo: Optional[str] = None
+
+    instrumentos: List['PTSCreate.InstrumentoItem'] = []
     
     # Seção 18 - Programas
     prog_nao_se_aplica: bool = False

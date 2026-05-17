@@ -391,7 +391,8 @@ class PTSInstrumento(Base):
     nr_ordem = Column("NR_ORDEM", Integer, default=1, nullable=False)
     cd_instrumento = Column("CD_INSTRUMENTO", String(20))
     ds_instrumento = Column("DS_INSTRUMENTO", String(500), nullable=False)
-    
+    ds_calculo = Column("DS_CALCULO", String(2000))
+
     pts = relationship("PTS", back_populates="instrumentos")
 
 
