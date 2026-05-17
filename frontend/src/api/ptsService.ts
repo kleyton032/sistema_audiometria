@@ -114,6 +114,21 @@ export async function getPTSDashboardReport(): Promise<any[]> {
   return data
 }
 
+export interface CondutaInterdisciplinarStatus {
+  possui_preenchimento: boolean
+  status_documento: string
+  total_registros: number
+}
+
+export async function getCondutaInterdisciplinarStatus(
+  cdPaciente: number,
+): Promise<CondutaInterdisciplinarStatus> {
+  const { data } = await api.get<CondutaInterdisciplinarStatus>(
+    `/pts/${cdPaciente}/conduta-interdisciplinar`,
+  )
+  return data
+}
+
 export interface OutroPTSObjetivo {
   objetivo: string | null
   status: string | null

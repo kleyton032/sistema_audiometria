@@ -54,7 +54,8 @@ import {
   type CerGrupo,
   type Area,
 } from './data/listas'
-import { getMe, getPTSDiagnosticosPrincipais, getPTSDiagnosticosArea, getPTSDiagnosticosTerapeuticos, getPTSEspecialidades, getPTSItensMultidisciplinar, getPTSTerapiasIndicadas, getPTSInstrumentosAvaliacao, finalizarPTS, cancelarPTS, savePTS, updatePTS, getPTSById } from '@/api'
+import { getMe, getPTSDiagnosticosPrincipais, getPTSDiagnosticosArea, getPTSDiagnosticosTerapeuticos, getPTSEspecialidades, getPTSItensMultidisciplinar, getPTSTerapiasIndicadas, getPTSInstrumentosAvaliacao, finalizarPTS, cancelarPTS, savePTS, updatePTS, getPTSById, getCondutaInterdisciplinarStatus } from '@/api'
+import type { CondutaInterdisciplinarStatus } from '@/api/ptsService'
 import type { User } from '@/types'
 
 const { Title, Text } = Typography
@@ -198,6 +199,8 @@ export default function PTSPage() {
   const [opcoesMultidisciplinar, setOpcoesMultidisciplinar] = useState<{ cd: string; ds: string }[]>([])
   const [opcoesTerapiasIndicadas, setOpcoesTerapiasIndicadas] = useState<{ cd: string; ds: string }[]>([])
   const [instrumentoRows, setInstrumentoRows] = useState<DiagPrincipalRow[]>([{ key: 1, diagnostico: undefined }])
+  const [condutaStatus, setCondutaStatus] = useState<CondutaInterdisciplinarStatus | null>(null)
+  const [condutaStatusLoading, setCondutaStatusLoading] = useState(false)
   const [salvandoPTS, setSalvandoPTS] = useState(false)
   const [finalizandoPTS, setFinalizandoPTS] = useState(false)
   const [cancelandoPTS, setCancelandoPTS] = useState(false)
@@ -207,6 +210,20 @@ export default function PTSPage() {
   const [idUsuarioAutor, setIdUsuarioAutor] = useState<number | null>(null)
   const [errosObjetivos, setErrosObjetivos] = useState<Record<string, { anterior: (ObjetivoErro | null)[]; atual: (ObjetivoErro | null)[] }>>({})
 
+
+  // Consulta situação do documento de conduta interdisciplinar no MV (cd_documento=770)
+  // e auto-preenche o campo oculto para persistência na tabela
+  useEffect(() => {
+    if (!paciente.cd_paciente) return
+    setCondutaStatusLoading(true)
+    getCondutaInterdisciplinarStatus(paciente.cd_paciente)
+      .then((status) => {
+        setCondutaStatus(status)
+        form.setFieldValue('conduta_interdisciplinar', status.status_documento)
+      })
+      .catch(() => setCondutaStatus(null))
+      .finally(() => setCondutaStatusLoading(false))
+  }, [paciente.cd_paciente])
 
   // Observador para o campo de prazo da seção 16
   const prazoEstimado = Form.useWatch('intervencao_prazo', form)
@@ -1331,8 +1348,24 @@ export default function PTSPage() {
           title={<SectionHeader title="15. Conduta Interdisciplinar e Articulação" id="sec-conduta-inter" />}
           style={{ marginBottom: 16 }}
         >
-          <Form.Item name="conduta_interdisciplinar" style={{ marginBottom: 0 }}>
-            <Input.TextArea rows={4} placeholder="Descreva a conduta interdisciplinar..." />
+          {/* Situação no sistema MV (últimos 3 meses) */}
+          {condutaStatusLoading && (
+            <div style={{ marginBottom: 12 }}>
+              <Spin size="small" /> <Text type="secondary" style={{ marginLeft: 8 }}>Verificando situação no sistema...</Text>
+            </div>
+          )}
+          {!condutaStatusLoading && condutaStatus && (
+            <Alert
+              type={condutaStatus.possui_preenchimento ? 'success' : 'warning'}
+              showIcon
+              message="Situação no sistema MV — últimos 3 meses"
+              description={condutaStatus.status_documento}
+            />
+          )}
+
+          {/* Campo oculto — persiste o status_documento na coluna DS_CONDUTA_INTERDISCIPLINAR */}
+          <Form.Item name="conduta_interdisciplinar" style={{ display: 'none' }}>
+            <Input />
           </Form.Item>
         </Card>
 

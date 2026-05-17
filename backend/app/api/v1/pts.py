@@ -653,6 +653,55 @@ def listar_outros_pts_vigencia(
 
 
 @router.get(
+    "/{cd_paciente}/conduta-interdisciplinar",
+    summary="Verifica se há preenchimento do documento de conduta interdisciplinar (cd_documento=770) nos últimos 3 meses",
+)
+def verificar_conduta_interdisciplinar(
+    cd_paciente: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    session = get_db_session(user, db)
+    try:
+        row = session.execute(
+            text("""
+                SELECT COUNT(erc.cd_registro) AS total_registros
+                FROM pw_documento_clinico pdc
+                JOIN pw_editor_clinico pec
+                    ON pec.cd_documento_clinico = pdc.cd_documento_clinico
+                JOIN editor_registro er
+                    ON er.cd_registro = pec.cd_editor_registro
+                JOIN editor_registro_campo erc
+                    ON erc.cd_registro = er.cd_registro
+                WHERE pec.cd_documento = 770
+                  AND pdc.cd_paciente  = :cd_paciente
+                  AND pdc.tp_status   <> 'CANCELADO'
+                  AND er.sn_fechado    = 'S'
+                  AND TRUNC(pdc.dh_documento) >= TRUNC(ADD_MONTHS(SYSDATE, -3))
+            """),
+            {"cd_paciente": cd_paciente},
+        ).fetchone()
+
+        total = int(row[0]) if row and row[0] is not None else 0
+        possui = total > 0
+
+        return {
+            "possui_preenchimento": possui,
+            "total_registros": total,
+            "status_documento": (
+                "Houve preenchimento do documento de conduta interdisciplinar para o paciente"
+                if possui
+                else "Paciente não possui preenchimento do documento de conduta interdisciplinar"
+            ),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if user.nm_login == 'testesoul':
+            session.close()
+
+
+@router.get(
     "/load/{id_pts}",
     summary="Carrega dados completos de um PTS existente",
 )
