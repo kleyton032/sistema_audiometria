@@ -4,11 +4,24 @@ from __future__ import annotations
 import base64
 import io
 import math
+import os
 from datetime import datetime
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.db.models import Exame
+
+
+# ── Logos institucionais (base64 inline para WeasyPrint) ─────────────────────
+
+def _logo_b64(nome: str) -> str:
+    """Lê uma logo do diretório public do frontend e retorna base64."""
+    base = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    path = os.path.join(base, "frontend", "public", nome)
+    if not os.path.exists(path):
+        return ""
+    with open(path, "rb") as f:
+        return base64.b64encode(f.read()).decode()
 
 
 # ── Timpanograma ──────────────────────────────────────────────────────────────
@@ -106,6 +119,8 @@ def _reflex_cell(value) -> str:
 def _html(exame: "Exame", nm_usuario: str, nr_conselho: str) -> str:
     r = exame.resultado_imitan
     img_b64 = _timpanograma_base64(r)
+    logo_fav   = _logo_b64("logo-fav.png")
+    logo_ceriv = _logo_b64("logo-ceriv.png")
     dt = exame.dt_exame
     dt_str = dt.strftime("%d/%m/%Y às %H:%M") if isinstance(dt, datetime) else str(dt)
     obs = exame.ds_observacoes or "—"
@@ -123,12 +138,18 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str) -> str:
   @page {{ size: A4; margin: 12mm 14mm; }}
   * {{ box-sizing: border-box; margin: 0; padding: 0; }}
   body {{ font-family: Arial, sans-serif; font-size: 9px; color: #222; }}
-  h1 {{ font-size: 13px; color: #4c2c8a; }}
+  h1 {{ font-size: 13px; color: #1e5aa8; text-transform: uppercase; margin: 0; }}
   h2 {{ font-size: 10px; color: #4c2c8a; margin: 6px 0 3px; border-bottom: 1px solid #ddd; padding-bottom: 2px; }}
-  .header {{ display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }}
-  .header-info {{ font-size: 9px; color: #555; text-align: right; }}
-  .info-grid {{ display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2px 16px; margin-bottom: 4px; }}
-  .info-item span:first-child {{ font-weight: bold; }}
+  .inst-header {{ border: 1px solid #1e5aa8; border-radius: 6px; margin-bottom: 10px; }}
+  .inst-header-top {{ display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; border-bottom: 1px solid #1e5aa8; min-height: 48px; }}
+  .inst-header-logo {{ flex: 0 0 95px; }}
+  .inst-header-logo img {{ height: 32px; object-fit: contain; }}
+  .inst-header-logo-right img {{ height: 40px; object-fit: contain; }}
+  .inst-header-title {{ flex: 1; text-align: center; }}
+  .inst-header-data {{ display: flex; gap: 0; padding: 6px 12px; font-size: 9px; }}
+  .inst-header-data-left {{ flex: 2; display: flex; flex-direction: column; gap: 2px; }}
+  .inst-header-data-right {{ flex: 1; display: flex; flex-direction: column; gap: 2px; text-align: right; }}
+  .inst-header-data strong {{ font-weight: bold; }}
   table {{ width: 100%; border-collapse: collapse; margin: 3px 0; font-size: 9px; }}
   th, td {{ border: 1px solid #ccc; padding: 2px 4px; text-align: center; }}
   th {{ background: #f0eaff; font-weight: bold; }}
@@ -150,25 +171,32 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str) -> str:
 </head>
 <body>
 
-<div class="header">
-  <div>
-    <h1>Laudo de Imitanciometria</h1>
-    <div style="font-size:10px; color:#555; margin-top:4px;">
-      Exame #{exame.id_exame} &nbsp;|&nbsp;
-      Status: <span class="{'badge-finalizado' if exame.ds_status == 'FINALIZADO' else 'badge-rascunho'}">{exame.ds_status}</span>
+<!-- Cabeçalho institucional FAV / CER IV -->
+<div class="inst-header">
+  <div class="inst-header-top">
+    <div class="inst-header-logo">
+      {f'<img src="data:image/png;base64,{logo_fav}" alt="FAV - CER IV">' if logo_fav else '<span style="font-weight:bold;color:#1e5aa8;">FAV</span>'}
+    </div>
+    <div class="inst-header-title">
+      <h1>Laudo de Imitanciometria</h1>
+    </div>
+    <div class="inst-header-logo inst-header-logo-right" style="text-align:right;">
+      {f'<img src="data:image/png;base64,{logo_ceriv}" alt="Menina dos Olhos - CER IV">' if logo_ceriv else '<span style="font-weight:bold;color:#1e5aa8;">CER IV</span>'}
     </div>
   </div>
-  <div class="header-info">
-    Data: {dt_str}<br>
-    {f"Atendimento: #{exame.id_atendimento}" if exame.id_atendimento else ""}
+  <div class="inst-header-data">
+    <div class="inst-header-data-left">
+      <div><strong>Paciente:</strong> {getattr(exame, 'nm_paciente', None) or f'Cód. {exame.id_paciente}'}</div>
+      <div><strong>Profissional:</strong> {nm_usuario}</div>
+      <div><strong>Especialidade / Conselho:</strong> {nr_conselho or '—'}</div>
+    </div>
+    <div class="inst-header-data-right">
+      <div><strong>Atendimento:</strong> {exame.id_atendimento or '—'}</div>
+      <div><strong>Cód. Paciente:</strong> {exame.id_paciente}</div>
+      <div><strong>Data:</strong> {dt_str}</div>
+      <div><strong>Status:</strong> <span class="{'badge-finalizado' if exame.ds_status == 'FINALIZADO' else 'badge-rascunho'}">{exame.ds_status}</span></div>
+    </div>
   </div>
-</div>
-
-<h2>Identificação</h2>
-<div class="info-grid">
-  <div class="info-item"><span>Paciente (cód.):</span> {exame.id_paciente}</div>
-  <div class="info-item"><span>Profissional:</span> {nm_usuario}</div>
-  <div class="info-item"><span>Conselho:</span> {nr_conselho or "—"}</div>
 </div>
 
 <h2>Timpanograma</h2>
