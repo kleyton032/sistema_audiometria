@@ -1,25 +1,30 @@
+/**
+ * HomePage — reconstruída com React Aria Components para garantir
+ * acessibilidade completa com leitores de tela (NVDA, JAWS, VoiceOver).
+ *
+ * Princípios aplicados:
+ *  - Hierarquia de headings semântica (h1 → h2)
+ *  - Landmarks: <section aria-labelledby>, <nav aria-label>
+ *  - Região ao vivo (aria-live="polite") para o estado de carregamento
+ *  - Botões via React Aria Button — suporte nativo a teclado e anúncio
+ *  - Emojis decorativos com aria-hidden="true"
+ *  - Estatísticas com <dl>/<dt>/<dd> — lidos como "termo: valor" pelo NVDA
+ *  - Alvos de clique mínimos 44×44 px (WCAG 2.5.8)
+ *  - Indicadores de foco visíveis e contrastados (outline 3 px)
+ */
 import { useEffect, useState } from 'react'
-import { Card, Col, Row, Statistic, Typography, Button, Space, Divider, Alert, Spin } from 'antd'
-import { 
-  FileTextOutlined, 
-  SoundOutlined, 
-  WarningOutlined, 
-  PlusOutlined, 
-  TeamOutlined, 
-  FileSearchOutlined 
-} from '@ant-design/icons'
+import { Button } from 'react-aria-components'
 import { useNavigate } from 'react-router-dom'
 import { getHomeStats, type HomeStats } from '../../api/homeService'
 import { useAuth } from '@/contexts'
-
-const { Title, Text } = Typography
+import styles from './HomePage.module.css'
 
 export default function HomePage() {
   const navigate = useNavigate()
   const { usuario } = useAuth()
   const [stats, setStats] = useState<HomeStats>({
     resumo_mes: { pts_finalizados: 0, exames_realizados: 0 },
-    pendencias: { pts_rascunho: 0, exames_pendentes: 0 }
+    pendencias: { pts_rascunho: 0, exames_pendentes: 0 },
   })
   const [loading, setLoading] = useState(true)
 
@@ -29,125 +34,216 @@ export default function HomePage() {
       .finally(() => setLoading(false))
   }, [])
 
-  const totalPendencias = stats.pendencias.pts_rascunho + stats.pendencias.exames_pendentes
+  const totalPendencias =
+    stats.pendencias.pts_rascunho + stats.pendencias.exames_pendentes
+
+  const primeiroNome = usuario?.nm_usuario?.split(' ')[0] ?? ''
 
   return (
-    <div>
-      <div style={{ marginBottom: 24 }}>
-        <Title level={2} style={{ margin: 0 }}>
-          Olá, {usuario?.nm_usuario?.split(' ')[0]} 👋
-        </Title>
-        <Text type="secondary">Aqui está o resumo do seu dia e produtividade do mês.</Text>
+    <>
+      {/*
+        Região ao vivo oculta visualmente.
+        O NVDA anuncia a mudança quando loading passa de true → false.
+      */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className={styles.visuallyHidden}
+      >
+        {loading ? 'Carregando dados da página inicial…' : 'Dados carregados.'}
       </div>
 
-      <Spin spinning={loading}>
-        <Row gutter={[16, 16]}>
-          {/* Seção 1: Pendências (O Foco principal) */}
-          <Col xs={24} lg={16}>
-            <Card 
-              title={<span><WarningOutlined style={{ color: '#faad14', marginRight: 8 }} /> Minhas Pendências</span>}
-              variant="borderless"
-              style={{ height: '100%' }}
+      {/* ── Cabeçalho de boas-vindas ──────────────────────────────── */}
+      <header className={styles.header}>
+        <h1 className={styles.greeting}>
+          Olá, {primeiroNome} <span aria-hidden="true">👋</span>
+        </h1>
+        <p className={styles.subtitle}>
+          Aqui está o resumo do seu dia e produtividade do mês.
+        </p>
+      </header>
+
+      {/* ── Spinner acessível enquanto carrega ────────────────────── */}
+      {loading && (
+        <div
+          className={styles.loadingWrapper}
+          aria-hidden="true"
+        >
+          <div className={styles.spinner} />
+        </div>
+      )}
+
+      {!loading && (
+        <>
+          {/* ── Grid: Pendências + Ações Rápidas ────────────────────── */}
+          <div className={styles.twoColGrid}>
+
+            {/* Pendências */}
+            <section
+              aria-labelledby="pendencias-heading"
+              className={styles.card}
             >
-              {totalPendencias === 0 ? (
-                <Alert 
-                  message="Tudo em dia!" 
-                  description="Você não possui pendências ou rascunhos no momento. Ótimo trabalho!" 
-                  type="success" 
-                  showIcon 
-                />
-              ) : (
-                <Space direction="vertical" style={{ width: '100%' }} size="middle">
-                  {stats.pendencias.pts_rascunho > 0 && (
-                    <Alert
-                      message={`${stats.pendencias.pts_rascunho} PTS em Rascunho`}
-                      description="Existem Projetos Terapêuticos Singulares que foram salvos mas ainda não finalizados."
-                      type="warning"
-                      showIcon
-                      action={
-                        <Button size="small" type="primary" ghost onClick={() => navigate('/pts/pacientes')}>
-                          Ver Pacientes
-                        </Button>
-                      }
-                    />
-                  )}
-                  {stats.pendencias.exames_pendentes > 0 && (
-                    <Alert
-                      message={`${stats.pendencias.exames_pendentes} Exames aguardando Laudo`}
-                      description="Existem exames criados que ainda não possuem laudo ou não foram finalizados."
-                      type="warning"
-                      showIcon
-                      action={
-                        <Button size="small" type="primary" ghost onClick={() => navigate('/pacientes')}>
-                          Ir para Exames
-                        </Button>
-                      }
-                    />
-                  )}
-                </Space>
-              )}
-            </Card>
-          </Col>
+              <h2 id="pendencias-heading" className={styles.cardTitle}>
+                <span aria-hidden="true">⚠️</span> Minhas Pendências
+              </h2>
 
-          {/* Seção 2: Ações Rápidas */}
-          <Col xs={24} lg={8}>
-            <Card title="Ações Rápidas" variant="borderless" style={{ height: '100%' }}>
-              <Space direction="vertical" style={{ width: '100%' }}>
-                <Button 
-                  type="primary" 
-                  block 
-                  icon={<TeamOutlined />} 
-                  onClick={() => navigate('/pts/pacientes')}
-                  size="large"
-                >
-                  Buscar Paciente p/ PTS
-                </Button>
-                <Button 
-                  block 
-                  icon={<TeamOutlined />} 
-                  onClick={() => navigate('/pacientes')}
-                  size="large"
-                >
-                  Buscar Paciente p/ Exame
-                </Button>
-                <Button 
-                  block 
-                  icon={<FileSearchOutlined />} 
-                  onClick={() => navigate('/consulta')}
-                  size="large"
-                >
-                  Consultar Laudos
-                </Button>
-              </Space>
-            </Card>
-          </Col>
-        </Row>
+              {/*
+                aria-live="polite" + aria-atomic="true": o NVDA relê o bloco
+                completo sempre que o conteúdo mudar (ex.: após salvar um PTS).
+              */}
+              <div aria-live="polite" aria-atomic="true">
+                {totalPendencias === 0 ? (
+                  <div className={styles.alertSuccess} role="status">
+                    <span className={styles.alertIcon} aria-hidden="true">
+                      ✅
+                    </span>
+                    <div>
+                      <strong>Tudo em dia!</strong>
+                      <p>
+                        Você não possui pendências ou rascunhos no momento.
+                        Ótimo trabalho!
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <ul
+                    className={styles.alertList}
+                    aria-label="Lista de pendências"
+                  >
+                    {stats.pendencias.pts_rascunho > 0 && (
+                      <li>
+                        <div className={styles.alertWarning}>
+                          <div>
+                            <strong>
+                              {stats.pendencias.pts_rascunho} PTS em Rascunho
+                            </strong>
+                            <p>
+                              Existem Projetos Terapêuticos Singulares salvos
+                              mas ainda não finalizados.
+                            </p>
+                          </div>
+                          <Button
+                            className={styles.alertAction}
+                            onPress={() => navigate('/pts/pacientes')}
+                            aria-label={`Ver pacientes com ${stats.pendencias.pts_rascunho} PTS em rascunho`}
+                          >
+                            Ver Pacientes
+                          </Button>
+                        </div>
+                      </li>
+                    )}
 
-        <Divider orientation="left">Produtividade Mensal</Divider>
+                    {stats.pendencias.exames_pendentes > 0 && (
+                      <li>
+                        <div className={styles.alertWarning}>
+                          <div>
+                            <strong>
+                              {stats.pendencias.exames_pendentes} Exames
+                              aguardando Laudo
+                            </strong>
+                            <p>
+                              Existem exames criados que ainda não possuem
+                              laudo ou não foram finalizados.
+                            </p>
+                          </div>
+                          <Button
+                            className={styles.alertAction}
+                            onPress={() => navigate('/pacientes')}
+                            aria-label={`Ir para os ${stats.pendencias.exames_pendentes} exames pendentes de laudo`}
+                          >
+                            Ir para Exames
+                          </Button>
+                        </div>
+                      </li>
+                    )}
+                  </ul>
+                )}
+              </div>
+            </section>
 
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12}>
-            <Card variant="borderless">
-              <Statistic
-                title="PTS Elaborados/Revisados (Mês atual)"
-                value={stats.resumo_mes.pts_finalizados}
-                prefix={<FileTextOutlined />}
-                valueStyle={{ color: '#667eea' }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Card variant="borderless">
-              <Statistic
-                title="Exames Realizados (Mês atual)"
-                value={stats.resumo_mes.exames_realizados}
-                prefix={<SoundOutlined />}
-                valueStyle={{ color: '#764ba2' }}
-              />
-            </Card>
-          </Col>
-        </Row>
-      </Spin>
-    </div>
+            {/* Ações Rápidas — nav porque navega para outras páginas */}
+            <nav aria-label="Ações rápidas" className={styles.card}>
+              <h2 className={styles.cardTitle}>Ações Rápidas</h2>
+
+              <ul className={styles.actionList}>
+                <li>
+                  <Button
+                    className={`${styles.actionBtn} ${styles.actionBtnPrimary}`}
+                    onPress={() => navigate('/pts/pacientes')}
+                  >
+                    <span aria-hidden="true" className={styles.btnIcon}>
+                      👥
+                    </span>
+                    Buscar Paciente p/ PTS
+                  </Button>
+                </li>
+                <li>
+                  <Button
+                    className={styles.actionBtn}
+                    onPress={() => navigate('/pacientes')}
+                  >
+                    <span aria-hidden="true" className={styles.btnIcon}>
+                      👥
+                    </span>
+                    Buscar Paciente p/ Exame
+                  </Button>
+                </li>
+                <li>
+                  <Button
+                    className={styles.actionBtn}
+                    onPress={() => navigate('/consulta')}
+                  >
+                    <span aria-hidden="true" className={styles.btnIcon}>
+                      🔍
+                    </span>
+                    Consultar Laudos
+                  </Button>
+                </li>
+              </ul>
+            </nav>
+          </div>
+
+          {/* ── Produtividade Mensal ───────────────────────────────── */}
+          <section
+            aria-labelledby="produtividade-heading"
+            className={styles.produtividadeSection}
+          >
+            <h2
+              id="produtividade-heading"
+              className={styles.sectionDivider}
+            >
+              Produtividade Mensal
+            </h2>
+
+            {/*
+              <dl>/<dt>/<dd>: o NVDA lê naturalmente como
+              "PTS Elaborados/Revisados (Mês atual) — 1"
+            */}
+            <dl className={styles.statsGrid}>
+              <div className={styles.statCard}>
+                <dt className={styles.statLabel}>
+                  <span aria-hidden="true">📄</span>
+                  PTS Elaborados/Revisados (Mês atual)
+                </dt>
+                <dd className={styles.statValue}>
+                  {stats.resumo_mes.pts_finalizados}
+                </dd>
+              </div>
+
+              <div className={styles.statCard}>
+                <dt className={styles.statLabel}>
+                  <span aria-hidden="true">🔊</span>
+                  Exames Realizados (Mês atual)
+                </dt>
+                <dd className={styles.statValue}>
+                  {stats.resumo_mes.exames_realizados}
+                </dd>
+              </div>
+            </dl>
+          </section>
+        </>
+      )}
+    </>
   )
 }
