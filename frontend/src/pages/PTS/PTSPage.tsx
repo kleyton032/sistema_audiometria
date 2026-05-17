@@ -367,7 +367,7 @@ export default function PTSPage() {
     getPTSItensMultidisciplinar().then(setOpcoesMultidisciplinar).catch(() => null)
     getPTSTerapiasIndicadas().then(setOpcoesTerapiasIndicadas).catch(() => null)
     getPTSInstrumentosAvaliacao().then(setOpcoesInstrumentos).catch(() => null)
-    // Visual: sem dados por enquanto (id_especialidade não definido)
+    getPTSDiagnosticosArea(14).then((v) => setOpcoesDiagArea((p) => ({ ...p, visual: v }))).catch(() => null)
     getPTSDiagnosticosArea(64).then((v) => setOpcoesDiagArea((p) => ({ ...p, intelectual: v }))).catch(() => null)
     getPTSDiagnosticosArea(66).then((v) => setOpcoesDiagArea((p) => ({ ...p, fisica: v }))).catch(() => null)
     getPTSDiagnosticosArea(68).then((v) => setOpcoesDiagArea((p) => ({ ...p, auditiva: v }))).catch(() => null)
