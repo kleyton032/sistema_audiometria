@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Card,
   Table,
@@ -102,6 +102,8 @@ export default function PtsPacientesPage() {
   })
   const [ptsStatus, setPtsStatus] = useState<Record<string, { id_pts: number; fl_finalizado: number } | null>>({})
   const [calendarOpen, setCalendarOpen] = useState(false)
+  // Anuncio acessível do resultado da busca para leitores de tela
+  const [searchAnnouncement, setSearchAnnouncement] = useState('')
 
   function abrirPTS(record: AgendaItem) {
     const status = record.cd_atendimento != null ? ptsStatus[String(record.cd_atendimento)] : null
@@ -138,20 +140,27 @@ export default function PtsPacientesPage() {
       dataIndex: 'nm_paciente',
       key: 'nm_paciente',
       ellipsis: true,
-      render: (nome, record) => (
-        <Space direction="vertical" size={0}>
-          <Space>
-            <UserOutlined style={{ color: '#667eea' }} aria-hidden="true" />
-            <Text strong>{nome ?? '—'}</Text>
+      render: (nome, record) => {
+        const label = [
+          nome ?? 'Nome não informado',
+          record.cd_paciente ? `código ${record.cd_paciente}` : null,
+          record.sn_encaixe === 'S' ? 'encaixe' : null,
+        ].filter(Boolean).join(', ')
+        return (
+          <Space direction="vertical" size={0} aria-label={`Paciente: ${label}`}>
+            <Space>
+              <UserOutlined style={{ color: '#667eea' }} aria-hidden="true" />
+              <Text strong>{nome ?? '—'}</Text>
+            </Space>
+            {record.cd_paciente && (
+              <Text type="secondary" style={{ fontSize: 11 }} aria-hidden="true">
+                Cód. {record.cd_paciente}
+              </Text>
+            )}
+            {encaixeBadge(record.sn_encaixe)}
           </Space>
-          {record.cd_paciente && (
-            <Text type="secondary" style={{ fontSize: 11 }}>
-              Cód. {record.cd_paciente}
-            </Text>
-          )}
-          {encaixeBadge(record.sn_encaixe)}
-        </Space>
-      ),
+        )
+      },
     },
     {
       title: 'Item Agendado',
@@ -159,7 +168,12 @@ export default function PtsPacientesPage() {
       key: 'ds_item_agendamento',
       width: 180,
       ellipsis: true,
-      render: (v) => v ?? <Text type="secondary">—</Text>,
+      render: (v) =>
+        v ? (
+          v
+        ) : (
+          <Text type="secondary" aria-label="Item agendado não informado">—</Text>
+        ),
     },
     {
       title: 'Telefone',
@@ -168,12 +182,12 @@ export default function PtsPacientesPage() {
       width: 140,
       render: (v) =>
         v ? (
-          <Space>
+          <Space aria-label={`Telefone: ${v}`}>
             <PhoneOutlined aria-hidden="true" />
             <Text>{v}</Text>
           </Space>
         ) : (
-          <Text type="secondary">—</Text>
+          <Text type="secondary" aria-label="Telefone não informado">—</Text>
         ),
     },
     {
@@ -273,11 +287,18 @@ export default function PtsPacientesPage() {
   const fetchAgenda = async (d: Dayjs) => {
     setLoading(true)
     setError(null)
+    setSearchAnnouncement('')
     try {
       sessionStorage.setItem('pts_pacientes_data_ref', d.toISOString())
       const result = await getAgendaDoPacientes(d.format('YYYY-MM-DD'))
       setData(result.items)
       setTotal(result.total)
+      // Anuncia o resultado para leitores de tela
+      setSearchAnnouncement(
+        result.total === 0
+          ? `Nenhum paciente encontrado para ${d.format('DD/MM/YYYY')}`
+          : `${result.total} paciente${result.total !== 1 ? 's' : ''} encontrado${result.total !== 1 ? 's' : ''} para ${d.format('DD/MM/YYYY')}`
+      )
       // Busca status PTS para todos os pacientes da agenda
       const ids = result.items
         .map((i) => i.cd_atendimento)
@@ -554,6 +575,21 @@ export default function PtsPacientesPage() {
           />
         )}
 
+        {/* Live region acessível: anuncia resultado da busca ao leitor de tela */}
+        <div
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          style={{
+            position: 'absolute',
+            width: 1, height: 1, padding: 0, margin: -1,
+            overflow: 'hidden', clip: 'rect(0,0,0,0)',
+            whiteSpace: 'nowrap', border: 0,
+          }}
+        >
+          {searchAnnouncement}
+        </div>
+
         <Table<AgendaItem>
           rowKey={(r) =>
             `${r.cd_atendimento ?? '0'}-${r.cd_item_agendamento ?? '0'}-${r.cd_paciente ?? '0'}`
@@ -562,10 +598,43 @@ export default function PtsPacientesPage() {
           dataSource={data}
           loading={loading}
           size="middle"
+          caption="Lista de pacientes agendados com status de PTS"
           pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (t) => `${t} registros` }}
           locale={{ emptyText: 'Nenhum paciente agendado para esta data.' }}
           scroll={{ x: 'max-content' }}
           aria-label="Lista de pacientes agendados com status de PTS"
+          onRow={(record) => {
+            const status = record.cd_atendimento != null ? ptsStatus[String(record.cd_atendimento)] : null
+            const finalizado = status?.fl_finalizado === 1
+            const temPTS = status != null
+            const SITUACAO_MAP: Record<string, string> = {
+              L: 'Livre', M: 'Marcado', A: 'Aguardando',
+              E: 'Atendido', F: 'Falta', C: 'Cancelado', R: 'Em Atendimento',
+            }
+            const situacao = record.tp_situacao
+              ? (SITUACAO_MAP[record.tp_situacao.toUpperCase()] ?? record.tp_situacao)
+              : 'não informada'
+            const ptsStatusLabel = finalizado
+              ? 'PTS finalizado'
+              : temPTS
+              ? 'PTS em andamento'
+              : 'Sem PTS registrado'
+
+            return {
+              'aria-label': [
+                `Paciente: ${record.nm_paciente ?? 'não informado'}`,
+                record.cd_atendimento
+                  ? `código de atendimento ${record.cd_atendimento}`
+                  : 'sem código de atendimento',
+                `horário: ${record.hr_agenda ?? 'não informado'}`,
+                record.ds_item_agendamento
+                  ? `item agendado: ${record.ds_item_agendamento}`
+                  : null,
+                `situação: ${situacao}`,
+                ptsStatusLabel,
+              ].filter(Boolean).join(', '),
+            } as React.HTMLAttributes<HTMLTableRowElement>
+          }}
         />
       </Card>
     </div>
