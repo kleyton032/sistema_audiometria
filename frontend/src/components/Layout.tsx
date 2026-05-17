@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Layout as AntLayout, Button, theme, Avatar, Typography, Tooltip, Space, Modal, Descriptions, Badge, Tag, Divider } from 'antd'
 import {
   DashboardOutlined,
@@ -20,6 +20,90 @@ const { Text, Title } = Typography
 
 // nm_tip_presta do MV para Fonoaudiólogo (cd_tip_presta = 6)
 const NM_TIP_FONOAUDIOLOGO = 'FONOAUDIOLOGO(A)'
+
+// ── Mapa de nomes legíveis para cada rota ──────────────────────────────────
+const ROUTE_NAMES: Record<string, string> = {
+  '/home':           'Início',
+  '/pacientes':      'Pacientes — Audiometrias',
+  '/consulta':       'Laudos e Consultas',
+  '/pts/pacientes':  'Lista de Pacientes do PTS',
+  '/pts/dashboard':  'Dashboard PTS',
+  '/pts':            'Projeto Terapêutico Singular',
+}
+
+function routeLabel(pathname: string): string {
+  // Correspondência exata primeiro
+  if (ROUTE_NAMES[pathname]) return ROUTE_NAMES[pathname]
+  // Prefixo mais longo
+  const match = Object.keys(ROUTE_NAMES)
+    .filter((k) => pathname.startsWith(k))
+    .sort((a, b) => b.length - a.length)[0]
+  return match ? ROUTE_NAMES[match] : 'Página'
+}
+
+/**
+ * RouteAnnouncer — anuncia mudanças de rota para leitores de tela via aria-live.
+ * Também move o foco para o primeiro h1 do conteúdo principal após a navegação,
+ * garantindo que o usuário saiba exatamente onde está.
+ */
+function RouteAnnouncer() {
+  const location = useLocation()
+  const [announcement, setAnnouncement] = useState('')
+  // Evita anunciar na montagem inicial
+  const isFirstRender = useRef(true)
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false
+      return
+    }
+
+    const label = routeLabel(location.pathname)
+    // Limpa antes de definir para forçar re-anúncio se a mesma rota for acessada
+    setAnnouncement('')
+
+    const announceTimer = setTimeout(() => {
+      setAnnouncement(`Navegou para: ${label}`)
+    }, 50)
+
+    // Foca o h1 do conteúdo principal após a navegação
+    const focusTimer = setTimeout(() => {
+      const main = document.getElementById('main-content')
+      const heading = main?.querySelector<HTMLElement>('h1')
+      if (heading) {
+        // tabIndex temporário para permitir foco programático
+        if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1')
+        heading.focus({ preventScroll: false })
+      }
+    }, 150)
+
+    return () => {
+      clearTimeout(announceTimer)
+      clearTimeout(focusTimer)
+    }
+  }, [location.pathname])
+
+  return (
+    <div
+      role="status"
+      aria-live="assertive"
+      aria-atomic="true"
+      style={{
+        position: 'absolute',
+        width: 1,
+        height: 1,
+        padding: 0,
+        margin: -1,
+        overflow: 'hidden',
+        clip: 'rect(0,0,0,0)',
+        whiteSpace: 'nowrap',
+        border: 0,
+      }}
+    >
+      {announcement}
+    </div>
+  )
+}
 
 export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false)
@@ -424,6 +508,7 @@ export default function AppLayout() {
             Sair
           </Button>
         </Header>
+        <RouteAnnouncer />
         <Content
           id="main-content"
           role="main"

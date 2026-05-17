@@ -51,7 +51,7 @@ dayjs.locale('pt-br')
 const { Title, Text } = Typography
 
 function situacaoTag(tp: string | null) {
-  if (!tp) return <Tag>—</Tag>
+  if (!tp) return <Tag aria-label="Situação não informada">—</Tag>
   const map: Record<string, { color: string; label: string }> = {
     L: { color: 'default',  label: 'Livre' },
     M: { color: 'blue',     label: 'Marcado' },
@@ -62,7 +62,15 @@ function situacaoTag(tp: string | null) {
     R: { color: 'purple',   label: 'Em Atendimento' },
   }
   const info = map[tp.toUpperCase()] ?? { color: 'default', label: tp }
-  return <Tag color={info.color}>{info.label}</Tag>
+  return (
+    <Tag
+      color={info.color}
+      role="status"
+      aria-label={`Situação: ${info.label}`}
+    >
+      {info.label}
+    </Tag>
+  )
 }
 
 function encaixeBadge(sn: string | null) {
@@ -193,25 +201,69 @@ export default function PtsPacientesPage() {
         const status = record.cd_atendimento != null ? ptsStatus[String(record.cd_atendimento)] : null
         const finalizado = status?.fl_finalizado === 1
         const temPTS     = status != null
+        const acaoLabel  = finalizado ? 'Ver PTS' : temPTS ? 'Editar PTS' : 'Preencher PTS'
+        const nomePaciente = record.nm_paciente ?? 'paciente'
+        const semAtendimento = !record.cd_atendimento
+
         return (
           <Space direction="vertical" size={4} align="center">
-            <Tooltip title={!record.cd_atendimento ? "Aguardando recepção (sem código de atendimento)" : undefined}>
-              <Button
-                type="primary"
-                size="small"
-                icon={<FileProtectOutlined />}
-                disabled={!record.cd_atendimento}
-                onClick={() => abrirPTS(record)}
+            <Tooltip title={semAtendimento ? 'Aguardando recepção (sem código de atendimento)' : undefined}>
+              {/* React Aria Button garante que o leitor anuncie o texto exato do aria-label */}
+              <AriaButton
+                isDisabled={semAtendimento}
+                onPress={() => abrirPTS(record)}
+                aria-label={
+                  semAtendimento
+                    ? `PTS indisponível para ${nomePaciente}: aguardando recepção`
+                    : `${acaoLabel} de ${nomePaciente}`
+                }
                 style={{
-                  background: !record.cd_atendimento ? undefined : finalizado ? '#52c41a' : '#667eea',
-                  borderColor: !record.cd_atendimento ? undefined : finalizado ? '#52c41a' : '#667eea',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '0 10px',
+                  height: 24,
+                  fontSize: 13,
+                  fontWeight: 500,
+                  borderRadius: 4,
+                  border: 'none',
+                  cursor: semAtendimento ? 'not-allowed' : 'pointer',
+                  background: semAtendimento
+                    ? '#f5f5f5'
+                    : finalizado
+                    ? '#52c41a'
+                    : '#667eea',
+                  color: semAtendimento ? '#bfbfbf' : '#fff',
+                  transition: 'opacity 0.2s, box-shadow 0.2s',
+                  outline: 'none',
                 }}
+                // Estilo de foco visível injetado via CSS global abaixo
+                className="pts-aria-btn"
               >
-                {finalizado ? 'Ver PTS' : temPTS ? 'Editar PTS' : 'Preencher PTS'}
-              </Button>
+                <FileProtectOutlined aria-hidden="true" style={{ fontSize: 13 }} />
+                {acaoLabel}
+              </AriaButton>
             </Tooltip>
-            {finalizado && <Tag color="success" style={{ fontSize: 10, margin: 0 }}>Finalizado</Tag>}
-            {temPTS && !finalizado && <Tag color="processing" style={{ fontSize: 10, margin: 0 }}>Em andamento</Tag>}
+            {finalizado && (
+              <Tag
+                color="success"
+                role="status"
+                aria-label="PTS finalizado"
+                style={{ fontSize: 10, margin: 0 }}
+              >
+                Finalizado
+              </Tag>
+            )}
+            {temPTS && !finalizado && (
+              <Tag
+                color="processing"
+                role="status"
+                aria-label="PTS em andamento"
+                style={{ fontSize: 10, margin: 0 }}
+              >
+                Em andamento
+              </Tag>
+            )}
           </Space>
         )
       },
@@ -348,6 +400,21 @@ export default function PtsPacientesPage() {
 
   return (
     <div style={{ padding: '0 8px' }}>
+      {/* CSS de foco visível para o botão React Aria da coluna PTS */}
+      <style>{`
+        .pts-aria-btn:focus-visible {
+          outline: 2px solid #667eea;
+          outline-offset: 2px;
+          box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.25);
+        }
+        .pts-aria-btn[data-hovered]:not([data-disabled]) {
+          opacity: 0.88;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+        }
+        .pts-aria-btn[data-pressed]:not([data-disabled]) {
+          transform: scale(0.97);
+        }
+      `}</style>
       <Title level={1}>Pacientes — PTS</Title>
 
       <Card style={{ marginBottom: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
@@ -403,8 +470,11 @@ export default function PtsPacientesPage() {
                     />
                   )}
                 </DateInput>
-                <AriaButton style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 0 8px', display: 'flex' }}>
-                  <CalendarOutlined style={{ color: '#667eea' }} />
+                <AriaButton
+                  aria-label="Abrir calendário para selecionar data"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 0 8px', display: 'flex' }}
+                >
+                  <CalendarOutlined style={{ color: '#667eea' }} aria-hidden="true" />
                 </AriaButton>
               </Group>
               <AriaPopover style={{ 
