@@ -16,6 +16,7 @@ import {
   Modal,
   Tooltip,
   Divider,
+  Switch,
 } from 'antd'
 import {
   MedicineBoxOutlined,
@@ -122,7 +123,11 @@ export function criarObjetivosIniciais(): ObjetivosState {
  * 3. Se motivo for OUTROS, o texto descritivo torna-se obrigatório.
  * 4. Para especialidades obrigatórias, PELO MENOS UM objetivo (anterior OU atual) deve estar preenchido.
  */
-export function validarObjetivos(state: ObjetivosState, especialidadesObrigatorias: string[] = []): { 
+export function validarObjetivos(
+  state: ObjetivosState,
+  especialidadesObrigatorias: string[] = [],
+  naoSeAplica: Record<string, boolean> = {},
+): { 
   temErro: boolean; 
   erros: Record<string, { anterior: (ObjetivoErro | null)[]; atual: (ObjetivoErro | null)[] }>;
   especialidadesComErro: string[];
@@ -132,6 +137,8 @@ export function validarObjetivos(state: ObjetivosState, especialidadesObrigatori
   const espsComErro: string[] = []
 
   Object.entries(state).forEach(([espKey, dados]) => {
+    // Especialidade marcada como "Não se aplica" → skip total
+    if (naoSeAplica[espKey]) return
     const isObrigatoria = especialidadesObrigatorias.includes(espKey);
 
     const errosAnterior = dados.anterior.map((item, idx) => {
@@ -445,6 +452,9 @@ function LinhaObjetivoAtual({
   )
 }
 
+// Especialidades que suportam "Não se aplica"
+const ESPS_NAO_SE_APLICA = new Set(['fisioterapia', 'fisio_aquatica', 'psicologia', 'psicologia_musical'])
+
 // ── componente principal exportado ────────────────────────────────────────────
 interface Props {
   value: ObjetivosState
@@ -455,12 +465,16 @@ interface Props {
   vigencia?: string
   idPtsAtual?: number | null
   erros?: Record<string, { anterior: (ObjetivoErro | null)[]; atual: (ObjetivoErro | null)[] }>
+  naoSeAplica?: Record<string, boolean>
+  onNaoSeAplicaChange?: (next: Record<string, boolean>) => void
 }
 
 export default function ObjetivosEspecialidades({
   value, onChange, ptsFinalizado = false,
   nrAtendimento, cdPaciente, vigencia, idPtsAtual,
   erros = {},
+  naoSeAplica = {},
+  onNaoSeAplicaChange,
 }: Props) {
   const { usuario } = useAuth()
   const [objetivosPorArea, setObjetivosPorArea] = useState<Record<string, string[]>>({})
@@ -537,35 +551,61 @@ export default function ObjetivosEspecialidades({
     return ESPECIALIDADES.filter(e => minhasEsps.includes(e.key))
   }, [isAdmin, minhasEsps])
 
+  const handleNaoSeAplica = useCallback((espKey: string, checked: boolean) => {
+    onNaoSeAplicaChange?.({ ...naoSeAplica, [espKey]: checked })
+  }, [naoSeAplica, onNaoSeAplicaChange])
+
   const collapseItems = useMemo(() => {
     return especialidadesFiltradas.map((esp) => {
       const mom = momento[esp.key]
       const lista = value[esp.key][mom]
       const qtdAnterior = contarPreenchidos(value[esp.key].anterior)
       const qtdAtual    = contarPreenchidos(value[esp.key].atual)
-
       const canEdit = canEditEspecialidade(esp.key, esp.label, usuario)
+      const podeMarcarNaoSeAplica = ESPS_NAO_SE_APLICA.has(esp.key) && canEdit && !ptsFinalizado
+      const marcadoNaoSeAplica = !!naoSeAplica[esp.key]
 
       return {
         key: esp.key,
         label: (
-          <Space>
-            <span style={{ color: esp.color }}>{esp.icon}</span>
-            <Text strong>{esp.label}</Text>
+          <Space onClick={(e) => e.stopPropagation()}>
+            <span style={{ color: marcadoNaoSeAplica ? '#bfbfbf' : esp.color }}>{esp.icon}</span>
+            <Text strong style={{ color: marcadoNaoSeAplica ? '#bfbfbf' : undefined }}>{esp.label}</Text>
             {!canEdit && <LockOutlined style={{ color: '#bfbfbf' }} title="Visualização apenas" />}
-            {qtdAnterior > 0 && (
+            {!marcadoNaoSeAplica && qtdAnterior > 0 && (
               <Tag color="default" style={{ fontSize: 11 }}>
                 {qtdAnterior} anterior{qtdAnterior > 1 ? 'es' : ''}
               </Tag>
             )}
-            {qtdAtual > 0 && (
+            {!marcadoNaoSeAplica && qtdAtual > 0 && (
               <Tag color="purple" style={{ fontSize: 11 }}>
                 {qtdAtual} {qtdAtual > 1 ? 'atuais' : 'atual'}
               </Tag>
             )}
+            {marcadoNaoSeAplica && (
+              <Tag color="default" style={{ fontSize: 11 }}>Não se aplica</Tag>
+            )}
+            {podeMarcarNaoSeAplica && (
+              <Switch
+                size="small"
+                checked={marcadoNaoSeAplica}
+                onChange={(checked) => handleNaoSeAplica(esp.key, checked)}
+                checkedChildren="N/A"
+                unCheckedChildren="N/A"
+                title={marcadoNaoSeAplica ? 'Clique para reativar esta especialidade' : 'Marcar como não se aplica neste atendimento'}
+                style={{ marginLeft: 4 }}
+              />
+            )}
           </Space>
         ),
-        children: (
+        children: marcadoNaoSeAplica ? (
+          <div style={{ background: '#fafafa', border: '1px dashed #d9d9d9', borderRadius: 8, padding: '20px 24px', textAlign: 'center' }}>
+            <Text type="secondary" style={{ fontSize: 13 }}>
+              Esta especialidade foi marcada como <strong>Não se aplica</strong> neste atendimento.
+              Nenhum objetivo é exigido. Para reativar, clique no toggle <strong>N/A</strong> no cabeçalho.
+            </Text>
+          </div>
+        ) : (
           <Space direction="vertical" style={{ width: '100%' }} size={12}>
             {/* toggle anterior / atual */}
             <Segmented
@@ -639,7 +679,7 @@ export default function ObjetivosEspecialidades({
         ),
       }
     })
-  }, [value, momento, objetivosPorArea, handleItem, handleMomento, especialidadesFiltradas, ptsFinalizado, usuario])
+  }, [value, momento, objetivosPorArea, handleItem, handleMomento, especialidadesFiltradas, ptsFinalizado, usuario, naoSeAplica, handleNaoSeAplica, erros])
 
   // Renderizar o conteúdo do modal de visualização de outro PTS
   const renderModalContent = useCallback((pts: OutroPTSItem) => {

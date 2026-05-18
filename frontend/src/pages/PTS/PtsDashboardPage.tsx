@@ -131,7 +131,11 @@ export default function PtsDashboardPage() {
         extTerapias: toRows(d.cer_terapias || []),
         conductaRows: toRows(d.conduta_avaliacao_medica || []),
         multidisciplinarRows: toRows(d.conduta_multidisciplinar || []),
-        instrumentoRows: toRows(d.instrumentos || []),
+        instrumentoRows: (d.instrumentos || []).map((v: any, i: number) => ({
+          key: i + 1,
+          diagnostico: typeof v === 'string' ? v : v.ds_instrumento,
+          calculo: typeof v === 'object' ? v.ds_calculo : undefined,
+        })),
         terapias: d.terapias_indicadas || [],
         objetivos: { ...criarObjetivosIniciais(), ...(d.objetivos || {}) },
         usuarioMe: {

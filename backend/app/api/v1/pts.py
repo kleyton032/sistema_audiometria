@@ -460,20 +460,40 @@ def listar_objetivos_por_especialidade(
     # Caso contrário, usamos o nome original convertido para UPPER.
     esp_busca = mapa_especialidades.get(esp_frontend, esp_frontend)
 
+    # Especialidades extras a incluir na busca de objetivos
+    especialidades_extras: dict[str, list[str]] = {
+        "FISIOTERAPIA": ["PSICOPEDAGOGIA"],
+        "FISIOTERAPIA AQUÁTICA": ["PSICOPEDAGOGIA"],
+        "TERAPIA OCUPACIONAL": ["PSICOPEDAGOGIA"],
+    }
+    extras = especialidades_extras.get(esp_busca, [])
+    todas_especialidades = [esp_busca] + extras
+
     try:
-        rows = db.execute(
-            text(
-                """
-                SELECT o.id_objetivo, o.ds_objetivo
-                FROM FAV_TB_OBJETIVO_CERIV o
-                JOIN FAV_TB_ESP_OBJETIVO_CERIV e ON o.id_especialidade = e.id_especialidade
-                WHERE UPPER(e.ds_especialidade) = :esp
-                AND o.ic_ativo = 'S'
-                ORDER BY o.ds_objetivo
-                """
-            ),
-            {"esp": esp_busca},
-        ).fetchall()
+        # Busca objetivos de todas as especialidades
+        resultados = {}
+        for esp in todas_especialidades:
+            rows = db.execute(
+                text(
+                    """
+                    SELECT o.id_objetivo, o.ds_objetivo
+                    FROM FAV_TB_OBJETIVO_CERIV o
+                    JOIN FAV_TB_ESP_OBJETIVO_CERIV e ON o.id_especialidade = e.id_especialidade
+                    WHERE UPPER(e.ds_especialidade) = :esp
+                    AND o.ic_ativo = 'S'
+                    ORDER BY o.ds_objetivo
+                    """
+                ),
+                {"esp": esp},
+            ).fetchall()
+            
+            # Adiciona sem duplicar (chave = ds_objetivo)
+            for r in rows:
+                desc = str(r[1]) if r[1] is not None else ""
+                if desc not in resultados:
+                    resultados[desc] = r
+        
+        rows = list(resultados.values())
         
         # Converte para lista de dicionários garantindo tipos primitivos (evita erro de serialização se vier LOB/None)
         return [

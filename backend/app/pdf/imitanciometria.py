@@ -16,7 +16,8 @@ if TYPE_CHECKING:
 
 def _logo_b64(nome: str) -> str:
     """Lê uma logo do diretório public do frontend e retorna base64."""
-    base = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    # Caminho: backend/app/pdf/ -> vai 4 níveis acima para raiz do projeto
+    base = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     path = os.path.join(base, "frontend", "public", nome)
     if not os.path.exists(path):
         return ""

@@ -2,6 +2,8 @@ import React from 'react';
 import { Typography, Row, Col } from 'antd';
 import dayjs from 'dayjs';
 import { AREA_LABEL, Area } from './data/listas';
+import logoFav from '../../../public/logo-fav.png';
+import logoCeriv from '../../../public/logo-ceriv.png';
 
 const { Title, Text } = Typography;
 
@@ -31,6 +33,7 @@ export interface PTSPrintData {
   instrumentoRows: any[];
   terapias: any[];
   objetivos: any;
+  objetivosNaoSeAplica?: Record<string, boolean>;
   usuarioMe: any;
   fl_finalizado?: number;
 }
@@ -77,6 +80,7 @@ export default function PTSPrintView({ data, full = false }: Props) {
     instrumentoRows,
     terapias,
     objetivos,
+    objetivosNaoSeAplica = {},
     usuarioMe,
     fl_finalizado,
   } = data || {};
@@ -160,6 +164,8 @@ export default function PTSPrintView({ data, full = false }: Props) {
     let hasAnyObj = false;
     const areas = Object.keys(objetivos);
     const content = areas.map(area => {
+      // Especialidade marcada como "Não se aplica" → não exibir na impressão
+      if (objetivosNaoSeAplica[area]) return null;
       const objArea = objetivos[area];
       const validAtual = (objArea?.atual || []).filter((o: any) => o.objetivo);
       const validAnterior = (objArea?.anterior || []).filter((o: any) => o.objetivo);
@@ -253,7 +259,7 @@ export default function PTSPrintView({ data, full = false }: Props) {
         }}>
           {/* Logo FAV - Esquerda */}
           <div style={{ flex: '0 0 120px', textAlign: 'left' }}>
-            <img src="/logo-fav.png" alt="FAV - CER IV" style={{ height: 35, objectFit: 'contain' }} />
+            <img src={logoFav} alt="FAV - CER IV" style={{ height: 35, objectFit: 'contain' }} />
           </div>
 
           {/* Título Central */}
@@ -265,7 +271,7 @@ export default function PTSPrintView({ data, full = false }: Props) {
 
           {/* Logo CER IV - Direita */}
           <div style={{ flex: '0 0 120px', textAlign: 'right' }}>
-            <img src="/logo-ceriv.png" alt="Menina dos Olhos - CER IV" style={{ height: 50, objectFit: 'contain' }} />
+            <img src={logoCeriv} alt="Menina dos Olhos - CER IV" style={{ height: 50, objectFit: 'contain' }} />
           </div>
         </div>
 

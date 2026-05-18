@@ -193,6 +193,7 @@ export default function PTSPage() {
     () => Object.fromEntries(AREAS.map((a) => [a, undefined])) as Record<Area, string | undefined>
   )
   const [objetivos, setObjetivos] = useState<ObjetivosState>(criarObjetivosIniciais)
+  const [objetivosNaoSeAplica, setObjetivosNaoSeAplica] = useState<Record<string, boolean>>({})
   const [usuarioMe, setUsuarioMe] = useState<User | null>(null)
   const [terapias, setTerapias] = useState<TerapiaRow[]>([{ key: 1, cd_terapia: undefined, terapia: undefined, tipo_atendimento: undefined, periodicidade: undefined, qtde_sessoes: undefined }])
   const [diagPrincipais, setDiagPrincipais] = useState<DiagPrincipalRow[]>([{ key: 1, diagnostico: undefined }])
@@ -471,7 +472,7 @@ export default function PTSPage() {
   const handleSave = async (values: PTSFormValues, finalizeAfterSave = false) => {
     // Validação de objetivos antes de salvar
     const minhasEsps = getMinhasEspecialidades(usuarioMe)
-    const val = validarObjetivos(objetivos, minhasEsps)
+    const val = validarObjetivos(objetivos, minhasEsps, objetivosNaoSeAplica)
     if (val.temErro) {
       setErrosObjetivos(val.erros)
       notification.error({
@@ -543,7 +544,7 @@ export default function PTSPage() {
   const handleFinalizar = async () => {
     // Validação de objetivos antes de finalizar
     const minhasEsps = getMinhasEspecialidades(usuarioMe)
-    const val = validarObjetivos(objetivos, minhasEsps)
+    const val = validarObjetivos(objetivos, minhasEsps, objetivosNaoSeAplica)
     if (val.temErro) {
       setErrosObjetivos(val.erros)
       notification.error({
@@ -1341,6 +1342,8 @@ export default function PTSPage() {
             vigencia={vigenciaAtual || dayjs().format('YYYY-MM')}
             idPtsAtual={idPtsSalvo ?? -1}
             erros={errosObjetivos}
+            naoSeAplica={objetivosNaoSeAplica}
+            onNaoSeAplicaChange={setObjetivosNaoSeAplica}
           />
         </Card>
 
@@ -1813,6 +1816,7 @@ export default function PTSPage() {
             instrumentoRows,
             terapias,
             objetivos,
+            objetivosNaoSeAplica,
             usuarioMe,
             fl_finalizado: ptsFinalizado ? 1 : 0,
           }}
