@@ -281,6 +281,7 @@ CREATE TABLE FAV_TB_PTS_OBJETIVO (
     NR_ITEM          NUMBER(1)     NOT NULL,   
     DS_OBJETIVO      VARCHAR2(500),
     DS_DESCRICAO     CLOB,
+    DS_OUTROS        VARCHAR2(4000),
     DS_STATUS        VARCHAR2(20),             
     DS_MOTIVO        VARCHAR2(500),            
 

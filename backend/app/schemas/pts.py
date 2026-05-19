@@ -10,6 +10,7 @@ class PTSObjetivoItem(BaseModel):
 class PTSObjetivoMomento(BaseModel):
     anterior: List[PTSObjetivoItem]
     atual: List[PTSObjetivoItem]
+    outros_atual: Optional[str] = None
 
 class PTSTerapiaRow(BaseModel):
     key: int

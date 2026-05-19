@@ -34,15 +34,20 @@ def pts_to_dict(pts: PTS) -> dict:
             objetivos[esp] = {
                 "anterior": [vazio(), vazio(), vazio()],
                 "atual":    [vazio(), vazio(), vazio()],
+                "outros_atual": None,
             }
         idx = (obj.nr_item or 1) - 1
         if 0 <= idx <= 2:
+            objetivo_val = obj.ds_outros if (getattr(obj, "ds_outros", None) and idx == 2) else obj.ds_objetivo
             objetivos[esp][obj.ds_momento][idx] = {
-                "objetivo": obj.ds_objetivo,
+                "objetivo": objetivo_val,
                 "descricao": obj.ds_descricao,
                 "status":   obj.ds_status,
                 "motivo":   obj.ds_motivo,
             }
+            
+        if obj.ds_momento == "atual" and idx == 2 and getattr(obj, "ds_outros", None):
+            objetivos[esp]["outros_atual"] = obj.ds_outros
 
     return {
         "id_pts":        pts.id_pts,
@@ -241,6 +246,14 @@ def _inserir_filhos(db: Session, id_pts: int, vigencia: str, pts_data: PTSCreate
                     ds_objetivo=obj.objetivo, ds_descricao=obj.descricao,
                     ds_status=None, ds_motivo=None
                 ))
+        if getattr(momentos, "outros_atual", None):
+            db.add(PTSObjetivo(
+                id_pts=id_pts, ds_vigencia=vigencia, ds_especialidade=esp,
+                ds_momento="atual", nr_item=3,
+                ds_objetivo=None, ds_descricao=None,
+                ds_status=None, ds_motivo=None,
+                ds_outros=momentos.outros_atual
+            ))
 
 
 def create_pts(db: Session, pts_data: PTSCreate, id_usuario: int) -> PTS:

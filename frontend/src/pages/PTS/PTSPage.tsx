@@ -426,7 +426,11 @@ export default function PTSPage() {
           allowClear
           showSearch
           optionFilterProp="label"
-          options={toOptions(opcoesDiagArea[row.area])}
+          options={(() => {
+            const rawList = opcoesDiagArea[row.area] || []
+            const filtered = rawList.filter((item) => item && item.toUpperCase() !== 'NÃO SE APLICA')
+            return toOptions(['NÃO SE APLICA', ...filtered])
+          })()}
           value={diagnosticosArea[row.area]}
           disabled={ptsFinalizado}
           onChange={(v) => setDiagnosticosArea((prev) => ({ ...prev, [row.area]: v }))}

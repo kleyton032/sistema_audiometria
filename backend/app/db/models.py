@@ -406,6 +406,7 @@ class PTSObjetivo(Base):
     nr_item = Column("NR_ITEM", Integer, nullable=False)
     ds_objetivo = Column("DS_OBJETIVO", String(500))
     ds_descricao = Column("DS_DESCRICAO", Text)
+    ds_outros = Column("DS_OUTROS", String(4000))
     ds_status = Column("DS_STATUS", String(20))
     ds_motivo = Column("DS_MOTIVO", String(50))
     

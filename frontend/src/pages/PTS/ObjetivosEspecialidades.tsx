@@ -48,7 +48,8 @@ export type MomentoObjetivos = 'anterior' | 'atual'
 
 export interface ObjetivosEspecialidade {
   anterior: [ObjetivoItem, ObjetivoItem, ObjetivoItem]
-  atual: [ObjetivoItem, ObjetivoItem, ObjetivoItem]
+  atual: [ObjetivoItem, ObjetivoItem]
+  outros_atual?: string | undefined
 }
 
 export type ObjetivosState = Record<string, ObjetivosEspecialidade>
@@ -109,7 +110,8 @@ export function criarObjetivosIniciais(): ObjetivosState {
       e.key,
       {
         anterior: [objetivoVazio(), objetivoVazio(), objetivoVazio()] as [ObjetivoItem, ObjetivoItem, ObjetivoItem],
-        atual:    [objetivoVazio(), objetivoVazio(), objetivoVazio()] as [ObjetivoItem, ObjetivoItem, ObjetivoItem],
+        atual:    [objetivoVazio(), objetivoVazio()] as [ObjetivoItem, ObjetivoItem],
+        outros_atual: undefined,
       },
     ])
   )
@@ -129,7 +131,7 @@ export function validarObjetivos(
   naoSeAplica: Record<string, boolean> = {},
 ): { 
   temErro: boolean; 
-  erros: Record<string, { anterior: (ObjetivoErro | null)[]; atual: (ObjetivoErro | null)[] }>;
+  erros: Record<string, { anterior: (ObjetivoErro | null)[]; atual: (ObjetivoErro | null)[]; outros_atual?: ObjetivoErro | null }>;
   especialidadesComErro: string[];
 } {
   const erros: any = {}
@@ -161,33 +163,28 @@ export function validarObjetivos(
     })
 
     const errosAtual = dados.atual.map((item, idx) => {
-      const e: ObjetivoErro = {}
-      if (isObrigatoria && idx === 0 && !item.objetivo) {
-        // Primeira linha do objetivo atual é obrigatória para a especialidade do usuário
-        e.objetivo = true
-      }
-      if (Object.keys(e).length > 0) return e
       return null
     })
+    let erroOutrosAtual: ObjetivoErro | null = null;
 
     // Validação adicional: Se é especialidade obrigatória, deve ter PELO MENOS UM objetivo preenchido (anterior OU atual)
     if (isObrigatoria) {
       const temObjetivoAnterior = dados.anterior.some(item => !!item.objetivo)
-      const temObjetivoAtual = dados.atual.some(item => !!item.objetivo)
+      const temObjetivoAtual = dados.atual.some(item => !!item.objetivo) || !!dados.outros_atual
       
       if (!temObjetivoAnterior && !temObjetivoAtual) {
         // Nenhum objetivo foi preenchido - adicionar erro na primeira linha de ambos
         if (!errosAnterior[0]) errosAnterior[0] = {}
-        if (!errosAtual[0]) errosAtual[0] = {}
         errosAnterior[0]!.objetivo = true
-        errosAtual[0]!.objetivo = true
+        errosAtual[0] = { objetivo: true }
+        erroOutrosAtual = { objetivo: true }
       }
     }
 
-    const espTemErro = errosAnterior.some(x => x !== null) || errosAtual.some(x => x !== null)
+    const espTemErro = errosAnterior.some(x => x !== null) || errosAtual.some(x => x !== null) || erroOutrosAtual !== null
     if (espTemErro) {
       temErroGeral = true
-      erros[espKey] = { anterior: errosAnterior, atual: errosAtual }
+      erros[espKey] = { anterior: errosAnterior, atual: errosAtual, outros_atual: erroOutrosAtual }
       const label = ESPECIALIDADES.find(e => e.key === espKey)?.label || espKey
       espsComErro.push(label)
     }
@@ -221,7 +218,7 @@ function canEditEspecialidade(espKey: string, espLabel: string, user: any): bool
   if (espKey === 'ed_fisica' && (userTip.includes('FISICA') || userTip.includes('FÍSICA'))) return true
   if (espKey.startsWith('psicologia') && userTip.includes('PSICOLOG')) return true
   if (espKey === 'psicopedagogia' && userTip.includes('PSICOPEDAGOG')) return true
-  if (espKey === 'prof_braille' && userTip.includes('BRAILLE')) return true
+  if (espKey === 'prof_braille' && (userTip.includes('BRAILLE') || userTip.includes('DEF VISUAL') || userTip.includes('DEF. VISUAL') || userTip.includes('VISUAL'))) return true
 
   return false
 }
@@ -240,7 +237,7 @@ function getEspecialidadeInfo(dsEspecialidade: string | null | undefined): { ico
   if (up.includes('OCUPACIONAL'))   return { icon: <MedicineBoxOutlined />,    color: '#722ed1', label: 'Terapia Ocupacional' }
   if (up.includes('PSICOLOG'))      return { icon: <TeamOutlined />,           color: '#eb2f96', label: 'Psicologia' }
   if (up.includes('PSICOPEDAGOG'))  return { icon: <BookOutlined />,           color: '#faad14', label: 'Psicopedagogia' }
-  if (up.includes('BRAILLE'))       return { icon: <ReadOutlined />,           color: '#08979c', label: 'Professor de Braille' }
+  if (up.includes('BRAILLE') || up.includes('DEF VISUAL') || up.includes('DEF. VISUAL') || up.includes('VISUAL'))       return { icon: <ReadOutlined />,           color: '#08979c', label: 'Professor de Braille' }
   if (up.includes('FISICA') || up.includes('FÍSICA')) return { icon: <UserOutlined />, color: '#fa8c16', label: 'Prof. Educação Física' }
   return { icon: <UserOutlined />, color: '#8c8c8c', label: dsEspecialidade }
 }
@@ -259,12 +256,14 @@ function LinhaObjetivoAnterior({
   disabled,
   onChange,
   erro,
+  especialidadeLabel,
 }: {
   numero: number
   item: ObjetivoItem
   disabled: boolean
   onChange: (updates: Partial<ObjetivoItem>) => void
   erro?: ObjetivoErro | null
+  especialidadeLabel: string
 }) {
   return (
     <Row gutter={[12, 8]} align="top" style={{ marginBottom: 8, borderBottom: '1px solid #f0f0f0', paddingBottom: 8 }}>
@@ -286,6 +285,7 @@ function LinhaObjetivoAnterior({
           value={item.objetivo} 
           disabled={disabled}
           status={erro?.objetivo ? 'error' : undefined}
+          ariaLabel={`Descrição do objetivo anterior número ${numero} para ${especialidadeLabel}`}
           onChange={(val) => onChange({ objetivo: val })} 
         />
         {erro?.objetivo && <div style={{ color: '#ff4d4f', fontSize: 12, marginTop: 2 }}>Campo obrigatório</div>}
@@ -296,7 +296,7 @@ function LinhaObjetivoAnterior({
         <Select
           style={{ width: '100%' }}
           placeholder="Status da evolução..."
-          aria-label={`Status da evolução do objetivo ${numero}`}
+          aria-label={`Status da evolução do objetivo anterior número ${numero} para ${especialidadeLabel}`}
           allowClear
           disabled={disabled}
           status={erro?.status ? 'error' : undefined}
@@ -322,7 +322,7 @@ function LinhaObjetivoAnterior({
               <Select
                 style={{ width: '100%' }}
                 placeholder="Motivo..."
-                aria-label={`Motivo do status do objetivo ${numero}`}
+                aria-label={`Motivo do status de não alcançado para objetivo anterior número ${numero} de ${especialidadeLabel}`}
                 allowClear
                 disabled={disabled}
                 status={erro?.motivo ? 'error' : undefined}
@@ -338,6 +338,7 @@ function LinhaObjetivoAnterior({
               <Col flex="1" style={{ minWidth: 180 }}>
                 <InputObjetivoAnterior
                   placeholder="Descreva o motivo..."
+                  ariaLabel={`Descreva detalhadamente o motivo de não alcançado para o objetivo anterior número ${numero} de ${especialidadeLabel}`}
                   value={outrosTexto}
                   disabled={disabled}
                   status={erro?.motivo ? 'error' : undefined}
@@ -364,13 +365,15 @@ const InputObjetivoAnterior = memo(({
   onChange, 
   placeholder = "Objetivo do período anterior...",
   disabled = false,
-  status
+  status,
+  ariaLabel
 }: { 
   value: string | undefined, 
   onChange: (v: string | undefined) => void,
   placeholder?: string,
   disabled?: boolean,
-  status?: "" | "error" | "warning" | undefined
+  status?: "" | "error" | "warning" | undefined,
+  ariaLabel?: string
 }) => {
   const [localVal, setLocalVal] = useState(value ?? '')
 
@@ -385,6 +388,7 @@ const InputObjetivoAnterior = memo(({
       disabled={disabled}
       status={status}
       style={{ textTransform: 'uppercase' }}
+      aria-label={ariaLabel}
       onChange={(e) => setLocalVal(e.target.value.toUpperCase())}
       onBlur={() => {
         if (localVal !== (value ?? '')) {
@@ -406,6 +410,7 @@ function LinhaObjetivoAtual({
   disabled,
   onChange,
   erro,
+  especialidadeLabel,
 }: {
   numero: number
   item: ObjetivoItem
@@ -413,6 +418,7 @@ function LinhaObjetivoAtual({
   disabled: boolean
   onChange: (updates: Partial<ObjetivoItem>) => void
   erro?: ObjetivoErro | null
+  especialidadeLabel: string
 }) {
   return (
     <Row gutter={[12, 8]} align="top" style={{ marginBottom: 8, borderBottom: '1px solid #f0f0f0', paddingBottom: 8 }}>
@@ -433,7 +439,7 @@ function LinhaObjetivoAtual({
         <Select
           style={{ width: '100%' }}
           placeholder="Selecione o objetivo..."
-          aria-label={`Selecione o objetivo atual número ${numero}`}
+          aria-label={`Selecione o objetivo atual número ${numero} para ${especialidadeLabel}`}
           allowClear
           showSearch
           disabled={disabled}
@@ -481,10 +487,31 @@ export default function ObjetivosEspecialidades({
   const [momento, setMomento] = useState<Record<string, MomentoObjetivos>>(
     () => Object.fromEntries(ESPECIALIDADES.map((e) => [e.key, 'atual' as MomentoObjetivos]))
   )
+  const [srAnnouncement, setSrAnnouncement] = useState('')
+
+  // Identificar as especialidades do usuário logado
+  const minhasEsps = useMemo(() => getMinhasEspecialidades(usuario), [usuario])
+  const isAdmin = usuario?.ds_perfil === 'ADMIN'
 
   // Estado para outros PTS da mesma vigência
   const [outrosPTS, setOutrosPTS] = useState<OutroPTSItem[]>([])
   const [modalPTS, setModalPTS] = useState<OutroPTSItem | null>(null)
+
+  const handleOpenModal = useCallback((pts: OutroPTSItem) => {
+    setModalPTS(pts)
+    const info = getEspecialidadeInfo(pts.ds_especialidade_profissional)
+    setSrAnnouncement(`Modal de visualização aberto para objetivos de ${pts.nm_prestador}, especialidade ${info.label}.`)
+    // Foca o modal após um pequeno tempo
+    setTimeout(() => {
+      const modalElement = document.querySelector('.ant-modal-content') as HTMLElement
+      if (modalElement) modalElement.focus()
+    }, 300)
+  }, [])
+
+  const handleCloseModal = useCallback(() => {
+    setModalPTS(null)
+    setSrAnnouncement(`Modal de visualização fechado.`)
+  }, [])
 
   useEffect(() => {
     async function carregarObjetivos() {
@@ -524,8 +551,81 @@ export default function ObjetivosEspecialidades({
       .catch((err) => console.error('Erro ao carregar outros PTS:', err))
   }, [nrAtendimento, cdPaciente, vigencia, idPtsAtual])
 
+  // Escuta atalhos de teclado (Alt + T, Alt + E, Alt + 1, Alt + 2, Alt + 3) para acessibilidade do Professor de Braille
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!e.altKey) return
+
+      const key = e.key.toLowerCase()
+
+      if (key === 't') {
+        e.preventDefault()
+        minhasEsps.forEach(espKey => {
+          setMomento(prev => ({ ...prev, [espKey]: 'atual' }))
+        })
+        setSrAnnouncement('Abas de objetivos alternadas para Objetivos Atuais')
+        setTimeout(() => {
+          const firstInput = document.querySelector(`[aria-label*="Selecione o objetivo atual número 1"] input, [aria-label*="Selecione o objetivo atual número 1"]`) as HTMLElement
+          if (firstInput) firstInput.focus()
+        }, 100)
+      }
+
+      if (key === 'e') {
+        e.preventDefault()
+        minhasEsps.forEach(espKey => {
+          setMomento(prev => ({ ...prev, [espKey]: 'anterior' }))
+        })
+        setSrAnnouncement('Abas de objetivos alternadas para Objetivos Anteriores de evolução')
+        setTimeout(() => {
+          const firstInput = document.querySelector(`[aria-label*="Status da evolução do objetivo anterior número 1"] input, [aria-label*="Status da evolução do objetivo anterior número 1"]`) as HTMLElement
+          if (firstInput) firstInput.focus()
+        }, 100)
+      }
+
+      if (key === '1' || key === '2' || key === '3') {
+        e.preventDefault()
+        const numero = key
+        setTimeout(() => {
+          if (minhasEsps.length > 0) {
+            const espKey = minhasEsps[0]
+            const mom = momento[espKey] || 'atual'
+            let targetSelector = ''
+            if (mom === 'atual') {
+              targetSelector = `[aria-label*="Selecione o objetivo atual número ${numero}"] input, [aria-label*="Selecione o objetivo atual número ${numero}"]`
+            } else {
+              targetSelector = `[aria-label*="Status da evolução do objetivo anterior número ${numero}"] input, [aria-label*="Status da evolução do objetivo anterior número ${numero}"]`
+            }
+            const input = document.querySelector(targetSelector) as HTMLElement
+            if (input) {
+              input.focus()
+              const label = ESPECIALIDADES.find(x => x.key === espKey)?.label || ''
+              setSrAnnouncement(`Focado no objetivo ${numero} de ${label}`)
+            }
+          }
+        }, 50)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [minhasEsps, momento])
+
   const handleMomento = useCallback((key: string, m: MomentoObjetivos) => {
     setMomento((prev) => ({ ...prev, [key]: m }))
+    const label = ESPECIALIDADES.find(e => e.key === key)?.label || key
+    setSrAnnouncement(`Abas de objetivos para ${label} alternada para Objetivos ${m === 'atual' ? 'Atuais' : 'Anteriores (evolução)'}`)
+    
+    // Gerenciamento de foco ao alternar abas
+    setTimeout(() => {
+      let targetSelector = ''
+      if (m === 'atual') {
+        targetSelector = `[aria-label*="Selecione o objetivo atual número 1"] input, [aria-label*="Selecione o objetivo atual número 1"]`
+      } else {
+        targetSelector = `[aria-label*="Status da evolução do objetivo anterior número 1"] input, [aria-label*="Status da evolução do objetivo anterior número 1"]`
+      }
+      const element = document.querySelector(targetSelector) as HTMLElement
+      if (element) element.focus()
+    }, 150)
   }, [])
 
   const handleItem = useCallback((
@@ -535,14 +635,15 @@ export default function ObjetivosEspecialidades({
     updates: Partial<ObjetivoItem>
   ) => {
     const espAtual = value[espKey]
-    const lista = [...espAtual[mom]] as [ObjetivoItem, ObjetivoItem, ObjetivoItem]
+    const lista = [...espAtual[mom]] as any[]
     lista[idx] = { ...lista[idx], ...updates }
     onChange({ ...value, [espKey]: { ...espAtual, [mom]: lista } })
   }, [value, onChange])
 
-  // Identificar as especialidades do usuário logado
-  const minhasEsps = useMemo(() => getMinhasEspecialidades(usuario), [usuario])
-  const isAdmin = usuario?.ds_perfil === 'ADMIN'
+  const handleOutros = useCallback((espKey: string, text: string | undefined) => {
+    const espAtual = value[espKey]
+    onChange({ ...value, [espKey]: { ...espAtual, outros_atual: text } })
+  }, [value, onChange])
 
   // Filtrar: ADMIN vê todas, profissional vê somente a(s) sua(s)
   const especialidadesFiltradas = useMemo(() => {
@@ -607,6 +708,20 @@ export default function ObjetivosEspecialidades({
           </div>
         ) : (
           <Space direction="vertical" style={{ width: '100%' }} size={12}>
+            {/* Guia explicativo exclusivo para leitores de tela */}
+            {canEdit && (
+              <div
+                style={{
+                  position: 'absolute',
+                  width: 1, height: 1, padding: 0, margin: -1,
+                  overflow: 'hidden', clip: 'rect(0,0,0,0)',
+                  whiteSpace: 'nowrap', border: 0,
+                }}
+              >
+                Seção de objetivos de {esp.label}. Você pode alternar entre objetivos atuais e evolução anterior usando os atalhos de teclado Alt mais a letra T para objetivos atuais, ou Alt mais a letra E para evolução anterior. Também pode pular diretamente para os objetivos um, dois ou três pressionando Alt mais os números correspondentes um, dois ou três.
+              </div>
+            )}
+
             {/* toggle anterior / atual */}
             <Segmented
               options={[
@@ -652,7 +767,7 @@ export default function ObjetivosEspecialidades({
               </div>
             )}
 
-            {/* 3 linhas de objetivo */}
+            {/* linhas de objetivo (3 para anterior, 2 para atual) */}
             {lista.map((item, idx) =>
               mom === 'anterior' ? (
                 <MemoizedLinhaObjetivoAnterior
@@ -661,6 +776,7 @@ export default function ObjetivosEspecialidades({
                   item={item}
                   disabled={!canEdit || ptsFinalizado}
                   erro={erros[esp.key]?.anterior[idx]}
+                  especialidadeLabel={esp.label}
                   onChange={(updates) => handleItem(esp.key, mom, idx, updates)}
                 />
               ) : (
@@ -671,9 +787,38 @@ export default function ObjetivosEspecialidades({
                   disabled={!canEdit || ptsFinalizado}
                   listaOpcoes={objetivosPorArea[esp.key] || []}
                   erro={erros[esp.key]?.atual[idx]}
+                  especialidadeLabel={esp.label}
                   onChange={(updates) => handleItem(esp.key, mom, idx, updates)}
                 />
               )
+            )}
+            
+            {mom === 'atual' && (
+              <Row gutter={[12, 8]} align="top" style={{ marginBottom: 8, paddingBottom: 8 }}>
+                <Col flex="32px">
+                  <div style={{
+                    width: 28, height: 28, borderRadius: '50%',
+                    background: '#667eea', color: '#fff',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontWeight: 'bold', fontSize: 13, marginTop: 2,
+                  }}>
+                    3
+                  </div>
+                </Col>
+                <Col flex="1" style={{ minWidth: 180 }}>
+                  <Input.TextArea
+                    placeholder="ESPECIFICAÇÕES ADICIONAIS / OUTROS OBJETIVOS..."
+                    aria-label={`Especificações adicionais ou outros objetivos para ${esp.label}`}
+                    disabled={!canEdit || ptsFinalizado}
+                    status={erros[esp.key]?.outros_atual?.objetivo ? 'error' : undefined}
+                    value={value[esp.key].outros_atual || ''}
+                    onChange={(e) => handleOutros(esp.key, e.target.value.toUpperCase())}
+                    autoSize={{ minRows: 2, maxRows: 6 }}
+                    style={{ textTransform: 'uppercase' }}
+                  />
+                  {erros[esp.key]?.outros_atual?.objetivo && <div style={{ color: '#ff4d4f', fontSize: 12, marginTop: 2 }}>Objetivo obrigatório (selecione nos campos acima ou digite aqui)</div>}
+                </Col>
+              </Row>
             )}
           </Space>
         ),
@@ -697,23 +842,26 @@ export default function ObjetivosEspecialidades({
           const dados = pts.objetivos[espKey]
 
           return (
-            <div key={espKey}>
-              <Space style={{ marginBottom: 8 }}>
-                <span style={{ color }}>{icon}</span>
-                <Text strong>{label}</Text>
-              </Space>
+            <div key={espKey} role="region" aria-label={`Objetivos de ${label}`}>
+              <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ color }} aria-hidden="true">{icon}</span>
+                <span>{label}</span>
+              </h4>
 
               {/* Anteriores */}
               {dados.anterior.some(o => o.objetivo) && (
                 <>
-                  <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 4 }}>
+                  <h5 style={{ fontSize: '11px', color: '#8c8c8c', margin: '8px 0 4px 0', fontWeight: 'normal' }}>
                     Objetivos Anteriores
-                  </Text>
+                  </h5>
                   {dados.anterior.map((obj, idx) => obj.objetivo && (
                     <div key={`ant-${idx}`} style={{
                       background: '#fafafa', border: '1px solid #f0f0f0',
                       borderRadius: 6, padding: '8px 12px', marginBottom: 6,
-                    }}>
+                    }}
+                    role="text"
+                    aria-label={`Objetivo anterior ${idx + 1}: ${obj.objetivo}. Status: ${STATUS_EVOLUCAO.find(s => s.value === obj.status)?.label || obj.status}.${obj.motivo ? ' Motivo: ' + (MOTIVOS_NAO_ALCANCADO.find(m => m.value === obj.motivo)?.label || obj.motivo) : ''}`}
+                    >
                       <Text style={{ fontSize: 13, textTransform: 'uppercase' }}>{idx + 1}. {obj.objetivo}</Text>
                       {obj.status && (
                         <Tag color={obj.status === 'ALCANCADO' ? 'green' : obj.status === 'PARCIAL' ? 'orange' : 'red'} style={{ marginLeft: 8, fontSize: 11 }}>
@@ -733,14 +881,17 @@ export default function ObjetivosEspecialidades({
               {/* Atuais */}
               {dados.atual.some(o => o.objetivo) && (
                 <>
-                  <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 4, marginTop: 8 }}>
+                  <h5 style={{ fontSize: '11px', color: '#8c8c8c', margin: '8px 0 4px 0', fontWeight: 'normal' }}>
                     Objetivos Atuais
-                  </Text>
+                  </h5>
                   {dados.atual.map((obj, idx) => obj.objetivo && (
                     <div key={`atu-${idx}`} style={{
                       background: '#f0f5ff', border: '1px solid #d6e4ff',
                       borderRadius: 6, padding: '8px 12px', marginBottom: 6,
-                    }}>
+                    }}
+                    role="text"
+                    aria-label={`Objetivo atual ${idx + 1}: ${obj.objetivo}`}
+                    >
                       <Text style={{ fontSize: 13, textTransform: 'uppercase' }}>{idx + 1}. {obj.objetivo}</Text>
                     </div>
                   ))}
@@ -775,7 +926,8 @@ export default function ObjetivosEspecialidades({
                   <Button
                     size="middle"
                     icon={<span style={{ color: info.color, marginRight: 4 }}>{info.icon}</span>}
-                    onClick={() => setModalPTS(pts)}
+                    onClick={() => handleOpenModal(pts)}
+                    aria-label={`Visualizar objetivos registrados por ${pts.nm_prestador}, especialidade ${info.label}`}
                     style={{
                       borderColor: info.color,
                       color: '#333',
@@ -806,26 +958,48 @@ export default function ObjetivosEspecialidades({
       {/* ── Modal de visualização de outro PTS ── */}
       <Modal
         open={!!modalPTS}
-        onCancel={() => setModalPTS(null)}
+        onCancel={handleCloseModal}
         footer={
-          <Button type="primary" onClick={() => setModalPTS(null)}>
+          <Button type="primary" onClick={handleCloseModal} aria-label="Fechar modal de visualização de objetivos">
             Fechar
           </Button>
         }
         width={700}
         style={{ top: 20 }}
+        aria-label={modalPTS ? `Visualização de Objetivos do Profissional ${modalPTS.nm_prestador}, especialidade ${getEspecialidadeInfo(modalPTS.ds_especialidade_profissional).label}` : 'Visualização de Objetivos'}
+        closeIcon={<span aria-label="Fechar modal de visualização de objetivos" style={{ fontSize: 16 }}>✕</span>}
         title={
           modalPTS ? (
             <Space>
               <EyeOutlined />
-              <span>Objetivos — {modalPTS.nm_prestador}</span>
-              <Tag color="blue">{getEspecialidadeInfo(modalPTS.ds_especialidade_profissional).label}</Tag>
+              <span aria-hidden="true">Objetivos — {modalPTS.nm_prestador}</span>
+              <Tag color="blue" aria-hidden="true">{getEspecialidadeInfo(modalPTS.ds_especialidade_profissional).label}</Tag>
             </Space>
           ) : ''
         }
       >
         {modalPTS && renderModalContent(modalPTS)}
       </Modal>
+
+      {/* Região live acessível para leitores de tela */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        style={{
+          position: 'absolute',
+          width: 1,
+          height: 1,
+          padding: 0,
+          margin: -1,
+          overflow: 'hidden',
+          clip: 'rect(0,0,0,0)',
+          whiteSpace: 'nowrap',
+          border: 0,
+        }}
+      >
+        {srAnnouncement}
+      </div>
     </>
   )
 }
