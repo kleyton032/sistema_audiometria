@@ -239,6 +239,10 @@ def _inserir_filhos(db: Session, id_pts: int, vigencia: str, pts_data: PTSCreate
                     ds_status=obj.status, ds_motivo=obj.motivo
                 ))
         for i, obj in enumerate(momentos.atual):
+            # Quando outros_atual está preenchido, o nr_item=3 é tratado
+            # exclusivamente pelo bloco abaixo para evitar duplicate key
+            if i == 2 and getattr(momentos, "outros_atual", None):
+                continue
             if obj.objetivo or obj.descricao:
                 db.add(PTSObjetivo(
                     id_pts=id_pts, ds_vigencia=vigencia, ds_especialidade=esp,

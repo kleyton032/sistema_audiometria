@@ -5,7 +5,7 @@ from sqlalchemy.sql import text
 from pydantic import BaseModel
 
 from app.dependencies import get_db, get_current_user
-from app.db.models import User
+from app.db.models import User, PTS
 from app.schemas.pts import PTSCreate
 from app.db.repositories.pts import create_pts, update_pts, get_pts_by_id, get_pts_status_batch, calcular_vigencia
 from app.db.session import SessionTest
@@ -219,7 +219,7 @@ def salvar_pts(
         print("ERRO REAL AO SALVAR PTS:", erro_real)
         print(traceback.format_exc())
         try:
-            if 'session' in locals() and user.nm_login == 'testesoul':
+            if 'session' in locals():
                 session.rollback()
         except Exception as rollback_err:
             print("Erro durante o rollback:", str(rollback_err))
@@ -329,12 +329,15 @@ def cancelar_pts(
         )
 
     try:
+        motivo_completo = cancel_data.ds_motivo
+        if cancel_data.ds_detalhe:
+            motivo_completo = f"{cancel_data.ds_motivo} | {cancel_data.ds_detalhe}"
+
         session.execute(
-            text("BEGIN PRC_FAV_PTS_CANCELA_FILA(:id_pts, :motivo, :detalhe); END;"),
+            text("BEGIN PRC_FAV_PTS_CANCELA_FILA(:id_pts, :motivo); END;"),
             {
                 'id_pts': id_pts,
-                'motivo': cancel_data.ds_motivo,
-                'detalhe': cancel_data.ds_detalhe
+                'motivo': motivo_completo,
             },
         )
         session.commit()

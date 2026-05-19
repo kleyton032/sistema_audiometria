@@ -217,6 +217,7 @@ export default function PTSPage() {
   const [ptsFinalizado, setPtsFinalizado] = useState(() => (paciente.fl_finalizado ?? 0) === 1)
   const [idUsuarioAutor, setIdUsuarioAutor] = useState<number | null>(null)
   const [errosObjetivos, setErrosObjetivos] = useState<Record<string, { anterior: (ObjetivoErro | null)[]; atual: (ObjetivoErro | null)[] }>>({})
+  const [errosTerapias, setErrosTerapias] = useState(false)
 
 
   // Consulta situação do documento de conduta interdisciplinar no MV (cd_documento=770)
@@ -472,7 +473,13 @@ export default function PTSPage() {
     grau: grauArea[area],
   }))
 
-  // ── submit ────────────────────────────────────────────────────────────────
+  const validarTerapias = (lista: TerapiaRow[]) => {
+    if (!lista || lista.length === 0) return { temErro: true, mensagem: 'É necessário prescrever pelo menos uma terapia indicada.' }
+    const incompleta = lista.some(t => !t.cd_terapia || !t.tipo_atendimento || !t.periodicidade || !t.qtde_sessoes)
+    if (incompleta) return { temErro: true, mensagem: 'Por favor, preencha todos os campos (Terapia, Tipo de Atendimento, Periodicidade e Qtde. Sessões) das terapias indicadas (Seção 20).' }
+    return { temErro: false }
+  }
+
   const handleSave = async (values: PTSFormValues, finalizeAfterSave = false) => {
     // Validação de objetivos antes de salvar
     const minhasEsps = getMinhasEspecialidades(usuarioMe)
@@ -489,6 +496,20 @@ export default function PTSPage() {
       return
     }
     setErrosObjetivos({})
+
+    // Validação de terapias indicadas antes de salvar
+    const valTerapias = validarTerapias(terapias)
+    if (valTerapias.temErro) {
+      setErrosTerapias(true)
+      notification.error({
+        message: 'Prescrição Incompleta',
+        description: valTerapias.mensagem,
+        duration: 8,
+      })
+      document.getElementById('sec-terapias-indicadas')?.scrollIntoView({ behavior: 'smooth' })
+      return
+    }
+    setErrosTerapias(false)
 
     setSalvandoPTS(true)
     const payload = {
@@ -561,6 +582,20 @@ export default function PTSPage() {
     }
     setErrosObjetivos({})
 
+    // Validação de terapias indicadas antes de finalizar
+    const valTerapias = validarTerapias(terapias)
+    if (valTerapias.temErro) {
+      setErrosTerapias(true)
+      notification.error({
+        message: 'Prescrição Incompleta',
+        description: valTerapias.mensagem,
+        duration: 8,
+      })
+      document.getElementById('sec-terapias-indicadas')?.scrollIntoView({ behavior: 'smooth' })
+      return
+    }
+    setErrosTerapias(false)
+
     if (idPtsSalvo === null) {
       // Se não salvou ainda, valida o form e salva com flag de finalizar depois
       try {
@@ -592,15 +627,21 @@ export default function PTSPage() {
     setCancelandoPTS(true)
     try {
       await cancelarPTS(idPtsSalvo, values)
-      setIdPtsSalvo(null)
-      setPtsFinalizado(false)
       setModalCancelamento(false)
-      form.resetFields()
-      setModalResultado({
-        visivel: true,
-        status: 'success',
-        titulo: 'PTS Cancelado',
-        mensagem: 'O PTS foi cancelado e os itens foram removidos da fila de espera.'
+      
+      Modal.confirm({
+        title: 'PTS Cancelado',
+        content: 'O PTS foi cancelado e os itens foram removidos da fila de espera. Deseja aproveitar as informações da tela para iniciar a digitação de um novo PTS agora mesmo?',
+        okText: 'Sim, aproveitar dados',
+        cancelText: 'Não, voltar para lista',
+        onOk: () => {
+          // Mantém os dados no form e transforma a tela atual num rascunho limpo!
+          setIdPtsSalvo(null)
+          setPtsFinalizado(false)
+        },
+        onCancel: () => {
+          navigate('/pts/pacientes', { state: { fromPTS: true } })
+        }
       })
     } catch (error: any) {
       console.error('Erro ao cancelar PTS:', error)
@@ -1577,6 +1618,7 @@ export default function PTSPage() {
                     style={{ width: '100%' }}
                     placeholder="Selecione..."
                     aria-label="Terapia indicada"
+                    status={errosTerapias && !row.cd_terapia ? 'error' : undefined}
                     allowClear
                     showSearch
                     optionFilterProp="label"
@@ -1599,6 +1641,7 @@ export default function PTSPage() {
                     style={{ width: '100%' }}
                     placeholder="Selecione..."
                     aria-label="Tipo de atendimento da terapia"
+                    status={errosTerapias && !row.tipo_atendimento ? 'error' : undefined}
                     allowClear
                     options={TIPOS_ATENDIMENTO.map(o => ({ label: o.label, value: o.label }))}
                     value={row.tipo_atendimento}
@@ -1637,6 +1680,7 @@ export default function PTSPage() {
                     style={{ width: '100%' }}
                     placeholder="Selecione..."
                     aria-label="Periodicidade da terapia"
+                    status={errosTerapias && !row.periodicidade ? 'error' : undefined}
                     allowClear
                     options={PERIODICIDADES.map(o => ({ label: o.label, value: o.label }))}
                     value={row.periodicidade}
@@ -1674,6 +1718,7 @@ export default function PTSPage() {
                     min={1}
                     max={999}
                     style={{ width: '100%' }}
+                    status={errosTerapias && !row.qtde_sessoes ? 'error' : undefined}
                     value={row.qtde_sessoes}
                     disabled={ptsFinalizado}
                     onChange={(v) => setTerapias((prev) => prev.map((r) => r.key === row.key ? { ...r, qtde_sessoes: v ?? undefined } : r))}
