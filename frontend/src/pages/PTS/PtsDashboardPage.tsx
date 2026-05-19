@@ -7,12 +7,10 @@ import {
   CloseCircleOutlined,
   SearchOutlined,
   ReloadOutlined,
-  EyeOutlined,
   PrinterOutlined
 } from '@ant-design/icons'
 import { getPTSDashboardStats, getPTSDashboardReport, getPTSById } from '@/api/ptsService'
-import { useNavigate } from 'react-router-dom'
-import { Modal, Spin, Divider } from 'antd'
+import { Modal, Spin } from 'antd'
 import PTSPrintView from './PTSPrintView'
 import { Area } from './data/listas'
 import { criarObjetivosIniciais } from './ObjetivosEspecialidades'
@@ -20,7 +18,6 @@ import { criarObjetivosIniciais } from './ObjetivosEspecialidades'
 const { Title, Text } = Typography
 
 export default function PtsDashboardPage() {
-  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({ total_pts: 0, finalizados: 0, em_rascunho: 0, cancelados: 0 })
   const [report, setReport] = useState<any[]>([])
@@ -156,19 +153,7 @@ export default function PtsDashboardPage() {
     }
   }
 
-  const handleEditFromPreview = () => {
-    if (!currentPtsData) return
-    const record = report.find(r => r.id_pts === currentPtsData.id_pts) || currentPtsData
-    navigate('/pts', { 
-      state: { 
-        nm_paciente: currentPtsData.paciente.nm_paciente,
-        cd_paciente: currentPtsData.paciente.cd_paciente,
-        cd_atendimento: currentPtsData.paciente.cd_atendimento,
-        id_pts: currentPtsData.id_pts,
-        fl_finalizado: currentPtsData.fl_finalizado
-      } 
-    })
-  }
+
 
   const handlePrintFromPreview = () => {
     const printWindow = window.open('', '_blank')

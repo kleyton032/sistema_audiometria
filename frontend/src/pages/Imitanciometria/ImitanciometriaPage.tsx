@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
   Card, Col, Row, Typography, Input, Divider,
-  Button, Space, Alert, Spin, notification, Collapse, Table, Tag,
+  Button, Space, Alert, Spin, App, Collapse, Table, Tag,
 } from 'antd'
 import { InfoCircleOutlined } from '@ant-design/icons'
 import {
@@ -181,6 +181,7 @@ interface ImitanciometriaPageProps {
 }
 
 export default function ImitanciometriaPage({ cdPaciente, cdAtendimento }: ImitanciometriaPageProps) {
+  const { notification } = App.useApp()
   const [data, setData] = useState<ImmittanceData>({
     rightEar: createEmptyTympanogram(),
     leftEar: createEmptyTympanogram(),

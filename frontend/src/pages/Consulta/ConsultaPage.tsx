@@ -2,7 +2,7 @@ import { useState } from 'react'
 import {
   Button, Card, Col, DatePicker, Form, Input,
   InputNumber, Row, Select, Space, Statistic,
-  Table, Tag, Tooltip, Typography, message,
+  Table, Tag, Tooltip, Typography, App,
 } from 'antd'
 import {
   EyeOutlined,
@@ -44,6 +44,7 @@ function tipoTag(ds: string) {
 }
 
 export default function ConsultaPage() {
+  const { message } = App.useApp()
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
   const [downloading, setDownloading] = useState<number | null>(null)

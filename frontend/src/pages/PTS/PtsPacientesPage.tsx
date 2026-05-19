@@ -9,13 +9,9 @@ import {
   Badge,
   Alert,
   Tooltip,
-  Input,
-  DatePicker,
-  Popover,
-  notification,
+  App,
 } from 'antd'
 import {
-  ReloadOutlined,
   UserOutlined,
   PhoneOutlined,
   CalendarOutlined,
@@ -23,7 +19,6 @@ import {
 } from '@ant-design/icons'
 import { 
   DatePicker as AriaDatePicker, 
-  Label, 
   Group, 
   DateInput, 
   DateSegment, 
@@ -78,6 +73,7 @@ function encaixeBadge(sn: string | null) {
 }
 
 export default function PtsPacientesPage() {
+  const { notification } = App.useApp()
   const navigate = useNavigate()
   const location = useLocation()
   const isReturning = location.state?.fromPTS
@@ -101,7 +97,7 @@ export default function PtsPacientesPage() {
     return dayjs().format('DD/MM/YYYY')
   })
   const [ptsStatus, setPtsStatus] = useState<Record<string, { id_pts: number; fl_finalizado: number } | null>>({})
-  const [calendarOpen, setCalendarOpen] = useState(false)
+
   // Anuncio acessível do resultado da busca para leitores de tela
   const [searchAnnouncement, setSearchAnnouncement] = useState('')
 
@@ -321,57 +317,7 @@ export default function PtsPacientesPage() {
     fetchAgenda(dataRef)
   }, [])
 
-  const handleDateChange = (date: Dayjs | null) => {
-    if (date && date.isValid()) {
-      setDataRef(date)
-      setInputValue(date.format('DD/MM/YYYY'))
-      setCalendarOpen(false)
-      fetchAgenda(date)
-    }
-  }
 
-  const handleDateInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let valor = e.currentTarget.value.trim()
-    
-    // Remove tudo que não for número ou barra
-    valor = valor.replace(/[^\d/]/g, '')
-    
-    // Se o usuário digitar só números, aplica a máscara automaticamente
-    if (!/\//g.test(valor) && valor.length > 0) {
-      // Remove qualquer caractere não numérico
-      const apenasNumeros = valor.replace(/\D/g, '')
-      
-      if (apenasNumeros.length > 0) {
-        // Aplica máscara DD/MM/YYYY
-        if (apenasNumeros.length <= 2) {
-          valor = apenasNumeros
-        } else if (apenasNumeros.length <= 4) {
-          valor = `${apenasNumeros.slice(0, 2)}/${apenasNumeros.slice(2)}`
-        } else if (apenasNumeros.length <= 8) {
-          valor = `${apenasNumeros.slice(0, 2)}/${apenasNumeros.slice(2, 4)}/${apenasNumeros.slice(4)}`
-        } else {
-          // Limita a 8 dígitos
-          valor = `${apenasNumeros.slice(0, 2)}/${apenasNumeros.slice(2, 4)}/${apenasNumeros.slice(4, 8)}`
-        }
-      }
-    } else if (/\//g.test(valor)) {
-      // Se já tem barras, remove e reaplica a máscara
-      const apenasNumeros = valor.replace(/\D/g, '')
-      if (apenasNumeros.length > 0) {
-        if (apenasNumeros.length <= 2) {
-          valor = apenasNumeros
-        } else if (apenasNumeros.length <= 4) {
-          valor = `${apenasNumeros.slice(0, 2)}/${apenasNumeros.slice(2)}`
-        } else if (apenasNumeros.length <= 8) {
-          valor = `${apenasNumeros.slice(0, 2)}/${apenasNumeros.slice(2, 4)}/${apenasNumeros.slice(4)}`
-        } else {
-          valor = `${apenasNumeros.slice(0, 2)}/${apenasNumeros.slice(2, 4)}/${apenasNumeros.slice(4, 8)}`
-        }
-      }
-    }
-    
-    setInputValue(valor)
-  }
 
   const handlePesquisar = () => {
     const valor = inputValue.trim()

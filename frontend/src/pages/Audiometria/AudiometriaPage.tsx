@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
   Card, Col, Row, Typography, Input, Divider, Tag, Select,
-  Button, Space, Alert, Spin, notification,
+  Button, Space, Alert, Spin, App,
 } from 'antd'
 import {
   SaveOutlined, FilePdfOutlined, CheckCircleOutlined, LoadingOutlined,
@@ -210,6 +210,7 @@ interface AudiometriaPageProps {
 }
 
 export default function AudiometriaPage({ cdPaciente, cdAtendimento }: AudiometriaPageProps) {
+  const { notification } = App.useApp()
   const [data, setData] = useState<AudiometryData>(emptyData())
   const [idExame, setIdExame] = useState<number | null>(null)
   const [status, setStatus] = useState<string | null>(null)

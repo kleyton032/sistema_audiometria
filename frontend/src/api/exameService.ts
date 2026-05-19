@@ -52,7 +52,6 @@ export interface ExameAudiometriaCreate {
   ds_class_od?: string | null; ds_class_oe?: string | null
   ds_tipo_od?: string | null; ds_tipo_oe?: string | null
   ds_conclusao?: string | null
-  ds_observacoes?: string | null
 }
 
 export interface ResultadoAudioResponse {

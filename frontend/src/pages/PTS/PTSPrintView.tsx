@@ -144,19 +144,7 @@ export default function PTSPrintView({ data, full = false }: Props) {
     { key: 'def_associada_auditiva', label: 'Auditiva' },
   ].filter(d => formValues?.[d.key]);
 
-  const programas = [
-    { key: 'prog_nao_se_aplica', label: 'Não se Aplica' },
-    { key: 'prog_glaucoma', label: 'Glaucoma Congênito' },
-    { key: 'prog_catarata', label: 'Catarata Congênita' },
-    { key: 'prog_alem_olhar', label: 'Além do Olhar' },
-    { key: 'prog_zika', label: 'ZIKA' },
-    { key: 'prog_apoio_familiar', label: 'Apoio Familiar' },
-    { key: 'prog_tea', label: 'TEA' },
-    { key: 'prog_intervencao_precoce', label: 'Intervenção Precoce' },
-    { key: 'prog_rop', label: 'ROP' },
-    { key: 'prog_pronas_tea', label: 'PRONAS TEA' },
-    { key: 'prog_pronas_doencas_raras', label: 'PRONAS Doenças Raras' },
-  ].filter(p => formValues?.[p.key]);
+
 
   // Função para renderizar os objetivos por área
   const renderObjetivos = () => {

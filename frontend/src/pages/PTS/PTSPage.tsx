@@ -16,13 +16,10 @@ import {
   Tag,
   Alert,
   InputNumber,
-  DatePicker,
-  Popconfirm,
-  message,
-  Modal,
   Result,
   Spin,
-  notification,
+  App,
+  Modal,
 } from 'antd'
 import { SaveOutlined, FileTextOutlined, PlusOutlined, DeleteOutlined, CheckCircleOutlined, CloseCircleOutlined, ArrowLeftOutlined, PrinterOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
@@ -37,21 +34,12 @@ import ObjetivosEspecialidades, {
 import type { ColumnsType } from 'antd/es/table'
 import PTSPrintView from './PTSPrintView'
 import {
-  DIAGNOSTICOS_PRINCIPAIS,
-  DIAGNOSTICOS_AREA,
   GRAU_DEFICIENCIA,
-  DIAGNOSTICOS_TERAPEUTICOS,
-  INSTRUMENTOS_AVALIACAO,
-  TERAPIAS_INDICADAS,
   TIPOS_ATENDIMENTO,
   PERIODICIDADES,
   AREAS,
   AREA_LABEL,
-  CER_GRUPOS,
-  CER_GRUPO_LABEL,
-  CER_OPCOES,
   EXTERNAL_TERAPY_OPTIONS,
-  type CerGrupo,
   type Area,
 } from './data/listas'
 import { getMe, getPTSDiagnosticosPrincipais, getPTSDiagnosticosArea, getPTSDiagnosticosTerapeuticos, getPTSEspecialidades, getPTSItensMultidisciplinar, getPTSTerapiasIndicadas, getPTSInstrumentosAvaliacao, finalizarPTS, cancelarPTS, savePTS, updatePTS, getPTSById, getCondutaInterdisciplinarStatus } from '@/api'
@@ -181,6 +169,7 @@ interface PacienteState {
 }
 
 export default function PTSPage() {
+  const { message, notification, modal } = App.useApp()
   const location  = useLocation()
   const navigate   = useNavigate()
   const paciente  = (location.state ?? {}) as Partial<PacienteState>
@@ -629,7 +618,7 @@ export default function PTSPage() {
       await cancelarPTS(idPtsSalvo, values)
       setModalCancelamento(false)
       
-      Modal.confirm({
+      modal.confirm({
         title: 'PTS Cancelado',
         content: 'O PTS foi cancelado e os itens foram removidos da fila de espera. Deseja aproveitar as informações da tela para iniciar a digitação de um novo PTS agora mesmo?',
         okText: 'Sim, aproveitar dados',

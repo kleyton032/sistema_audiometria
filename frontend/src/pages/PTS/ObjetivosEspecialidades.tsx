@@ -11,7 +11,6 @@ import {
   Space,
   Row,
   Col,
-  Badge,
   Button,
   Modal,
   Tooltip,
@@ -162,7 +161,7 @@ export function validarObjetivos(
       return null
     })
 
-    const errosAtual = dados.atual.map((item, idx) => {
+    const errosAtual: (ObjetivoErro | null)[] = dados.atual.map(() => {
       return null
     })
     let erroOutrosAtual: ObjetivoErro | null = null;
@@ -204,7 +203,7 @@ function contarPreenchidos(items: ObjetivoItem[]): number {
   return items.filter((i) => i.objetivo).length
 }
 
-function canEditEspecialidade(espKey: string, espLabel: string, user: any): boolean {
+function canEditEspecialidade(espKey: string, _espLabel: string, user: any): boolean {
   if (!user) return false
   if (user.ds_perfil === 'ADMIN') return true
 
@@ -470,7 +469,7 @@ interface Props {
   cdPaciente?: string | number | null
   vigencia?: string
   idPtsAtual?: number | null
-  erros?: Record<string, { anterior: (ObjetivoErro | null)[]; atual: (ObjetivoErro | null)[] }>
+  erros?: Record<string, { anterior: (ObjetivoErro | null)[]; atual: (ObjetivoErro | null)[]; outros_atual?: ObjetivoErro | null }>
   naoSeAplica?: Record<string, boolean>
   onNaoSeAplicaChange?: (next: Record<string, boolean>) => void
 }
