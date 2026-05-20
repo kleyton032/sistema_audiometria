@@ -175,6 +175,7 @@ class PTSReportItem(BaseModel):
     ds_vigencia: str
     dt_criacao: str
     fl_finalizado: int
+    fl_ativo: int = 1
     terapias: str | None = None
     objetivos: str | None = None
 
@@ -542,11 +543,21 @@ def stats_dashboard_pts(
     summary="Relatório detalhado de PTS para o Dashboard",
 )
 def report_dashboard_pts(
+    status: str | None = Query(default=None, description="Filtro de status: 'finalizados', 'rascunho' ou 'cancelados'"),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
     try:
-        sql = """
+        if status == "cancelados":
+            where_clause = "WHERE p.FL_ATIVO = 0"
+        elif status == "finalizados":
+            where_clause = "WHERE p.FL_ATIVO = 1 AND p.FL_FINALIZADO = 1"
+        elif status == "rascunho":
+            where_clause = "WHERE p.FL_ATIVO = 1 AND p.FL_FINALIZADO = 0"
+        else:
+            where_clause = "WHERE p.FL_ATIVO = 1"
+
+        sql = f"""
             SELECT 
                 p.ID_PTS,
                 p.CD_PACIENTE,
@@ -556,6 +567,7 @@ def report_dashboard_pts(
                 p.DS_VIGENCIA,
                 TO_CHAR(p.DT_CRIACAO, 'DD/MM/YYYY') as DT_CRIACAO,
                 p.FL_FINALIZADO,
+                p.FL_ATIVO,
                 (SELECT LISTAGG(
                     t.DS_TERAPIA || ' - ' || 
                     DECODE(t.DS_TIPO_ATENDIMENTO, '01', 'Individual', '02', 'Dupla', '03', 'Grupo 3', '04', 'Grupo 4', '05', 'Grupo 5', t.DS_TIPO_ATENDIMENTO) || ' - ' ||
@@ -565,9 +577,8 @@ def report_dashboard_pts(
                 (SELECT LISTAGG(o.DS_OBJETIVO, '; ') WITHIN GROUP (ORDER BY o.DS_ESPECIALIDADE, o.NR_ITEM) 
                  FROM FAV_TB_PTS_OBJETIVO o WHERE o.ID_PTS = p.ID_PTS AND o.DS_MOMENTO = 'atual') as OBJETIVOS
             FROM FAV_TB_PTS p
-            
             JOIN FAV_TB_SILA_USUARIOS u ON p.ID_USUARIO = u.ID_USUARIO
-            WHERE p.FL_ATIVO = 1
+            {where_clause}
             ORDER BY p.DT_CRIACAO DESC
         """
         rows = db.execute(text(sql)).fetchall()
@@ -582,8 +593,9 @@ def report_dashboard_pts(
                 "ds_vigencia": r[5],
                 "dt_criacao": r[6],
                 "fl_finalizado": r[7],
-                "terapias": r[8],
-                "objetivos": r[9]
+                "fl_ativo": r[8],
+                "terapias": r[9],
+                "objetivos": r[10]
             } for r in rows
         ]
     except Exception as e:

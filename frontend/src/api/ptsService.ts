@@ -109,8 +109,9 @@ export async function getPTSDashboardStats(): Promise<{ total_pts: number; final
   return data
 }
 
-export async function getPTSDashboardReport(): Promise<any[]> {
-  const { data } = await api.get('/pts/dashboard/report')
+export async function getPTSDashboardReport(status?: 'finalizados' | 'rascunho' | 'cancelados'): Promise<any[]> {
+  const params = status ? { status } : undefined
+  const { data } = await api.get('/pts/dashboard/report', { params })
   return data
 }
 

@@ -103,6 +103,7 @@ def pts_to_dict(pts: PTS) -> dict:
         "prog_pronas_doencas_raras": bool(pts.fl_prog_pronas_doencas_raras),
         "pts_nao_concluido":         bool(pts.fl_nao_concluido),
         "pts_vigencia":              pts.ds_vigencia,
+        "dt_criacao":                pts.dt_criacao.strftime('%d/%m/%Y %H:%M:%S') if pts.dt_criacao else None,
         # Listas
         "diagnosticos_principais": [
             r.ds_diagnostico for r in sorted(pts.diagnosticos_principais, key=lambda x: x.nr_ordem)

@@ -204,6 +204,7 @@ export default function PTSPage() {
   const [printTrigger, setPrintTrigger] = useState(0)
   const [idPtsSalvo, setIdPtsSalvo] = useState<number | null>(() => paciente.id_pts ?? null)
   const [ptsFinalizado, setPtsFinalizado] = useState(() => (paciente.fl_finalizado ?? 0) === 1)
+  const [dtDocumento, setDtDocumento] = useState<string | null>(null)
   const [idUsuarioAutor, setIdUsuarioAutor] = useState<number | null>(null)
   const [errosObjetivos, setErrosObjetivos] = useState<Record<string, { anterior: (ObjetivoErro | null)[]; atual: (ObjetivoErro | null)[] }>>({})
   const [errosTerapias, setErrosTerapias] = useState(false)
@@ -337,6 +338,7 @@ export default function PTSPage() {
     setObjetivos({ ...criarObjetivosIniciais(), ...(d.objetivos ?? {}) })
     setIdPtsSalvo(d.id_pts)
     setPtsFinalizado(d.fl_finalizado === 1)
+    if (d.dt_criacao) setDtDocumento(d.dt_criacao)
   }
 
   useEffect(() => {
@@ -1857,6 +1859,7 @@ export default function PTSPage() {
             objetivosNaoSeAplica,
             usuarioMe,
             fl_finalizado: ptsFinalizado ? 1 : 0,
+            dt_documento: dtDocumento || undefined,
           }}
         />
       </div>

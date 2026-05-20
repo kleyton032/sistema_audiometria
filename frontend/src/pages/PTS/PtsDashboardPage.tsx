@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Card, Row, Col, Statistic, Table, Tag, Typography, Button, Space, Input, Tooltip } from 'antd'
+import { Card, Row, Col, Statistic, Table, Tag, Typography, Button, Space, Input, Tooltip, Alert } from 'antd'
 import { 
   FileTextOutlined, 
   CheckCircleOutlined, 
@@ -7,7 +7,8 @@ import {
   CloseCircleOutlined,
   SearchOutlined,
   ReloadOutlined,
-  PrinterOutlined
+  PrinterOutlined,
+  FilterOutlined
 } from '@ant-design/icons'
 import { getPTSDashboardStats, getPTSDashboardReport, getPTSById } from '@/api/ptsService'
 import { Modal, Spin } from 'antd'
@@ -22,6 +23,9 @@ export default function PtsDashboardPage() {
   const [stats, setStats] = useState({ total_pts: 0, finalizados: 0, em_rascunho: 0, cancelados: 0 })
   const [report, setReport] = useState<any[]>([])
   const [searchText, setSearchText] = useState('')
+  const [filtroStatus, setFiltroStatus] = useState<'finalizados' | 'rascunho' | 'cancelados' | null>(null)
+  const [filtroData, setFiltroData] = useState<any[]>([])
+  const [filtroLoading, setFiltroLoading] = useState(false)
   
   // Estados para o Preview
   const [previewVisible, setPreviewVisible] = useState(false)
@@ -49,7 +53,35 @@ export default function PtsDashboardPage() {
     loadData()
   }, [])
 
-  const filteredData = report.filter(item => 
+  const handleFiltroStatus = async (status: 'finalizados' | 'rascunho' | 'cancelados') => {
+    if (filtroStatus === status) {
+      // Clique no mesmo card: limpa o filtro
+      setFiltroStatus(null)
+      setFiltroData([])
+      return
+    }
+    setFiltroStatus(status)
+    setFiltroLoading(true)
+    try {
+      const data = await getPTSDashboardReport(status)
+      setFiltroData(data)
+    } catch (error) {
+      console.error('Erro ao filtrar por status:', error)
+      setFiltroData([])
+    } finally {
+      setFiltroLoading(false)
+    }
+  }
+
+  const limparFiltro = () => {
+    setFiltroStatus(null)
+    setFiltroData([])
+    setSearchText('')
+  }
+
+  const dadosExibidos = filtroStatus ? filtroData : report
+
+  const filteredData = dadosExibidos.filter(item => 
     item.nm_paciente.toLowerCase().includes(searchText.toLowerCase()) ||
     item.cd_paciente.includes(searchText) ||
     item.nm_usuario.toLowerCase().includes(searchText.toLowerCase())
@@ -142,7 +174,8 @@ export default function PtsDashboardPage() {
           ds_codigo_conselho: d.usuario_nr_conselho
         },
         id_pts: record.id_pts,
-        fl_finalizado: record.fl_finalizado
+        fl_finalizado: record.fl_finalizado,
+        dt_documento: d.dt_criacao || record.dt_criacao || undefined,
       }
       
       setCurrentPtsData(printData)
@@ -252,8 +285,10 @@ export default function PtsDashboardPage() {
       dataIndex: 'fl_finalizado',
       key: 'fl_finalizado',
       width: 120,
-      render: (val: number) => (
-        val === 1 
+      render: (val: number, record: any) => (
+        record.fl_ativo === 0
+          ? <Tag color="error" icon={<CloseCircleOutlined />}>Cancelado</Tag>
+          : val === 1 
           ? <Tag color="success" icon={<CheckCircleOutlined />}>Finalizado</Tag>
           : <Tag color="processing" icon={<EditOutlined />}>Rascunho</Tag>
       )
@@ -299,9 +334,25 @@ export default function PtsDashboardPage() {
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <Card variant="borderless" style={{ borderLeft: '4px solid #52c41a' }}>
+          <Card
+            variant="borderless"
+            onClick={() => handleFiltroStatus('finalizados')}
+            style={{
+              borderLeft: '4px solid #52c41a',
+              cursor: 'pointer',
+              transition: 'box-shadow 0.2s, transform 0.1s',
+              outline: filtroStatus === 'finalizados' ? '2px solid #52c41a' : undefined,
+              boxShadow: filtroStatus === 'finalizados' ? '0 0 0 2px rgba(82,196,26,0.2)' : undefined,
+            }}
+            hoverable
+          >
             <Statistic 
-              title="Finalizados" 
+              title={
+                <Space size={4}>
+                  Finalizados
+                  <FilterOutlined style={{ fontSize: 11, color: '#8c8c8c' }} />
+                </Space>
+              }
               value={stats.finalizados} 
               prefix={<CheckCircleOutlined />} 
               valueStyle={{ color: '#52c41a' }}
@@ -310,9 +361,25 @@ export default function PtsDashboardPage() {
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <Card variant="borderless" style={{ borderLeft: '4px solid #faad14' }}>
+          <Card
+            variant="borderless"
+            onClick={() => handleFiltroStatus('rascunho')}
+            style={{
+              borderLeft: '4px solid #faad14',
+              cursor: 'pointer',
+              transition: 'box-shadow 0.2s, transform 0.1s',
+              outline: filtroStatus === 'rascunho' ? '2px solid #faad14' : undefined,
+              boxShadow: filtroStatus === 'rascunho' ? '0 0 0 2px rgba(250,173,20,0.2)' : undefined,
+            }}
+            hoverable
+          >
             <Statistic 
-              title="Em Rascunho" 
+              title={
+                <Space size={4}>
+                  Em Rascunho
+                  <FilterOutlined style={{ fontSize: 11, color: '#8c8c8c' }} />
+                </Space>
+              }
               value={stats.em_rascunho} 
               prefix={<EditOutlined />} 
               valueStyle={{ color: '#faad14' }}
@@ -321,9 +388,25 @@ export default function PtsDashboardPage() {
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <Card variant="borderless" style={{ borderLeft: '4px solid #ff4d4f' }}>
+          <Card
+            variant="borderless"
+            onClick={() => handleFiltroStatus('cancelados')}
+            style={{
+              borderLeft: '4px solid #ff4d4f',
+              cursor: 'pointer',
+              transition: 'box-shadow 0.2s, transform 0.1s',
+              outline: filtroStatus === 'cancelados' ? '2px solid #ff4d4f' : undefined,
+              boxShadow: filtroStatus === 'cancelados' ? '0 0 0 2px rgba(255,77,79,0.2)' : undefined,
+            }}
+            hoverable
+          >
             <Statistic 
-              title="Cancelados" 
+              title={
+                <Space size={4}>
+                  Cancelados
+                  <FilterOutlined style={{ fontSize: 11, color: '#8c8c8c' }} />
+                </Space>
+              }
               value={stats.cancelados} 
               prefix={<CloseCircleOutlined />} 
               valueStyle={{ color: '#ff4d4f' }}
@@ -334,6 +417,28 @@ export default function PtsDashboardPage() {
       </Row>
 
       <Card variant="borderless">
+        {filtroStatus && (
+          <Alert
+            style={{ marginBottom: 16 }}
+            type="info"
+            showIcon
+            message={
+              <Space>
+                <span>
+                  Exibindo apenas PTS&nbsp;
+                  <strong>
+                    {filtroStatus === 'finalizados' && 'Finalizados'}
+                    {filtroStatus === 'rascunho' && 'Em Rascunho'}
+                    {filtroStatus === 'cancelados' && 'Cancelados'}
+                  </strong>
+                </span>
+                <Button size="small" onClick={limparFiltro}>
+                  Ver todos
+                </Button>
+              </Space>
+            }
+          />
+        )}
         <div style={{ marginBottom: 16 }}>
           <Input
             placeholder="Buscar por paciente ou responsável..."
@@ -348,7 +453,7 @@ export default function PtsDashboardPage() {
           columns={columns} 
           dataSource={filteredData} 
           rowKey="id_pts"
-          loading={loading}
+          loading={loading || filtroLoading}
           pagination={{ pageSize: 10 }}
           size="middle"
         />

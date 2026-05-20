@@ -36,6 +36,7 @@ export interface PTSPrintData {
   objetivosNaoSeAplica?: Record<string, boolean>;
   usuarioMe: any;
   fl_finalizado?: number;
+  dt_documento?: string;
 }
 
 interface Props {
@@ -83,6 +84,7 @@ export default function PTSPrintView({ data, full = false }: Props) {
     objetivosNaoSeAplica = {},
     usuarioMe,
     fl_finalizado,
+    dt_documento,
   } = data || {};
 
   const validDiagPrincipais = (diagPrincipais || []).filter(d => d?.diagnostico);
@@ -281,7 +283,7 @@ export default function PTSPrintView({ data, full = false }: Props) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <div><Text strong>Atendimento:</Text> {paciente?.cd_atendimento || '—'}</div>
                 {paciente?.cd_paciente && <div><Text strong>Cód. Paciente:</Text> {paciente.cd_paciente}</div>}
-                <div><Text strong>Data:</Text> {dayjs().format('DD/MM/YYYY HH:mm:ss')}</div>
+                <div><Text strong>Data:</Text> {dt_documento || dayjs().format('DD/MM/YYYY HH:mm:ss')}</div>
               </div>
             </Col>
           </Row>

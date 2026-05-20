@@ -306,8 +306,8 @@ class PTS(Base):
     ds_motivo_cancelamento = Column("DS_MOTIVO_CANCELAMENTO", String(200))
     ds_detalhe_cancelamento = Column("DS_DETALHE_CANCELAMENTO", String(4000))
 
-    dt_criacao = Column("DT_CRIACAO", Date, server_default=func.now(), nullable=False)
-    dt_atualizacao = Column("DT_ATUALIZACAO", Date, onupdate=func.now())
+    dt_criacao = Column("DT_CRIACAO", DateTime, server_default=func.now(), nullable=False)
+    dt_atualizacao = Column("DT_ATUALIZACAO", DateTime, onupdate=func.now())
     fl_ativo = Column("FL_ATIVO", Integer, default=1, nullable=False)
 
     # Relacionamentos
