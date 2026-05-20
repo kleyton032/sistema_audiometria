@@ -16,14 +16,14 @@ export interface ExameAudiometriaCreate {
   od_va_6000?: number | null; od_va_8000?: number | null
   // Limiares OD — via óssea
   od_vo_500?: number | null; od_vo_1000?: number | null
-  od_vo_2000?: number | null; od_vo_4000?: number | null
+  od_vo_2000?: number | null; od_vo_3000?: number | null; od_vo_4000?: number | null
   // Limiares OE — via aérea
   oe_va_250?: number | null; oe_va_500?: number | null; oe_va_1000?: number | null
   oe_va_2000?: number | null; oe_va_3000?: number | null; oe_va_4000?: number | null
   oe_va_6000?: number | null; oe_va_8000?: number | null
   // Limiares OE — via óssea
   oe_vo_500?: number | null; oe_vo_1000?: number | null
-  oe_vo_2000?: number | null; oe_vo_4000?: number | null
+  oe_vo_2000?: number | null; oe_vo_3000?: number | null; oe_vo_4000?: number | null
   // Logoaudiometria
   od_lrf?: number | null; od_iprf_mon?: number | null; od_iprf_int?: number | null
   od_iprf_dis?: number | null; od_iprf_dis_db?: number | null
@@ -42,11 +42,11 @@ export interface ExameAudiometriaCreate {
   od_va_250_nr?: number; od_va_500_nr?: number; od_va_1000_nr?: number
   od_va_2000_nr?: number; od_va_3000_nr?: number; od_va_4000_nr?: number
   od_va_6000_nr?: number; od_va_8000_nr?: number
-  od_vo_500_nr?: number; od_vo_1000_nr?: number; od_vo_2000_nr?: number; od_vo_4000_nr?: number
+  od_vo_500_nr?: number; od_vo_1000_nr?: number; od_vo_2000_nr?: number; od_vo_3000_nr?: number; od_vo_4000_nr?: number
   oe_va_250_nr?: number; oe_va_500_nr?: number; oe_va_1000_nr?: number
   oe_va_2000_nr?: number; oe_va_3000_nr?: number; oe_va_4000_nr?: number
   oe_va_6000_nr?: number; oe_va_8000_nr?: number
-  oe_vo_500_nr?: number; oe_vo_1000_nr?: number; oe_vo_2000_nr?: number; oe_vo_4000_nr?: number
+  oe_vo_500_nr?: number; oe_vo_1000_nr?: number; oe_vo_2000_nr?: number; oe_vo_3000_nr?: number; oe_vo_4000_nr?: number
   // Classificação
   nr_media_od?: number | null; nr_media_oe?: number | null
   ds_class_od?: string | null; ds_class_oe?: string | null
@@ -61,12 +61,12 @@ export interface ResultadoAudioResponse {
   od_va_2000?: number | null; od_va_3000?: number | null; od_va_4000?: number | null
   od_va_6000?: number | null; od_va_8000?: number | null
   od_vo_500?: number | null; od_vo_1000?: number | null
-  od_vo_2000?: number | null; od_vo_4000?: number | null
+  od_vo_2000?: number | null; od_vo_3000?: number | null; od_vo_4000?: number | null
   oe_va_250?: number | null; oe_va_500?: number | null; oe_va_1000?: number | null
   oe_va_2000?: number | null; oe_va_3000?: number | null; oe_va_4000?: number | null
   oe_va_6000?: number | null; oe_va_8000?: number | null
   oe_vo_500?: number | null; oe_vo_1000?: number | null
-  oe_vo_2000?: number | null; oe_vo_4000?: number | null
+  oe_vo_2000?: number | null; oe_vo_3000?: number | null; oe_vo_4000?: number | null
   od_lrf?: number | null; od_iprf_mon?: number | null; od_iprf_int?: number | null
   od_iprf_dis?: number | null; od_iprf_dis_db?: number | null
   od_iprf_tri?: number | null; od_iprf_tri_db?: number | null
@@ -82,11 +82,11 @@ export interface ResultadoAudioResponse {
   od_va_250_nr?: number; od_va_500_nr?: number; od_va_1000_nr?: number
   od_va_2000_nr?: number; od_va_3000_nr?: number; od_va_4000_nr?: number
   od_va_6000_nr?: number; od_va_8000_nr?: number
-  od_vo_500_nr?: number; od_vo_1000_nr?: number; od_vo_2000_nr?: number; od_vo_4000_nr?: number
+  od_vo_500_nr?: number; od_vo_1000_nr?: number; od_vo_2000_nr?: number; od_vo_3000_nr?: number; od_vo_4000_nr?: number
   oe_va_250_nr?: number; oe_va_500_nr?: number; oe_va_1000_nr?: number
   oe_va_2000_nr?: number; oe_va_3000_nr?: number; oe_va_4000_nr?: number
   oe_va_6000_nr?: number; oe_va_8000_nr?: number
-  oe_vo_500_nr?: number; oe_vo_1000_nr?: number; oe_vo_2000_nr?: number; oe_vo_4000_nr?: number
+  oe_vo_500_nr?: number; oe_vo_1000_nr?: number; oe_vo_2000_nr?: number; oe_vo_3000_nr?: number; oe_vo_4000_nr?: number
   nr_media_od?: number | null; nr_media_oe?: number | null
   ds_class_od?: string | null; ds_class_oe?: string | null
   ds_tipo_od?: string | null; ds_tipo_oe?: string | null

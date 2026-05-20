@@ -28,6 +28,7 @@ class ExameAudiometriaCreate(BaseModel):
     od_vo_500:  Optional[float] = None
     od_vo_1000: Optional[float] = None
     od_vo_2000: Optional[float] = None
+    od_vo_3000: Optional[float] = None
     od_vo_4000: Optional[float] = None
 
     # Limiares OE — via aérea
@@ -44,6 +45,7 @@ class ExameAudiometriaCreate(BaseModel):
     oe_vo_500:  Optional[float] = None
     oe_vo_1000: Optional[float] = None
     oe_vo_2000: Optional[float] = None
+    oe_vo_3000: Optional[float] = None
     oe_vo_4000: Optional[float] = None
 
     # Logoaudiometria
@@ -79,11 +81,11 @@ class ExameAudiometriaCreate(BaseModel):
     od_va_250_nr: int = 0;  od_va_500_nr: int = 0;  od_va_1000_nr: int = 0
     od_va_2000_nr: int = 0; od_va_3000_nr: int = 0; od_va_4000_nr: int = 0
     od_va_6000_nr: int = 0; od_va_8000_nr: int = 0
-    od_vo_500_nr: int = 0;  od_vo_1000_nr: int = 0; od_vo_2000_nr: int = 0; od_vo_4000_nr: int = 0
+    od_vo_500_nr: int = 0;  od_vo_1000_nr: int = 0; od_vo_2000_nr: int = 0; od_vo_3000_nr: int = 0; od_vo_4000_nr: int = 0
     oe_va_250_nr: int = 0;  oe_va_500_nr: int = 0;  oe_va_1000_nr: int = 0
     oe_va_2000_nr: int = 0; oe_va_3000_nr: int = 0; oe_va_4000_nr: int = 0
     oe_va_6000_nr: int = 0; oe_va_8000_nr: int = 0
-    oe_vo_500_nr: int = 0;  oe_vo_1000_nr: int = 0; oe_vo_2000_nr: int = 0; oe_vo_4000_nr: int = 0
+    oe_vo_500_nr: int = 0;  oe_vo_1000_nr: int = 0; oe_vo_2000_nr: int = 0; oe_vo_3000_nr: int = 0; oe_vo_4000_nr: int = 0
 
     # Classificação
     nr_media_od: Optional[float] = None
@@ -113,6 +115,7 @@ class ResultadoAudioResponse(BaseModel):
     od_vo_500:  Optional[float] = None
     od_vo_1000: Optional[float] = None
     od_vo_2000: Optional[float] = None
+    od_vo_3000: Optional[float] = None
     od_vo_4000: Optional[float] = None
 
     oe_va_250:  Optional[float] = None
@@ -127,6 +130,7 @@ class ResultadoAudioResponse(BaseModel):
     oe_vo_500:  Optional[float] = None
     oe_vo_1000: Optional[float] = None
     oe_vo_2000: Optional[float] = None
+    oe_vo_3000: Optional[float] = None
     oe_vo_4000: Optional[float] = None
 
     od_lrf:         Optional[float] = None
@@ -161,11 +165,11 @@ class ResultadoAudioResponse(BaseModel):
     od_va_250_nr: int = 0;  od_va_500_nr: int = 0;  od_va_1000_nr: int = 0
     od_va_2000_nr: int = 0; od_va_3000_nr: int = 0; od_va_4000_nr: int = 0
     od_va_6000_nr: int = 0; od_va_8000_nr: int = 0
-    od_vo_500_nr: int = 0;  od_vo_1000_nr: int = 0; od_vo_2000_nr: int = 0; od_vo_4000_nr: int = 0
+    od_vo_500_nr: int = 0;  od_vo_1000_nr: int = 0; od_vo_2000_nr: int = 0; od_vo_3000_nr: int = 0; od_vo_4000_nr: int = 0
     oe_va_250_nr: int = 0;  oe_va_500_nr: int = 0;  oe_va_1000_nr: int = 0
     oe_va_2000_nr: int = 0; oe_va_3000_nr: int = 0; oe_va_4000_nr: int = 0
     oe_va_6000_nr: int = 0; oe_va_8000_nr: int = 0
-    oe_vo_500_nr: int = 0;  oe_vo_1000_nr: int = 0; oe_vo_2000_nr: int = 0; oe_vo_4000_nr: int = 0
+    oe_vo_500_nr: int = 0;  oe_vo_1000_nr: int = 0; oe_vo_2000_nr: int = 0; oe_vo_3000_nr: int = 0; oe_vo_4000_nr: int = 0
 
     nr_media_od: Optional[float] = None
     nr_media_oe: Optional[float] = None

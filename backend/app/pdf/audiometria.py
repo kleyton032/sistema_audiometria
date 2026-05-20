@@ -36,7 +36,7 @@ def _audiograma_base64(resultado, exame=None) -> str:
     fig.suptitle("Audiograma Tonal", fontsize=11, fontweight="bold")
 
     freqs_va = [250, 500, 1000, 2000, 3000, 4000, 6000, 8000]
-    freqs_vo = [500, 1000, 2000, 4000]
+    freqs_vo = [500, 1000, 2000, 3000, 4000]
     x_va = list(range(len(freqs_va)))
     x_vo = [freqs_va.index(f) for f in freqs_vo]
     xlabels = ["250", "500", "1k", "2k", "3k", "4k", "6k", "8k"]
@@ -176,9 +176,17 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str) -> str:
         cells = "".join(f"<td>{_fmt(getattr(r, f))}</td>" for f in fields)
         return f"<tr><th>{label}</th>{cells}</tr>"
 
-    def row_vo(label, *fields):
-        cells = "".join(f"<td>{_fmt(getattr(r, f))}</td>" for f in fields)
-        return f"<tr><th>{label}</th><td>—</td>{cells}</tr>"
+    def row_vo(label, f500, f1000, f2000, f3000, f4000):
+        cells = (
+            "<td>—</td>"
+            f"<td>{_fmt(getattr(r, f500))}</td>"
+            f"<td>{_fmt(getattr(r, f1000))}</td>"
+            f"<td>{_fmt(getattr(r, f2000))}</td>"
+            f"<td>{_fmt(getattr(r, f3000))}</td>"
+            f"<td>{_fmt(getattr(r, f4000))}</td>"
+            "<td>—</td><td>—</td>"
+        )
+        return f"<tr><th>{label}</th>{cells}</tr>"
 
     return f"""
 <!DOCTYPE html>
@@ -266,11 +274,11 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str) -> str:
     <tr><td colspan="9" style="background:#fff3f3; font-weight:bold; text-align:left; padding-left:8px;">
       <span class="tag tag-od">OD — Orelha Direita</span></td></tr>
     {row_va("Aérea", "od_va_250","od_va_500","od_va_1000","od_va_2000","od_va_3000","od_va_4000","od_va_6000","od_va_8000")}
-    {row_vo("Óssea", "od_vo_500","od_vo_1000","od_vo_2000","od_vo_4000")}
+    {row_vo("Óssea", "od_vo_500","od_vo_1000","od_vo_2000","od_vo_3000","od_vo_4000")}
     <tr><td colspan="9" style="background:#f0f5ff; font-weight:bold; text-align:left; padding-left:8px;">
       <span class="tag tag-oe">OE — Orelha Esquerda</span></td></tr>
     {row_va("Aérea", "oe_va_250","oe_va_500","oe_va_1000","oe_va_2000","oe_va_3000","oe_va_4000","oe_va_6000","oe_va_8000")}
-    {row_vo("Óssea", "oe_vo_500","oe_vo_1000","oe_vo_2000","oe_vo_4000")}
+    {row_vo("Óssea", "oe_vo_500","oe_vo_1000","oe_vo_2000","oe_vo_3000","oe_vo_4000")}
   </tbody>
 </table>
 

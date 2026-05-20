@@ -124,11 +124,11 @@ export default function ThresholdInput({ label, color, thresholds, onChange, dis
           Via Óssea
         </Text>
         <Row gutter={[8, 8]}>
-          {([500, 1000, 2000, 4000] as const).map((freq) => {
+          {([500, 1000, 2000, 3000, 4000] as const).map((freq) => {
             const value = thresholds.boneConduction[freq]
             const isNR = !!(thresholds.boneNR?.[freq])
             return (
-              <Col xs={6} sm={6} md={6} key={`bone-${freq}`} style={{ minWidth: 80 }}>
+              <Col xs={8} sm={6} md={4} key={`bone-${freq}`} style={{ minWidth: 80 }}>
                 <div>
                   <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 4 }}>
                     {freq >= 1000 ? freq / 1000 + 'k' : freq} Hz

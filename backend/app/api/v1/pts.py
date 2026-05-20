@@ -42,7 +42,7 @@ def listar_diagnosticos_principais(
         rows = db.execute(
             text(
                 """
-                SELECT e.ds_diagnostico
+                SELECT DISTINCT e.ds_diagnostico
                 FROM TB_FAV_DIAGNOSTICO_CERIV e
                 WHERE e.id_especialidade = 1
                 ORDER BY
@@ -367,7 +367,7 @@ def listar_diagnosticos_area(
         rows = db.execute(
             text(
                 """
-                SELECT e.ds_diagnostico
+                SELECT DISTINCT e.ds_diagnostico
                 FROM TB_FAV_DIAGNOSTICO_CERIV e
                 WHERE e.id_especialidade = :id_esp
                 ORDER BY

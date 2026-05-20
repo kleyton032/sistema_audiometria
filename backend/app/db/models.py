@@ -86,6 +86,7 @@ class ResultadoAudio(Base):
     od_vo_500  = Column("OD_VO_500",  Numeric(5, 1))
     od_vo_1000 = Column("OD_VO_1000", Numeric(5, 1))
     od_vo_2000 = Column("OD_VO_2000", Numeric(5, 1))
+    od_vo_3000 = Column("OD_VO_3000", Numeric(5, 1))
     od_vo_4000 = Column("OD_VO_4000", Numeric(5, 1))
 
     # Via aérea OE
@@ -102,6 +103,7 @@ class ResultadoAudio(Base):
     oe_vo_500  = Column("OE_VO_500",  Numeric(5, 1))
     oe_vo_1000 = Column("OE_VO_1000", Numeric(5, 1))
     oe_vo_2000 = Column("OE_VO_2000", Numeric(5, 1))
+    oe_vo_3000 = Column("OE_VO_3000", Numeric(5, 1))
     oe_vo_4000 = Column("OE_VO_4000", Numeric(5, 1))
 
     # Logoaudiometria
@@ -146,6 +148,7 @@ class ResultadoAudio(Base):
     od_vo_500_nr  = Column("OD_VO_500_NR",  Integer, default=0)
     od_vo_1000_nr = Column("OD_VO_1000_NR", Integer, default=0)
     od_vo_2000_nr = Column("OD_VO_2000_NR", Integer, default=0)
+    od_vo_3000_nr = Column("OD_VO_3000_NR", Integer, default=0)
     od_vo_4000_nr = Column("OD_VO_4000_NR", Integer, default=0)
     # VA OE
     oe_va_250_nr  = Column("OE_VA_250_NR",  Integer, default=0)
@@ -160,6 +163,7 @@ class ResultadoAudio(Base):
     oe_vo_500_nr  = Column("OE_VO_500_NR",  Integer, default=0)
     oe_vo_1000_nr = Column("OE_VO_1000_NR", Integer, default=0)
     oe_vo_2000_nr = Column("OE_VO_2000_NR", Integer, default=0)
+    oe_vo_3000_nr = Column("OE_VO_3000_NR", Integer, default=0)
     oe_vo_4000_nr = Column("OE_VO_4000_NR", Integer, default=0)
 
     # Classificação

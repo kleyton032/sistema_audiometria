@@ -58,7 +58,7 @@ function resultadoToData(r: ResultadoAudioResponse): AudiometryData {
       },
       boneConduction: {
         500: r.od_vo_500 ?? undefined, 1000: r.od_vo_1000 ?? undefined,
-        2000: r.od_vo_2000 ?? undefined, 4000: r.od_vo_4000 ?? undefined,
+        2000: r.od_vo_2000 ?? undefined, 3000: r.od_vo_3000 ?? undefined, 4000: r.od_vo_4000 ?? undefined,
       },
       airNR: {
         250: !!(r.od_va_250_nr), 500: !!(r.od_va_500_nr), 1000: !!(r.od_va_1000_nr),
@@ -67,7 +67,7 @@ function resultadoToData(r: ResultadoAudioResponse): AudiometryData {
       },
       boneNR: {
         500: !!(r.od_vo_500_nr), 1000: !!(r.od_vo_1000_nr),
-        2000: !!(r.od_vo_2000_nr), 4000: !!(r.od_vo_4000_nr),
+        2000: !!(r.od_vo_2000_nr), 3000: !!(r.od_vo_3000_nr), 4000: !!(r.od_vo_4000_nr),
       },
     },
     leftEar: {
@@ -79,7 +79,7 @@ function resultadoToData(r: ResultadoAudioResponse): AudiometryData {
       },
       boneConduction: {
         500: r.oe_vo_500 ?? undefined, 1000: r.oe_vo_1000 ?? undefined,
-        2000: r.oe_vo_2000 ?? undefined, 4000: r.oe_vo_4000 ?? undefined,
+        2000: r.oe_vo_2000 ?? undefined, 3000: r.oe_vo_3000 ?? undefined, 4000: r.oe_vo_4000 ?? undefined,
       },
       airNR: {
         250: !!(r.oe_va_250_nr), 500: !!(r.oe_va_500_nr), 1000: !!(r.oe_va_1000_nr),
@@ -88,7 +88,7 @@ function resultadoToData(r: ResultadoAudioResponse): AudiometryData {
       },
       boneNR: {
         500: !!(r.oe_vo_500_nr), 1000: !!(r.oe_vo_1000_nr),
-        2000: !!(r.oe_vo_2000_nr), 4000: !!(r.oe_vo_4000_nr),
+        2000: !!(r.oe_vo_2000_nr), 3000: !!(r.oe_vo_3000_nr), 4000: !!(r.oe_vo_4000_nr),
       },
     },
     speechRight: {
@@ -145,13 +145,13 @@ function dataToPayload(
     od_va_3000: ac[3000] ?? null, od_va_4000: ac[4000] ?? null,
     od_va_6000: ac[6000] ?? null, od_va_8000: ac[8000] ?? null,
     od_vo_500: bc[500] ?? null, od_vo_1000: bc[1000] ?? null,
-    od_vo_2000: bc[2000] ?? null, od_vo_4000: bc[4000] ?? null,
+    od_vo_2000: bc[2000] ?? null, od_vo_3000: bc[3000] ?? null, od_vo_4000: bc[4000] ?? null,
     oe_va_250: acL[250] ?? null, oe_va_500: acL[500] ?? null,
     oe_va_1000: acL[1000] ?? null, oe_va_2000: acL[2000] ?? null,
     oe_va_3000: acL[3000] ?? null, oe_va_4000: acL[4000] ?? null,
     oe_va_6000: acL[6000] ?? null, oe_va_8000: acL[8000] ?? null,
     oe_vo_500: bcL[500] ?? null, oe_vo_1000: bcL[1000] ?? null,
-    oe_vo_2000: bcL[2000] ?? null, oe_vo_4000: bcL[4000] ?? null,
+    oe_vo_2000: bcL[2000] ?? null, oe_vo_3000: bcL[3000] ?? null, oe_vo_4000: bcL[4000] ?? null,
     od_lrf: data.speechRight.srt, od_iprf_mon: data.speechRight.irf,
     od_iprf_int: data.speechRight.irfIntensity,
     od_iprf_dis: data.speechRight.irfDis, od_iprf_dis_db: data.speechRight.irfDisDb,
@@ -177,6 +177,7 @@ function dataToPayload(
     od_vo_500_nr: bc[500] != null && data.rightEar.boneNR?.[500] ? 1 : 0,
     od_vo_1000_nr: bc[1000] != null && data.rightEar.boneNR?.[1000] ? 1 : 0,
     od_vo_2000_nr: bc[2000] != null && data.rightEar.boneNR?.[2000] ? 1 : 0,
+    od_vo_3000_nr: bc[3000] != null && data.rightEar.boneNR?.[3000] ? 1 : 0,
     od_vo_4000_nr: bc[4000] != null && data.rightEar.boneNR?.[4000] ? 1 : 0,
     oe_va_250_nr: acL[250] != null && data.leftEar.airNR?.[250] ? 1 : 0,
     oe_va_500_nr: acL[500] != null && data.leftEar.airNR?.[500] ? 1 : 0,
@@ -189,6 +190,7 @@ function dataToPayload(
     oe_vo_500_nr: bcL[500] != null && data.leftEar.boneNR?.[500] ? 1 : 0,
     oe_vo_1000_nr: bcL[1000] != null && data.leftEar.boneNR?.[1000] ? 1 : 0,
     oe_vo_2000_nr: bcL[2000] != null && data.leftEar.boneNR?.[2000] ? 1 : 0,
+    oe_vo_3000_nr: bcL[3000] != null && data.leftEar.boneNR?.[3000] ? 1 : 0,
     oe_vo_4000_nr: bcL[4000] != null && data.leftEar.boneNR?.[4000] ? 1 : 0,
     nr_media_od: ptaRight, nr_media_oe: ptaLeft,
     ds_class_od: data.hearingLossGrade ?? null,
