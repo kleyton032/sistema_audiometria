@@ -17,8 +17,10 @@ import { useNavigate, useLocation, Outlet } from 'react-router-dom'
 import { useAuth } from '@/contexts'
 import { Sidebar } from './Sidebar/Sidebar'
 import { MenuRole } from '../config/menuConfig'
+import { AppHeader } from './Header/AppHeader'
+import { UserProfileDrawer } from './Profile/UserProfileDrawer'
 
-const { Header, Sider, Content } = AntLayout
+const { Sider, Content } = AntLayout
 const { Text, Title } = Typography
 
 // nm_tip_presta do MV para Fonoaudiólogo (cd_tip_presta = 6)
@@ -161,34 +163,13 @@ export default function AppLayout() {
 
 
       <AntLayout>
-        <Header
-          role="banner"
-          aria-label="Barra superior de navegação"
-          style={{
-            padding: '0 24px',
-            background: themeToken.colorBgContainer,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            borderBottom: '1px solid #f0f0f0',
-          }}
-        >
-          <Button
-            type="text"
-            icon={collapsed ? <MenuUnfoldOutlined aria-hidden="true" /> : <MenuFoldOutlined aria-hidden="true" />}
-            onClick={() => setCollapsed(!collapsed)}
-            aria-label={collapsed ? 'Expandir menu lateral' : 'Recolher menu lateral'}
-            aria-expanded={!collapsed}
-          />
-          <Button 
-            type="text" 
-            icon={<LogoutOutlined aria-hidden="true" />} 
-            onClick={handleLogout} 
-            aria-label="Sair do sistema"
-          >
-            Sair
-          </Button>
-        </Header>
+        <AppHeader 
+          collapsed={collapsed}
+          onToggleSidebar={() => setCollapsed(!collapsed)}
+          usuario={usuario}
+          onOpenProfile={() => setProfileVisible(true)}
+          onLogout={handleLogout}
+        />
         <RouteAnnouncer />
         <Content
           id="main-content"
@@ -206,64 +187,11 @@ export default function AppLayout() {
         </Content>
       </AntLayout>
 
-      {/* Modal de Perfil do Usuário */}
-      <Modal
-        title={
-          <Space>
-            <UserOutlined />
-            <span>Perfil do Profissional</span>
-          </Space>
-        }
+      <UserProfileDrawer 
         open={profileVisible}
-        onCancel={() => setProfileVisible(false)}
-        footer={[
-          <Button key="close" type="primary" onClick={() => setProfileVisible(false)}>
-            Fechar
-          </Button>
-        ]}
-        width={600}
-        style={{ top: 20 }}
-      >
-        {usuario && (
-          <div style={{ padding: '4px 0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
-              <Avatar size={64} icon={<UserOutlined />} style={{ background: '#667eea' }} />
-              <div>
-                <Title level={4} style={{ margin: 0 }}>{usuario.nm_usuario}</Title>
-                <Text type="secondary">{usuario.ds_email}</Text>
-                <div style={{ marginTop: 4 }}>
-                  <Tag color={usuario.ds_perfil === 'ADMIN' ? 'gold' : 'blue'}>
-                    {usuario.ds_perfil}
-                  </Tag>
-                </div>
-              </div>
-            </div>
-
-            <Divider orientation="left" style={{ margin: '12px 0' }}>Informações Profissionais</Divider>
-            
-            <Descriptions bordered column={1} size="small" styles={{ label: { width: 160, fontWeight: 'bold', background: '#fafafa' } }}>
-              <Descriptions.Item label="Login">{usuario.nm_login}</Descriptions.Item>
-              <Descriptions.Item label="Tipo de Prestador">
-                {usuario.nm_tip_presta || 'Não informado'}
-              </Descriptions.Item>
-              <Descriptions.Item label="Conselho">
-                {usuario.ds_conselho || usuario.nr_conselho ? (
-                  <Space>
-                    <Tag color="cyan">{usuario.ds_conselho || 'Conselho'}</Tag>
-                    <Text strong>{usuario.ds_codigo_conselho || usuario.nr_conselho}</Text>
-                  </Space>
-                ) : '—'}
-              </Descriptions.Item>
-              <Descriptions.Item label="Especialidade">
-                {usuario.ds_especialidade || '—'}
-              </Descriptions.Item>
-              <Descriptions.Item label="Status">
-                <Badge status={usuario.fl_ativo === 1 ? 'success' : 'error'} text={usuario.fl_ativo === 1 ? 'Ativo' : 'Inativo'} />
-              </Descriptions.Item>
-            </Descriptions>
-          </div>
-        )}
-      </Modal>
+        onClose={() => setProfileVisible(false)}
+        usuario={usuario}
+      />
 
       <style>{`
         .skip-link:focus {

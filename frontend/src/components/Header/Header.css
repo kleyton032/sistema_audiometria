@@ -1,0 +1,112 @@
+/* frontend/src/components/Header/Header.css */
+
+.HeaderAvatarButton {
+  all: unset;
+  border-radius: 100%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.HeaderAvatarButton:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.4);
+}
+
+.HeaderAvatarButton:focus-visible {
+  outline: 2px solid #667eea;
+  outline-offset: 2px;
+}
+
+/* Radix Dropdown Menu */
+.DropdownMenuContent {
+  min-width: 220px;
+  background-color: white;
+  border-radius: 6px;
+  padding: 5px;
+  box-shadow: 0px 10px 38px -10px rgba(22, 23, 24, 0.35), 0px 10px 20px -15px rgba(22, 23, 24, 0.2);
+  animation-duration: 400ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity;
+  z-index: 1050;
+}
+
+.DropdownMenuContent[data-state='open'][data-side='top'] {
+  animation-name: slideDownAndFade;
+}
+.DropdownMenuContent[data-state='open'][data-side='right'] {
+  animation-name: slideLeftAndFade;
+}
+.DropdownMenuContent[data-state='open'][data-side='bottom'] {
+  animation-name: slideUpAndFade;
+}
+.DropdownMenuContent[data-state='open'][data-side='left'] {
+  animation-name: slideRightAndFade;
+}
+
+.DropdownUserInfo {
+  padding: 12px 16px;
+}
+
+.DropdownMenuItem {
+  font-size: 14px;
+  line-height: 1;
+  color: #374151;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  position: relative;
+  user-select: none;
+  outline: none;
+  cursor: pointer;
+}
+
+.DropdownMenuItem:hover,
+.DropdownMenuItem[data-highlighted] {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+.DropdownMenuItem.danger {
+  color: #dc2626;
+}
+
+.DropdownMenuItem.danger:hover,
+.DropdownMenuItem.danger[data-highlighted] {
+  background-color: #fef2f2;
+  color: #991b1b;
+}
+
+.DropdownMenuSeparator {
+  height: 1px;
+  background-color: #e5e7eb;
+  margin: 5px;
+}
+
+.DropdownMenuArrow {
+  fill: white;
+}
+
+@keyframes slideUpAndFade {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideRightAndFade {
+  from { opacity: 0; transform: translateX(-2px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideDownAndFade {
+  from { opacity: 0; transform: translateY(-2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideLeftAndFade {
+  from { opacity: 0; transform: translateX(2px); }
+  to { opacity: 1; transform: translateX(0); }
+}
