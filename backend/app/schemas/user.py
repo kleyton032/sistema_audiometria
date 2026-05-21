@@ -4,7 +4,7 @@ from typing import Literal, Optional
 from datetime import datetime
 
 
-PerfilLiteral = Literal["ADMIN", "AUDIÓLOGO", "OPERADOR"]
+PerfilLiteral = Literal["ADMIN", "SUPERVISOR", "COORDENADOR", "OPERADOR"]
 
 
 class PrestadorMVInfo(BaseModel):
@@ -27,7 +27,7 @@ class UserCreate(BaseModel):
     cd_usuario_mv: str
     ds_email:      Optional[str] = None
     ds_senha:      str
-    ds_perfil:     PerfilLiteral = "OPERADOR"
+    ds_perfil:     PerfilLiteral = "OPERADOR"  # type: ignore[assignment]
 
     @field_validator("ds_senha")
     @classmethod

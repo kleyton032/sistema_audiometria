@@ -8,6 +8,7 @@ interface Props {
   color: string
   data: TympanogramData
   onChange: (updated: TympanogramData) => void
+  disabled?: boolean
 }
 
 const typeOptions: { value: TympanogramType; label: string }[] = [
@@ -15,10 +16,10 @@ const typeOptions: { value: TympanogramType; label: string }[] = [
   { value: 'As', label: 'Tipo As (Rigidez)' },
   { value: 'Ad', label: 'Tipo Ad (Hipermobilidade)' },
   { value: 'B', label: 'Tipo B (Efusão/Perfuração)' },
-  { value: 'C', label: 'Tipo C (Disfunção Tubária)' },
+  { value: 'C', label: 'Tipo C (Disfunção Tubarária)' },
 ]
 
-export default function TympanogramInput({ label, color, data, onChange }: Props) {
+export default function TympanogramInput({ label, color, data, onChange, disabled }: Props) {
   return (
     <div style={{ marginBottom: 16 }}>
       <Text strong style={{ color, fontSize: 16, marginBottom: 12, display: 'block' }}>
@@ -28,6 +29,7 @@ export default function TympanogramInput({ label, color, data, onChange }: Props
         <Col xs={24} sm={12}>
           <Text type="secondary">Tipo de Curva</Text>
           <Select
+            disabled={disabled}
             value={data.type}
             onChange={(v) => onChange({ ...data, type: v })}
             options={typeOptions}
@@ -39,6 +41,7 @@ export default function TympanogramInput({ label, color, data, onChange }: Props
         <Col xs={24} sm={12}>
           <Text type="secondary">Pressão do Pico (daPa)</Text>
           <InputNumber
+            disabled={disabled}
             value={data.peakPressure}
             onChange={(v) => onChange({ ...data, peakPressure: v })}
             min={-400}
@@ -51,6 +54,7 @@ export default function TympanogramInput({ label, color, data, onChange }: Props
         <Col xs={24} sm={12}>
           <Text type="secondary">Complacência Estática (ml)</Text>
           <InputNumber
+            disabled={disabled}
             value={data.staticCompliance}
             onChange={(v) => onChange({ ...data, staticCompliance: v })}
             min={0}
@@ -63,6 +67,7 @@ export default function TympanogramInput({ label, color, data, onChange }: Props
         <Col xs={24} sm={12}>
           <Text type="secondary">Volume do Canal (ml)</Text>
           <InputNumber
+            disabled={disabled}
             value={data.earCanalVolume}
             onChange={(v) => onChange({ ...data, earCanalVolume: v })}
             min={0}
@@ -75,6 +80,7 @@ export default function TympanogramInput({ label, color, data, onChange }: Props
         <Col xs={24} sm={12}>
           <Text type="secondary">Gradiente</Text>
           <InputNumber
+            disabled={disabled}
             value={data.gradient}
             onChange={(v) => onChange({ ...data, gradient: v })}
             min={0}

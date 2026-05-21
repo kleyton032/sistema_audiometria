@@ -146,7 +146,12 @@ _RESULTADO_FIELDS = [
 
 
 def get_exame_por_id(db: Session, id_exame: int) -> Optional[Exame]:
-    return db.query(Exame).filter(Exame.id_exame == id_exame).first()
+    exame = db.query(Exame).filter(Exame.id_exame == id_exame).first()
+    if exame:
+        sql = text("SELECT NM_PACIENTE FROM dbamv.PACIENTE WHERE CD_PACIENTE = :id")
+        nm = db.execute(sql, {"id": exame.id_paciente}).scalar()
+        exame.nm_paciente = nm
+    return exame
 
 
 def get_exame_por_atendimento(db: Session, cd_atendimento: int) -> Optional[Exame]:

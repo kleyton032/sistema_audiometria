@@ -4,7 +4,7 @@ import {
   Button, Space, Alert, Spin, App,
 } from 'antd'
 import {
-  SaveOutlined, FilePdfOutlined, CheckCircleOutlined, LoadingOutlined,
+  SaveOutlined, FilePdfOutlined, CheckCircleOutlined, LoadingOutlined, EditOutlined, CloseOutlined,
 } from '@ant-design/icons'
 import AudiogramChart from './AudiogramChart'
 import ThresholdInput from './ThresholdInput'
@@ -15,6 +15,7 @@ import {
   buscarExamePorAtendimento,
   criarExameAudiometria,
   atualizarExameAudiometria,
+  alterarExameFinalizadoAudiometria,
   finalizarExame,
   gerarLaudoPdf,
   type ResultadoAudioResponse,
@@ -219,12 +220,15 @@ export default function AudiometriaPage({ cdPaciente, cdAtendimento }: Audiometr
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [generatingPdf, setGeneratingPdf] = useState(false)
+  const [editMode, setEditMode] = useState(false)
+  const [dataOriginal, setDataOriginal] = useState<AudiometryData>(emptyData())
 
   const ptaRight = calculatePTA(data.rightEar)
   const ptaLeft = calculatePTA(data.leftEar)
   const gradeRight = ptaRight !== null ? classifyHearingLoss(ptaRight) : null
   const gradeLeft = ptaLeft !== null ? classifyHearingLoss(ptaLeft) : null
   const isFinalizado = status === 'FINALIZADO'
+  const isDisabled = isFinalizado && !editMode
 
   // Carrega exame existente ao abrir
   useEffect(() => {
@@ -233,7 +237,9 @@ export default function AudiometriaPage({ cdPaciente, cdAtendimento }: Audiometr
     buscarExamePorAtendimento(cdAtendimento)
       .then((exame) => {
         if (exame?.resultado_audio) {
-          setData(resultadoToData(exame.resultado_audio))
+          const dadosCarregados = resultadoToData(exame.resultado_audio)
+          setData(dadosCarregados)
+          setDataOriginal(dadosCarregados)
           setIdExame(exame.id_exame)
           setStatus(exame.ds_status)
         }
@@ -252,13 +258,22 @@ export default function AudiometriaPage({ cdPaciente, cdAtendimento }: Audiometr
       const payload = dataToPayload(data, cdPaciente, cdAtendimento ?? null, ptaRight, ptaLeft)
       let exame
       if (idExame) {
-        exame = await atualizarExameAudiometria(idExame, payload)
+        // Se em modo de edição de exame finalizado, use a função de alteração
+        if (editMode && isFinalizado) {
+          exame = await alterarExameFinalizadoAudiometria(idExame, payload)
+          setEditMode(false)
+          setDataOriginal(data)
+          notification.success({ message: 'Exame alterado com sucesso. Status mantido como FINALIZADO.' })
+        } else {
+          exame = await atualizarExameAudiometria(idExame, payload)
+          notification.success({ message: 'Exame salvo como rascunho.' })
+        }
       } else {
         exame = await criarExameAudiometria(payload)
         setIdExame(exame.id_exame)
+        notification.success({ message: 'Exame salvo como rascunho.' })
       }
       setStatus(exame.ds_status)
-      notification.success({ message: 'Exame salvo como rascunho.' })
     } catch {
       notification.error({ message: 'Erro ao salvar o exame.' })
     } finally {
@@ -272,12 +287,25 @@ export default function AudiometriaPage({ cdPaciente, cdAtendimento }: Audiometr
     try {
       const exame = await finalizarExame(idExame)
       setStatus(exame.ds_status)
+      setEditMode(false)
+      setDataOriginal(data)
       notification.success({ message: 'Exame finalizado com sucesso.' })
     } catch {
       notification.error({ message: 'Erro ao finalizar o exame.' })
     } finally {
       setSaving(false)
     }
+  }
+
+  function alterarExame() {
+    setEditMode(true)
+    notification.info({ message: 'Modo de edição ativado — Faça as correções necessárias.' })
+  }
+
+  function cancelarEdicao() {
+    setData(dataOriginal)
+    setEditMode(false)
+    notification.info({ message: 'Edições descartadas. Os dados originais foram restaurados.' })
   }
 
   async function gerarPdf() {
@@ -354,6 +382,7 @@ export default function AudiometriaPage({ cdPaciente, cdAtendimento }: Audiometr
               color="#e74c3c"
               thresholds={data.rightEar}
               onChange={(rightEar) => setData({ ...data, rightEar })}
+              disabled={isDisabled}
             />
             <SpeechAudiometryInput
               label="Orelha Direita"
@@ -379,6 +408,7 @@ export default function AudiometriaPage({ cdPaciente, cdAtendimento }: Audiometr
               color="#2980b9"
               thresholds={data.leftEar}
               onChange={(leftEar) => setData({ ...data, leftEar })}
+              disabled={isDisabled}
             />
             <SpeechAudiometryInput
               label="Orelha Esquerda"
@@ -409,7 +439,7 @@ export default function AudiometriaPage({ cdPaciente, cdAtendimento }: Audiometr
             <Text strong style={{ display: 'block', marginBottom: 8 }}>Tipo de Perda</Text>
             <Select
               allowClear
-              disabled={isFinalizado}
+              disabled={isDisabled}
               placeholder="Selecione o tipo de perda"
               value={data.hearingLossType}
               onChange={(v: HearingLossType | null) => setData({ ...data, hearingLossType: v })}
@@ -426,7 +456,7 @@ export default function AudiometriaPage({ cdPaciente, cdAtendimento }: Audiometr
             <Text strong style={{ display: 'block', marginBottom: 8 }}>Grau de Perda</Text>
             <Select
               allowClear
-              disabled={isFinalizado}
+              disabled={isDisabled}
               placeholder="Selecione o grau de perda"
               value={data.hearingLossGrade}
               onChange={(v: HearingLossGrade | null) => setData({ ...data, hearingLossGrade: v })}
@@ -449,7 +479,7 @@ export default function AudiometriaPage({ cdPaciente, cdAtendimento }: Audiometr
         <Title level={5}>Conclusão Clínica</Title>
         <TextArea
           rows={4}
-          disabled={isFinalizado}
+          disabled={isDisabled}
           value={data.conclusion}
           onChange={(e) => setData({ ...data, conclusion: e.target.value })}
           placeholder="Digite a conclusão clínica do exame de audiometria..."
@@ -462,7 +492,7 @@ export default function AudiometriaPage({ cdPaciente, cdAtendimento }: Audiometr
         <Title level={5}>Comentários / Observações</Title>
         <TextArea
           rows={3}
-          disabled={isFinalizado}
+          disabled={isDisabled}
           value={data.observations}
           onChange={(e) => setData({ ...data, observations: e.target.value })}
           placeholder="Observações adicionais sobre o exame..."
@@ -470,27 +500,68 @@ export default function AudiometriaPage({ cdPaciente, cdAtendimento }: Audiometr
         />
       </Card>
 
+      {/* Alerta de edição em exame finalizado */}
+      {editMode && isFinalizado && (
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message="Modo de edição ativo"
+          description="Seu exame será mantido em status FINALIZADO após salvar as alterações."
+        />
+      )}
+
       {/* Ações */}
       <Card style={{ marginTop: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
         <Space wrap>
-          <Button
-            type="primary"
-            icon={<SaveOutlined />}
-            loading={saving}
-            disabled={isFinalizado || !cdPaciente}
-            onClick={salvar}
-          >
-            Salvar Rascunho
-          </Button>
-          <Button
-            type="default"
-            icon={<CheckCircleOutlined />}
-            loading={saving}
-            disabled={isFinalizado || !cdPaciente}
-            onClick={finalizar}
-          >
-            Finalizar Exame
-          </Button>
+          {/* Botões normais (rascunho ou edição de finalizado) */}
+          {!isFinalizado || editMode ? (
+            <>
+              <Button
+                type="primary"
+                icon={<SaveOutlined />}
+                loading={saving}
+                disabled={!cdPaciente}
+                onClick={salvar}
+              >
+                Salvar {editMode ? 'Alterações' : 'Rascunho'}
+              </Button>
+              {!editMode && (
+                <Button
+                  type="default"
+                  icon={<CheckCircleOutlined />}
+                  loading={saving}
+                  disabled={!cdPaciente}
+                  onClick={finalizar}
+                >
+                  Finalizar Exame
+                </Button>
+              )}
+              {editMode && (
+                <Button
+                  danger
+                  icon={<CloseOutlined />}
+                  onClick={cancelarEdicao}
+                >
+                  Cancelar Edição
+                </Button>
+              )}
+            </>
+          ) : null}
+
+          {/* Botão de alterar exame finalizado */}
+          {isFinalizado && !editMode && (
+            <Button
+              type="primary"
+              danger
+              icon={<EditOutlined />}
+              onClick={alterarExame}
+            >
+              Alterar Exame Finalizado
+            </Button>
+          )}
+
+          {/* Botão PDF (sempre disponível se finalizado) */}
           <Button
             icon={<FilePdfOutlined />}
             loading={generatingPdf}

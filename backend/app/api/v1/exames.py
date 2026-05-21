@@ -94,6 +94,21 @@ def atualizar_exame(
     return repo.atualizar_exame_audiometria(db, exame, payload)
 
 
+@router.patch("/audiometria/{id_exame}/alterar", response_model=ExameResponse)
+def alterar_exame_finalizado(
+    id_exame: int,
+    payload: ExameAudiometriaCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Permite alterar um exame de audiometria mesmo quando está FINALIZADO."""
+    exame = repo.get_exame_por_id(db, id_exame)
+    if not exame:
+        raise HTTPException(status_code=404, detail="Exame não encontrado.")
+    # Permite alteração mesmo se FINALIZADO
+    return repo.atualizar_exame_audiometria(db, exame, payload)
+
+
 @router.get("/por-atendimento/{cd_atendimento}", response_model=ExameResponse | None)
 def buscar_por_atendimento(
     cd_atendimento: int,
@@ -221,6 +236,21 @@ def atualizar_exame_imitanciometria(
         raise HTTPException(status_code=404, detail="Exame não encontrado.")
     if exame.ds_status == "FINALIZADO":
         raise HTTPException(status_code=400, detail="Exame finalizado não pode ser alterado.")
+    return repo.atualizar_exame_imitanciometria(db, exame, payload)
+
+
+@router.patch("/imitanciometria/{id_exame}/alterar", response_model=ExameResponse)
+def alterar_exame_imitanciometria_finalizado(
+    id_exame: int,
+    payload: ExameImitanciometriaCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Permite alterar um exame de imitanciometria mesmo quando está FINALIZADO."""
+    exame = repo.get_exame_por_id(db, id_exame)
+    if not exame:
+        raise HTTPException(status_code=404, detail="Exame não encontrado.")
+    # Permite alteração mesmo se FINALIZADO
     return repo.atualizar_exame_imitanciometria(db, exame, payload)
 
 

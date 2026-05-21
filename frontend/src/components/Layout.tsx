@@ -114,6 +114,9 @@ export default function AppLayout() {
   const { token: themeToken } = theme.useToken()
 
   const isFonoaudiologo = usuario?.nm_tip_presta === NM_TIP_FONOAUDIOLOGO
+  const { isAdmin, isSupervisor, isCoordenador } = useAuth()
+  // ADMIN e SUPERVISOR têm visão global; COORDENADOR vê da especialidade; OPERADOR vê só os próprios
+  const isGestorOuCoordenador = isAdmin || isSupervisor || isCoordenador
 
   const menuItems = [
     // ── Início (Home Consolidada) ──────────────────────────────
@@ -141,7 +144,12 @@ export default function AppLayout() {
       label: 'Projeto Terapêutico Singular (PTS)',
       children: [
         { key: '/pts/pacientes', icon: <TeamOutlined aria-hidden="true" />, label: 'Pacientes PTS' },
-        { key: '/pts/dashboard', icon: <DashboardOutlined aria-hidden="true" />, label: 'Dashboard PTS' },
+        // Dashboard visível para todos, mas OPERADOR vê apenas seus próprios PTS (filtrado no backend)
+        {
+          key: '/pts/dashboard',
+          icon: <DashboardOutlined aria-hidden="true" />,
+          label: isGestorOuCoordenador ? 'Dashboard PTS' : 'Meus PTS',
+        },
       ],
     },
   ]

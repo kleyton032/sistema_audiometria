@@ -20,6 +20,34 @@ def get_db_session(user: User, db: Session) -> Session:
     return db
 
 
+def _pts_access_filter(user: User) -> tuple[str, dict]:
+    """
+    Retorna (extra_where, params) para filtrar PTS conforme o perfil do usuário.
+
+    Regras:
+      ADMIN / SUPERVISOR → vê tudo
+      COORDENADOR        → vê apenas PTS de profissionais da sua especialidade
+      OPERADOR (demais)  → vê apenas os próprios PTS
+    """
+    perfil = user.perfil_nome
+    if perfil in ("ADMIN", "SUPERVISOR"):
+        return "", {}
+    if perfil == "COORDENADOR":
+        extra_where = """
+            AND EXISTS (
+                SELECT 1
+                FROM FAV_TB_COORD_ESP ce
+                JOIN FAV_TB_USUARIO_PRESTADOR up ON UPPER(up.NM_TIP_PRESTA) = UPPER(ce.DS_TIPO_PRESTA)
+                WHERE ce.ID_USUARIO = :coord_id
+                  AND up.ID_USUARIO = p.ID_USUARIO
+                  AND ce.FL_ATIVO   = 1
+            )
+        """
+        return extra_where, {"coord_id": user.id_usuario}
+    # OPERADOR (e qualquer outro perfil não listado acima)
+    return "AND p.ID_USUARIO = :op_id", {"op_id": user.id_usuario}
+
+
 class DiagnosticoPrincipalOut(BaseModel):
     ds_diagnostico: str
 
@@ -521,17 +549,22 @@ def stats_dashboard_pts(
     user: User = Depends(get_current_user),
 ):
     try:
-        # Contagens básicas
-        total = db.execute(text("SELECT COUNT(*) FROM FAV_TB_PTS")).scalar() or 0
-        finalizados = db.execute(text("SELECT COUNT(*) FROM FAV_TB_PTS WHERE FL_FINALIZADO = 1 AND FL_ATIVO = 1")).scalar() or 0
-        rascunhos = db.execute(text("SELECT COUNT(*) FROM FAV_TB_PTS WHERE FL_FINALIZADO = 0 AND FL_ATIVO = 1")).scalar() or 0
-        cancelados = db.execute(text("SELECT COUNT(*) FROM FAV_TB_PTS WHERE FL_ATIVO = 0")).scalar() or 0
-        
+        extra_where, params = _pts_access_filter(user)
+
+        def _count(base_where: str) -> int:
+            sql = f"SELECT COUNT(*) FROM FAV_TB_PTS p WHERE {base_where} {extra_where}"
+            return db.execute(text(sql), params).scalar() or 0
+
+        total      = _count("1=1")
+        finalizados = _count("p.FL_FINALIZADO = 1 AND p.FL_ATIVO = 1")
+        rascunhos   = _count("p.FL_FINALIZADO = 0 AND p.FL_ATIVO = 1")
+        cancelados  = _count("p.FL_ATIVO = 0")
+
         return {
-            "total_pts": total,
+            "total_pts":  total,
             "finalizados": finalizados,
             "em_rascunho": rascunhos,
-            "cancelados": cancelados
+            "cancelados":  cancelados,
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao buscar estatísticas: {str(e)}")
@@ -549,13 +582,15 @@ def report_dashboard_pts(
 ):
     try:
         if status == "cancelados":
-            where_clause = "WHERE p.FL_ATIVO = 0"
+            base_where = "p.FL_ATIVO = 0"
         elif status == "finalizados":
-            where_clause = "WHERE p.FL_ATIVO = 1 AND p.FL_FINALIZADO = 1"
+            base_where = "p.FL_ATIVO = 1 AND p.FL_FINALIZADO = 1"
         elif status == "rascunho":
-            where_clause = "WHERE p.FL_ATIVO = 1 AND p.FL_FINALIZADO = 0"
+            base_where = "p.FL_ATIVO = 1 AND p.FL_FINALIZADO = 0"
         else:
-            where_clause = "WHERE p.FL_ATIVO = 1"
+            base_where = "p.FL_ATIVO = 1"
+
+        extra_where, params = _pts_access_filter(user)
 
         sql = f"""
             SELECT 
@@ -578,11 +613,12 @@ def report_dashboard_pts(
                  FROM FAV_TB_PTS_OBJETIVO o WHERE o.ID_PTS = p.ID_PTS AND o.DS_MOMENTO = 'atual') as OBJETIVOS
             FROM FAV_TB_PTS p
             JOIN FAV_TB_SILA_USUARIOS u ON p.ID_USUARIO = u.ID_USUARIO
-            {where_clause}
+            WHERE {base_where}
+            {extra_where}
             ORDER BY p.DT_CRIACAO DESC
         """
-        rows = db.execute(text(sql)).fetchall()
-        
+        rows = db.execute(text(sql), params).fetchall()
+
         return [
             {
                 "id_pts": r[0],

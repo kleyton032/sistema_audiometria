@@ -5,6 +5,18 @@ from sqlalchemy.sql import func
 from app.db.session import Base
 
 
+class Perfil(Base):
+    """Perfis de acesso do sistema (FAV_TB_PERFIS)."""
+    __tablename__ = "FAV_TB_PERFIS"
+
+    id_perfil    = Column("ID_PERFIL",    Integer, primary_key=True)
+    ds_perfil    = Column("DS_PERFIL",    String(20), nullable=False)
+    ds_descricao = Column("DS_DESCRICAO", String(200))
+
+    def __repr__(self):
+        return f"<Perfil {self.ds_perfil}>"
+
+
 class User(Base):
     __tablename__ = "FAV_TB_SILA_USUARIOS"
 
@@ -17,14 +29,23 @@ class User(Base):
     nr_conselho      = Column("NR_CONSELHO",      String(20))
     ds_especialidade = Column("DS_ESPECIALIDADE", String(100))
     ds_perfil        = Column("DS_PERFIL",        String(20),           default="OPERADOR", nullable=False)
+    id_perfil        = Column("ID_PERFIL",        Integer,              ForeignKey("FAV_TB_PERFIS.ID_PERFIL"), nullable=True)
     dt_criacao       = Column("DT_CRIACAO",       DateTime(timezone=True), server_default=func.now(), nullable=False)
     dt_ultimo_acesso = Column("DT_ULTIMO_ACESSO", DateTime(timezone=True))
     fl_ativo         = Column("FL_ATIVO",         Integer,              default=1, nullable=False)
 
     prestador = relationship("UsuarioPrestador", back_populates="usuario", uselist=False)
+    perfil    = relationship("Perfil", lazy="joined", foreign_keys=[id_perfil])
+
+    @property
+    def perfil_nome(self) -> str:
+        """Retorna o nome do perfil via FK (ID_PERFIL → FAV_TB_PERFIS) com fallback para DS_PERFIL."""
+        if self.perfil:
+            return self.perfil.ds_perfil
+        return self.ds_perfil or "OPERADOR"
 
     def __repr__(self):
-        return f"<User login={self.nm_login} profile={self.ds_perfil}>"
+        return f"<User login={self.nm_login} profile={self.perfil_nome}>"
 
 
 class UsuarioPrestador(Base):

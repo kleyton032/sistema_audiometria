@@ -9,9 +9,10 @@ interface Props {
   color: string
   reflexes: ReflexTable
   onChange: (updated: ReflexTable) => void
+  disabled?: boolean
 }
 
-export default function ReflexTableInput({ label, color, reflexes, onChange }: Props) {
+export default function ReflexTableInput({ label, color, reflexes, onChange, disabled }: Props) {
   const handleChange = (
     freq: ReflexFrequency,
     side: 'ipsilateral' | 'contralateral',
@@ -47,6 +48,7 @@ export default function ReflexTableInput({ label, color, reflexes, onChange }: P
           align: 'center' as const,
           render: (_: unknown, record: { freq: ReflexFrequency }) => (
             <Switch
+              disabled={disabled}
               size="small"
               checked={reflexes[record.freq].ipsilateral.present ?? false}
               onChange={(v) => handleChange(record.freq, 'ipsilateral', 'present', v)}
@@ -60,8 +62,8 @@ export default function ReflexTableInput({ label, color, reflexes, onChange }: P
           align: 'center' as const,
           render: (_: unknown, record: { freq: ReflexFrequency }) => (
             <InputNumber
+              disabled={disabled || !reflexes[record.freq].ipsilateral.present}
               size="small"
-              disabled={!reflexes[record.freq].ipsilateral.present}
               value={reflexes[record.freq].ipsilateral.threshold}
               onChange={(v) => handleChange(record.freq, 'ipsilateral', 'threshold', v)}
               min={50}
@@ -84,6 +86,7 @@ export default function ReflexTableInput({ label, color, reflexes, onChange }: P
           align: 'center' as const,
           render: (_: unknown, record: { freq: ReflexFrequency }) => (
             <Switch
+              disabled={disabled}
               size="small"
               checked={reflexes[record.freq].contralateral.present ?? false}
               onChange={(v) => handleChange(record.freq, 'contralateral', 'present', v)}
@@ -97,8 +100,8 @@ export default function ReflexTableInput({ label, color, reflexes, onChange }: P
           align: 'center' as const,
           render: (_: unknown, record: { freq: ReflexFrequency }) => (
             <InputNumber
+              disabled={disabled || !reflexes[record.freq].contralateral.present}
               size="small"
-              disabled={!reflexes[record.freq].contralateral.present}
               value={reflexes[record.freq].contralateral.threshold}
               onChange={(v) => handleChange(record.freq, 'contralateral', 'threshold', v)}
               min={50}

@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { login as loginService, getMe } from '@/api'
-import type { User } from '@/types'
+import type { User, Perfil } from '@/types'
 
 function decodeJwtLogin(token: string): string | null {
   try {
@@ -24,8 +24,16 @@ interface AuthContextType {
   token:           string | null
   nm_login:        string | null
   usuario:         User | null
+  perfil:          Perfil | null
   isAuthenticated: boolean
   loading:         boolean
+  // helpers de perfil
+  isAdmin:         boolean
+  isSupervisor:    boolean
+  isCoordenador:   boolean
+  isOperador:      boolean
+  /** true para ADMIN e SUPERVISOR (visão global) */
+  isGestor:        boolean
   login:  (username: string, password: string) => Promise<void>
   logout: () => void
 }
@@ -123,8 +131,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         token,
         nm_login,
         usuario,
+        perfil:          (usuario?.ds_perfil ?? null) as Perfil | null,
         isAuthenticated: !!token,
         loading,
+        isAdmin:         usuario?.ds_perfil === 'ADMIN',
+        isSupervisor:    usuario?.ds_perfil === 'SUPERVISOR',
+        isCoordenador:   usuario?.ds_perfil === 'COORDENADOR',
+        isOperador:      usuario?.ds_perfil === 'OPERADOR',
+        isGestor:        usuario?.ds_perfil === 'ADMIN' || usuario?.ds_perfil === 'SUPERVISOR',
         login,
         logout,
       }}

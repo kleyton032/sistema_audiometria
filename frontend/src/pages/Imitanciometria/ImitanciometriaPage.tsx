@@ -5,7 +5,7 @@ import {
 } from 'antd'
 import { InfoCircleOutlined } from '@ant-design/icons'
 import {
-  SaveOutlined, FilePdfOutlined, CheckCircleOutlined, LoadingOutlined,
+  SaveOutlined, FilePdfOutlined, CheckCircleOutlined, LoadingOutlined, EditOutlined, CloseOutlined,
 } from '@ant-design/icons'
 
 // ── Referência de Jerger ──────────────────────────────────────────────────────
@@ -78,6 +78,7 @@ import {
   buscarExameImitanPorAtendimento,
   criarExameImitanciometria,
   atualizarExameImitanciometria,
+  alterarExameFinalizadoImitanciometria,
   finalizarExame,
   gerarLaudoPdf,
 } from '@/api/exameService'
@@ -194,8 +195,17 @@ export default function ImitanciometriaPage({ cdPaciente, cdAtendimento }: Imita
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [generatingPdf, setGeneratingPdf] = useState(false)
+  const [editMode, setEditMode] = useState(false)
+  const [dataOriginal, setDataOriginal] = useState<ImmittanceData>({
+    rightEar: createEmptyTympanogram(),
+    leftEar: createEmptyTympanogram(),
+    rightReflexes: createEmptyReflexTable(),
+    leftReflexes: createEmptyReflexTable(),
+    conclusion: '',
+  })
 
   const isFinalizado = status === 'FINALIZADO'
+  const isDisabled = isFinalizado && !editMode
 
   // Carrega exame existente ao abrir
   useEffect(() => {
@@ -204,7 +214,9 @@ export default function ImitanciometriaPage({ cdPaciente, cdAtendimento }: Imita
     buscarExameImitanPorAtendimento(cdAtendimento)
       .then((exame) => {
         if (exame?.resultado_imitan) {
-          setData(resultadoToData(exame.resultado_imitan as ResultadoImitanResponse))
+          const dadosCarregados = resultadoToData(exame.resultado_imitan as ResultadoImitanResponse)
+          setData(dadosCarregados)
+          setDataOriginal(dadosCarregados)
           setIdExame(exame.id_exame)
           setStatus(exame.ds_status)
         }
@@ -223,13 +235,22 @@ export default function ImitanciometriaPage({ cdPaciente, cdAtendimento }: Imita
       const payload = dataToPayload(data, cdPaciente, cdAtendimento ?? null)
       let exame
       if (idExame) {
-        exame = await atualizarExameImitanciometria(idExame, payload)
+        // Se em modo de edição de exame finalizado, use a função de alteração
+        if (editMode && isFinalizado) {
+          exame = await alterarExameFinalizadoImitanciometria(idExame, payload)
+          setEditMode(false)
+          setDataOriginal(data)
+          notification.success({ message: 'Exame alterado com sucesso. Status mantido como FINALIZADO.' })
+        } else {
+          exame = await atualizarExameImitanciometria(idExame, payload)
+          notification.success({ message: 'Exame salvo como rascunho.' })
+        }
       } else {
         exame = await criarExameImitanciometria(payload)
         setIdExame(exame.id_exame)
+        notification.success({ message: 'Exame salvo como rascunho.' })
       }
       setStatus(exame.ds_status)
-      notification.success({ message: 'Exame salvo como rascunho.' })
     } catch {
       notification.error({ message: 'Erro ao salvar o exame.' })
     } finally {
@@ -243,12 +264,25 @@ export default function ImitanciometriaPage({ cdPaciente, cdAtendimento }: Imita
     try {
       const exame = await finalizarExame(idExame)
       setStatus(exame.ds_status)
+      setEditMode(false)
+      setDataOriginal(data)
       notification.success({ message: 'Exame finalizado com sucesso.' })
     } catch {
       notification.error({ message: 'Erro ao finalizar o exame.' })
     } finally {
       setSaving(false)
     }
+  }
+
+  function alterarExame() {
+    setEditMode(true)
+    notification.info({ message: 'Modo de edição ativado — Faça as correções necessárias.' })
+  }
+
+  function cancelarEdicao() {
+    setData(dataOriginal)
+    setEditMode(false)
+    notification.info({ message: 'Edições descartadas. Os dados originais foram restaurados.' })
   }
 
   async function gerarPdf() {
@@ -319,6 +353,7 @@ export default function ImitanciometriaPage({ cdPaciente, cdAtendimento }: Imita
               color="#e74c3c"
               data={data.rightEar}
               onChange={(rightEar) => setData({ ...data, rightEar })}
+              disabled={isDisabled}
             />
           </Card>
         </Col>
@@ -329,6 +364,7 @@ export default function ImitanciometriaPage({ cdPaciente, cdAtendimento }: Imita
               color="#2980b9"
               data={data.leftEar}
               onChange={(leftEar) => setData({ ...data, leftEar })}
+              disabled={isDisabled}
             />
           </Card>
         </Col>
@@ -343,6 +379,7 @@ export default function ImitanciometriaPage({ cdPaciente, cdAtendimento }: Imita
               color="#e74c3c"
               reflexes={data.rightReflexes}
               onChange={(rightReflexes) => setData({ ...data, rightReflexes })}
+              disabled={isDisabled}
             />
           </Card>
         </Col>
@@ -353,6 +390,7 @@ export default function ImitanciometriaPage({ cdPaciente, cdAtendimento }: Imita
               color="#2980b9"
               reflexes={data.leftReflexes}
               onChange={(leftReflexes) => setData({ ...data, leftReflexes })}
+              disabled={isDisabled}
             />
           </Card>
         </Col>
@@ -364,38 +402,79 @@ export default function ImitanciometriaPage({ cdPaciente, cdAtendimento }: Imita
         <Title level={5}>Conclusão Clínica</Title>
         <TextArea
           rows={4}
-          disabled={isFinalizado}
+          disabled={isDisabled}
           value={data.conclusion}
           onChange={(e) => setData({ ...data, conclusion: e.target.value })}
           placeholder="Digite a conclusão clínica do exame de imitanciometria..."
         />
       </Card>
 
+      {/* Alerta de edição em exame finalizado */}
+      {editMode && isFinalizado && (
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message="Modo de edição ativo"
+          description="Seu exame será mantido em status FINALIZADO após salvar as alterações."
+        />
+      )}
+
       {/* Ações */}
       <Card style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
         <Space wrap>
-          <Button
-            type="primary"
-            icon={<SaveOutlined />}
-            loading={saving}
-            disabled={isFinalizado || !cdPaciente}
-            onClick={salvar}
-          >
-            Salvar Rascunho
-          </Button>
-          <Button
-            type="default"
-            icon={<CheckCircleOutlined />}
-            loading={saving}
-            disabled={isFinalizado || !cdPaciente}
-            onClick={finalizar}
-          >
-            Finalizar Exame
-          </Button>
+          {/* Botões normais (rascunho ou edição de finalizado) */}
+          {!isFinalizado || editMode ? (
+            <>
+              <Button
+                type="primary"
+                icon={<SaveOutlined />}
+                loading={saving}
+                disabled={!cdPaciente}
+                onClick={salvar}
+              >
+                Salvar {editMode ? 'Alterações' : 'Rascunho'}
+              </Button>
+              {!editMode && (
+                <Button
+                  type="default"
+                  icon={<CheckCircleOutlined />}
+                  loading={saving}
+                  disabled={!cdPaciente}
+                  onClick={finalizar}
+                >
+                  Finalizar Exame
+                </Button>
+              )}
+              {editMode && (
+                <Button
+                  danger
+                  icon={<CloseOutlined />}
+                  onClick={cancelarEdicao}
+                >
+                  Cancelar Edição
+                </Button>
+              )}
+            </>
+          ) : null}
+
+          {/* Botão de alterar exame finalizado */}
+          {isFinalizado && !editMode && (
+            <Button
+              type="primary"
+              danger
+              icon={<EditOutlined />}
+              onClick={alterarExame}
+            >
+              Alterar Exame Finalizado
+            </Button>
+          )}
+
+          {/* Botão PDF (sempre disponível se finalizado) */}
           <Button
             icon={<FilePdfOutlined />}
             loading={generatingPdf}
-            disabled={!idExame}
+            disabled={!isFinalizado}
             onClick={gerarPdf}
           >
             Gerar Laudo PDF

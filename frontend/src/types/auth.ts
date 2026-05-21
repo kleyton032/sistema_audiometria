@@ -2,13 +2,15 @@
 // Types — User & Auth
 // ============================
 
+export type Perfil = 'ADMIN' | 'SUPERVISOR' | 'COORDENADOR' | 'OPERADOR'
+
 export interface User {
   id_usuario:         number
   nm_login:           string
   nm_usuario:         string
   ds_email:           string
   cd_usuario_mv:      string | null
-  ds_perfil:          'ADMIN' | 'AUDÍOLOGO' | 'OPERADOR'
+  ds_perfil:          Perfil
   dt_criacao:         string | null
   fl_ativo:           number
   // dados do prestador MV
@@ -38,5 +40,5 @@ export interface UserCreate {
   ds_senha: string
   nr_conselho?: string
   ds_especialidade?: string
-  ds_perfil?: 'ADMIN' | 'AUDIÓLOGO' | 'OPERADOR'
+  ds_perfil?: Perfil
 }

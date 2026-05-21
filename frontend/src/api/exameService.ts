@@ -142,6 +142,17 @@ export async function finalizarExame(idExame: number): Promise<ExameResponse> {
   return data
 }
 
+export async function alterarExameFinalizadoAudiometria(
+  idExame: number,
+  payload: ExameAudiometriaCreate,
+): Promise<ExameResponse> {
+  const { data } = await api.patch<ExameResponse>(
+    `/exames/audiometria/${idExame}/alterar`,
+    payload,
+  )
+  return data
+}
+
 export async function gerarLaudoPdf(idExame: number): Promise<Blob> {
   const { data } = await api.post(`/exames/${idExame}/laudo`, null, {
     responseType: 'blob',
@@ -245,6 +256,17 @@ export async function atualizarExameImitanciometria(
 ): Promise<ExameResponse> {
   const { data } = await api.put<ExameResponse>(
     `/exames/imitanciometria/${idExame}`,
+    payload,
+  )
+  return data
+}
+
+export async function alterarExameFinalizadoImitanciometria(
+  idExame: number,
+  payload: ExameImitanciometriaCreate,
+): Promise<ExameResponse> {
+  const { data } = await api.patch<ExameResponse>(
+    `/exames/imitanciometria/${idExame}/alterar`,
     payload,
   )
   return data

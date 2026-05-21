@@ -20,7 +20,7 @@ def _user_to_response(user: User) -> UserResponse:
         nm_login           = user.nm_login,
         nm_usuario         = user.nm_usuario,
         ds_email           = user.ds_email,
-        ds_perfil          = user.ds_perfil,
+        ds_perfil          = user.perfil_nome,
         dt_criacao         = user.dt_criacao,
         fl_ativo           = user.fl_ativo,
         cd_prestador       = p.cd_prestador       if p else None,

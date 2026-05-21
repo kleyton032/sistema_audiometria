@@ -42,3 +42,23 @@ def get_current_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+
+def require_perfis(*perfis: str):
+    """
+    Dependency factory: bloqueia a requisição se o perfil do usuário não estiver na lista.
+
+    Uso:
+        @router.get("/admin-only")
+        def admin_route(user: User = Depends(require_perfis("ADMIN", "SUPERVISOR"))):
+            ...
+    """
+    def _check(user: User = Depends(get_current_user)) -> User:
+        if user.perfil_nome not in perfis:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Acesso restrito. Perfil necessário: {', '.join(perfis)}. "
+                       f"Seu perfil: {user.perfil_nome}",
+            )
+        return user
+    return _check
