@@ -1,4 +1,4 @@
-import React from 'react'
+
 import * as Accordion from '@radix-ui/react-accordion'
 import * as Tooltip from '@radix-ui/react-tooltip'
 import { DownOutlined } from '@ant-design/icons'

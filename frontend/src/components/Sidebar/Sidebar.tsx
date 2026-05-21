@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react'
-import { Layout as AntLayout, Typography, Avatar, Tooltip, Space } from 'antd'
-import { FileProtectOutlined, UserOutlined } from '@ant-design/icons'
+import { useMemo } from 'react'
+import { Layout as AntLayout, Typography, Space } from 'antd'
+import { FileProtectOutlined } from '@ant-design/icons'
 import { SidebarMenu } from './SidebarMenu'
 import { menuTree, filterMenuByRoles, MenuRole } from '../../config/menuConfig'
 import { User } from '@/types'
@@ -10,12 +10,10 @@ const { Text } = Typography
 
 interface SidebarProps {
   collapsed: boolean
-  usuario: User | null
-  setProfileVisible: (visible: boolean) => void
   permissions: Record<MenuRole, boolean>
 }
 
-export function Sidebar({ collapsed, usuario, setProfileVisible, permissions }: SidebarProps) {
+export function Sidebar({ collapsed, permissions }: SidebarProps) {
   const filteredItems = useMemo(() => filterMenuByRoles(menuTree, permissions), [permissions])
 
   return (

@@ -1,4 +1,4 @@
-import React from 'react'
+
 import { Drawer, Avatar, Typography, Tag, Divider, Descriptions, Badge, Space } from 'antd'
 import { UserOutlined, MailOutlined, IdcardOutlined, SafetyCertificateOutlined } from '@ant-design/icons'
 import { User } from '@/types'

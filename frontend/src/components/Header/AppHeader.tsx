@@ -1,5 +1,4 @@
-import React from 'react'
-import { Layout as AntLayout, Button, theme, Space } from 'antd'
+import { Layout as AntLayout, Button, theme } from 'antd'
 import { MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons'
 import { UserProfileDropdown } from './UserProfileDropdown'
 import { User } from '@/types'

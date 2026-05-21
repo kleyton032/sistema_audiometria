@@ -1,18 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Layout as AntLayout, Button, theme, Avatar, Typography, Tooltip, Space, Modal, Descriptions, Badge, Tag, Divider } from 'antd'
-import {
-  DashboardOutlined,
-  LogoutOutlined,
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
-  SearchOutlined,
-  FileProtectOutlined,
-  SoundOutlined,
-  TeamOutlined,
-  UserOutlined,
-  HomeOutlined,
-  SettingOutlined,
-} from '@ant-design/icons'
+import { Layout as AntLayout, theme } from 'antd'
 import { useNavigate, useLocation, Outlet } from 'react-router-dom'
 import { useAuth } from '@/contexts'
 import { Sidebar } from './Sidebar/Sidebar'
@@ -20,8 +7,7 @@ import { MenuRole } from '../config/menuConfig'
 import { AppHeader } from './Header/AppHeader'
 import { UserProfileDrawer } from './Profile/UserProfileDrawer'
 
-const { Sider, Content } = AntLayout
-const { Text, Title } = Typography
+const { Content } = AntLayout
 
 // nm_tip_presta do MV para Fonoaudiólogo (cd_tip_presta = 6)
 const NM_TIP_FONOAUDIOLOGO = 'FONOAUDIOLOGO(A)'
@@ -156,8 +142,6 @@ export default function AppLayout() {
       
       <Sidebar
         collapsed={collapsed}
-        usuario={usuario}
-        setProfileVisible={setProfileVisible}
         permissions={permissions}
       />
 

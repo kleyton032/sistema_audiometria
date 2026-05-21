@@ -1,4 +1,4 @@
-import React from 'react'
+
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { Avatar, Typography } from 'antd'
 import { UserOutlined, LogoutOutlined, ProfileOutlined } from '@ant-design/icons'
