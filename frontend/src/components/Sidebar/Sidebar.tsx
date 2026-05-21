@@ -3,7 +3,7 @@ import { Layout as AntLayout, Typography, Space } from 'antd'
 import { FileProtectOutlined } from '@ant-design/icons'
 import { SidebarMenu } from './SidebarMenu'
 import { menuTree, filterMenuByRoles, MenuRole } from '../../config/menuConfig'
-import { User } from '@/types'
+
 
 const { Sider } = AntLayout
 const { Text } = Typography
