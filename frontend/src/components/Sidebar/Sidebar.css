@@ -1,0 +1,158 @@
+/* frontend/src/components/Sidebar/Sidebar.css */
+
+.sidebar-wrapper {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Base resets */
+.sidebar-nav-button {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 10px 16px;
+  color: rgba(255, 255, 255, 0.65);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.sidebar-nav-button:hover {
+  color: #fff;
+  background-color: rgba(102, 126, 234, 0.15);
+}
+
+.sidebar-nav-button:focus-visible {
+  outline: 2px solid #667eea;
+  outline-offset: -2px;
+  background-color: rgba(102, 126, 234, 0.2);
+  color: #fff;
+}
+
+/* Active Item state */
+.sidebar-nav-button[data-active="true"] {
+  background-color: rgba(102, 126, 234, 0.2);
+  color: #fff;
+  font-weight: 500;
+}
+
+.sidebar-nav-button[data-active="true"]::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: #667eea;
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+}
+
+/* Group Trigger */
+.SidebarAccordionTrigger {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: rgba(255, 255, 255, 0.65);
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.SidebarAccordionTrigger:hover {
+  color: #fff;
+  background-color: rgba(102, 126, 234, 0.1);
+}
+
+.SidebarAccordionTrigger:focus-visible {
+  outline: 2px solid #667eea;
+  outline-offset: -2px;
+}
+
+.SidebarAccordionTrigger[data-state="open"] {
+  color: #fff;
+  background-color: rgba(102, 126, 234, 0.1);
+}
+
+.SidebarAccordionTrigger .SidebarAccordionChevron {
+  transition: transform 300ms cubic-bezier(0.87, 0, 0.13, 1);
+}
+
+.SidebarAccordionTrigger[data-state="open"] .SidebarAccordionChevron {
+  transform: rotate(180deg);
+}
+
+/* Accordion Animations */
+.SidebarAccordionContent {
+  overflow: hidden;
+}
+
+.SidebarAccordionContent[data-state="open"] {
+  animation: slideDown 300ms cubic-bezier(0.87, 0, 0.13, 1);
+}
+
+.SidebarAccordionContent[data-state="closed"] {
+  animation: slideUp 300ms cubic-bezier(0.87, 0, 0.13, 1);
+}
+
+@keyframes slideDown {
+  from { height: 0; }
+  to { height: var(--radix-accordion-content-height); }
+}
+
+@keyframes slideUp {
+  from { height: var(--radix-accordion-content-height); }
+  to { height: 0; }
+}
+
+/* Tooltip Styles */
+.SidebarTooltipContent {
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 13px;
+  line-height: 1;
+  color: #fff;
+  background-color: #333;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  user-select: none;
+  animation-duration: 200ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity;
+  z-index: 9999;
+}
+
+.SidebarTooltipContent[data-state="delayed-open"][data-side="top"] { animation-name: slideDownAndFade; }
+.SidebarTooltipContent[data-state="delayed-open"][data-side="right"] { animation-name: slideLeftAndFade; }
+.SidebarTooltipContent[data-state="delayed-open"][data-side="bottom"] { animation-name: slideUpAndFade; }
+.SidebarTooltipContent[data-state="delayed-open"][data-side="left"] { animation-name: slideRightAndFade; }
+
+.SidebarTooltipArrow {
+  fill: #333;
+}
+
+@keyframes slideUpAndFade {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideRightAndFade {
+  from { opacity: 0; transform: translateX(-2px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes slideDownAndFade {
+  from { opacity: 0; transform: translateY(-2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideLeftAndFade {
+  from { opacity: 0; transform: translateX(2px); }
+  to { opacity: 1; transform: translateX(0); }
+}

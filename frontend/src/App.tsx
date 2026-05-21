@@ -11,6 +11,14 @@ import { ImitanciometriaPage } from '@/pages/Imitanciometria'
 import { PacientesPage } from '@/pages/Pacientes'
 import { ConsultaPage } from '@/pages/Consulta'
 import { PTSPage, PtsPacientesPage, PtsDashboardPage } from '@/pages/PTS'
+import { AdminPage } from '@/pages/Admin'
+import { useAuth } from '@/contexts'
+
+/** Rota acessível apenas para perfil ADMIN. */
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { isAdmin } = useAuth()
+  return isAdmin ? <>{children}</> : <Navigate to="/home" replace />
+}
 
 export default function App() {
   return (
@@ -47,6 +55,16 @@ export default function App() {
                   <Route path="/pts/pacientes" element={<PtsPacientesPage />} />
                   <Route path="/pts/dashboard" element={<PtsDashboardPage />} />
                   <Route path="/pts" element={<PTSPage />} />
+
+                  {/* Painel Administrativo — exclusivo para ADMIN */}
+                  <Route
+                    path="/admin"
+                    element={
+                      <AdminRoute>
+                        <AdminPage />
+                      </AdminRoute>
+                    }
+                  />
                 </Route>
 
                 {/* Redirect padrão */}
