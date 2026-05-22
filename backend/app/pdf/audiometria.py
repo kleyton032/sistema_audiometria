@@ -32,8 +32,8 @@ def _audiograma_base64(resultado, exame=None) -> str:
     import matplotlib.pyplot as plt
     import matplotlib.ticker as ticker
 
-    fig, (ax_od, ax_oe) = plt.subplots(1, 2, figsize=(13, 5))
-    fig.suptitle("Audiograma Tonal", fontsize=11, fontweight="bold")
+    fig, (ax_od, ax_oe) = plt.subplots(1, 2, figsize=(11, 3.8))
+    fig.suptitle("Audiograma Tonal", fontsize=10, fontweight="bold")
 
     freqs_va = [250, 500, 1000, 2000, 3000, 4000, 6000, 8000]
     freqs_vo = [500, 1000, 2000, 3000, 4000]
@@ -194,30 +194,31 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str) -> str:
 <head>
 <meta charset="utf-8">
 <style>
+  @page {{ size: A4; margin: 10mm 12mm; }}
   * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-  body {{ font-family: Arial, sans-serif; font-size: 11px; color: #222; padding: 24px 32px; }}
-  h1 {{ font-size: 15px; color: #1e5aa8; text-transform: uppercase; margin: 0; }}
-  h2 {{ font-size: 13px; color: #4c2c8a; margin: 16px 0 6px; border-bottom: 1px solid #ddd; padding-bottom: 3px; }}
-  .inst-header {{ border: 1px solid #1e5aa8; border-radius: 6px; margin-bottom: 16px; }}
-  .inst-header-top {{ display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; border-bottom: 1px solid #1e5aa8; min-height: 56px; }}
-  .inst-header-logo {{ flex: 0 0 110px; }}
-  .inst-header-logo img {{ height: 38px; object-fit: contain; }}
-  .inst-header-logo-right img {{ height: 48px; object-fit: contain; }}
+  body {{ font-family: Arial, sans-serif; font-size: 10px; color: #222; padding: 0; }}
+  h1 {{ font-size: 14px; color: #1e5aa8; text-transform: uppercase; margin: 0; }}
+  h2 {{ font-size: 12px; color: #4c2c8a; margin: 12px 0 4px; border-bottom: 1px solid #ddd; padding-bottom: 2px; }}
+  .inst-header {{ border: 1px solid #1e5aa8; border-radius: 8px; margin-bottom: 10px; background: #fff; }}
+  .inst-header-top {{ display: flex; align-items: center; justify-content: space-between; padding: 6px 16px; border-bottom: 1px solid #1e5aa8; min-height: 40px; }}
+  .inst-header-logo {{ flex: 0 0 120px; }}
+  .inst-header-logo img {{ height: 35px; object-fit: contain; }}
+  .inst-header-logo-right img {{ height: 40px; object-fit: contain; }}
   .inst-header-title {{ flex: 1; text-align: center; }}
-  .inst-header-data {{ display: flex; gap: 0; padding: 8px 16px; font-size: 10px; }}
-  .inst-header-data-left {{ flex: 2; display: flex; flex-direction: column; gap: 3px; }}
-  .inst-header-data-right {{ flex: 1; display: flex; flex-direction: column; gap: 3px; text-align: right; }}
+  .inst-header-data {{ display: flex; gap: 16px; padding: 6px 16px; font-size: 9px; line-height: 1.3; }}
+  .inst-header-data-left {{ flex: 2; display: flex; flex-direction: column; gap: 2px; }}
+  .inst-header-data-right {{ flex: 1; display: flex; flex-direction: column; gap: 2px; text-align: left; }}
   .inst-header-data strong {{ font-weight: bold; }}
-  table {{ width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 10px; }}
-  th, td {{ border: 1px solid #ccc; padding: 4px 6px; text-align: center; }}
+  table {{ width: 100%; border-collapse: collapse; margin: 4px 0; font-size: 9px; page-break-inside: avoid; }}
+  th, td {{ border: 1px solid #ccc; padding: 2px 4px; text-align: center; }}
   th {{ background: #f0eaff; font-weight: bold; }}
   .freq-header th {{ background: #4c2c8a; color: white; }}
-  .audiogram {{ text-align: center; margin: 10px 0; }}
+  .audiogram {{ text-align: center; margin: 6px 0; page-break-inside: avoid; }}
   .audiogram img {{ max-width: 100%; height: auto; }}
-  .conclusao {{ background: #fafafa; border: 1px solid #ddd; padding: 10px 14px; border-radius: 4px; line-height: 1.6; min-height: 50px; }}
-  .assinatura {{ margin-top: 32px; text-align: center; }}
+  .conclusao {{ background: #fafafa; border: 1px solid #ddd; padding: 6px 10px; border-radius: 4px; line-height: 1.4; min-height: 30px; page-break-inside: avoid; }}
+  .assinatura {{ margin-top: 24px; text-align: center; page-break-inside: avoid; }}
   .assinatura .linha {{ border-top: 1px solid #333; width: 250px; margin: 0 auto 4px; }}
-  .tag {{ display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: bold; }}
+  .tag {{ display: inline-block; padding: 2px 6px; border-radius: 10px; font-size: 9px; font-weight: bold; }}
   .tag-od {{ background: #fde8e8; color: #c0392b; }}
   .tag-oe {{ background: #e8f0fd; color: #1a5276; }}
   .badge-rascunho {{ color: #e67e22; font-weight: bold; }}
@@ -226,7 +227,7 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str) -> str:
 </head>
 <body>
 
-<!-- Cabeçalho institucional FAV / CER IV -->
+<!-- Cabeçalho institucional FAV / CER IV (Padrão PTS) -->
 <div class="inst-header">
   <div class="inst-header-top">
     <div class="inst-header-logo">
@@ -242,9 +243,9 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str) -> str:
   <div class="inst-header-data">
     <div class="inst-header-data-left">
       <div><strong>Paciente:</strong> {getattr(exame, 'nm_paciente', None) or f'Cód. {exame.id_paciente}'}</div>
-      <div><strong>Profissional:</strong> {nm_usuario}</div>
-      <div><strong>Especialidade / Conselho:</strong> {nr_conselho or '—'}</div>
-      <div><strong>Queixa principal:</strong> {queixa} &nbsp;|&nbsp; <strong>CAE OD:</strong> {cae_od} &nbsp; <strong>OE:</strong> {cae_oe}</div>
+      <div><strong>Prestador:</strong> {nm_usuario}</div>
+      <div><strong>Especialidade/Conselho:</strong> {nr_conselho or '—'}</div>
+      <div style="margin-top: 2px;"><strong>Queixa principal:</strong> {queixa} &nbsp;|&nbsp; <strong>CAE OD:</strong> {cae_od} &nbsp; <strong>OE:</strong> {cae_oe}</div>
     </div>
     <div class="inst-header-data-right">
       <div><strong>Atendimento:</strong> {exame.id_atendimento or '—'}</div>
