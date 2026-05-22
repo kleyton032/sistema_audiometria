@@ -6,6 +6,7 @@ import { Sidebar } from './Sidebar/Sidebar'
 import { MenuRole } from '../config/menuConfig'
 import { AppHeader } from './Header/AppHeader'
 import { UserProfileDrawer } from './Profile/UserProfileDrawer'
+import { ReLoginModal } from './ReLoginModal'
 
 const { Content } = AntLayout
 
@@ -176,6 +177,8 @@ export default function AppLayout() {
         onClose={() => setProfileVisible(false)}
         usuario={usuario}
       />
+
+      <ReLoginModal />
 
       <style>{`
         .skip-link:focus {

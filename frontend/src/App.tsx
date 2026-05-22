@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { ConfigProvider, App as AntdApp } from 'antd'
+import { ConfigProvider, App as AntdApp, Result, Button } from 'antd'
 import { StyleProvider, legacyLogicalPropertiesTransformer } from '@ant-design/cssinjs'
 import ptBR from 'antd/locale/pt_BR'
+import { ErrorBoundary } from 'react-error-boundary'
 import { AuthProvider } from '@/contexts'
 import { ProtectedRoute, AppLayout } from '@/components'
 import { LoginPage } from '@/pages/Login'
@@ -18,6 +19,23 @@ import { useAuth } from '@/contexts'
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { isAdmin } = useAuth()
   return isAdmin ? <>{children}</> : <Navigate to="/home" replace />
+}
+
+function ErrorFallback({ error, resetErrorBoundary }: any) {
+  return (
+    <div style={{ padding: 24, display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f5f5f5' }}>
+      <Result
+        status="500"
+        title="Ocorreu um erro inesperado"
+        subTitle={error?.message || "Houve uma falha ao renderizar a tela. Os dados não salvos podem ter sido perdidos."}
+        extra={
+          <Button type="primary" onClick={resetErrorBoundary}>
+            Tentar Novamente
+          </Button>
+        }
+      />
+    </div>
+  )
 }
 
 export default function App() {
@@ -43,7 +61,9 @@ export default function App() {
                 <Route
                   element={
                     <ProtectedRoute>
-                      <AppLayout />
+                      <ErrorBoundary FallbackComponent={ErrorFallback}>
+                        <AppLayout />
+                      </ErrorBoundary>
                     </ProtectedRoute>
                   }
                 >

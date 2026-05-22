@@ -24,8 +24,9 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401 && !window.location.pathname.includes('/login')) {
-      sessionStorage.removeItem('access_token')
-      window.location.href = '/login'
+      console.warn('[Axios] 401 Unauthorized interceptado da rota:', error.config?.url)
+      // Dispara evento global para o AuthContext interceptar e abrir o Modal de Soft-Login
+      window.dispatchEvent(new CustomEvent('auth-unauthorized'))
     }
     return Promise.reject(error)
   },

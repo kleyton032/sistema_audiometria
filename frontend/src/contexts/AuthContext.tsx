@@ -34,6 +34,8 @@ interface AuthContextType {
   isOperador:      boolean
   /** true para ADMIN e SUPERVISOR (visão global) */
   isGestor:        boolean
+  isSessionExpired: boolean
+  clearSessionExpired: () => void
   login:  (username: string, password: string) => Promise<void>
   logout: () => void
 }
@@ -45,6 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [nm_login, setNmLogin] = useState<string | null>(null)
   const [usuario, setUsuario] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isSessionExpired, setIsSessionExpired] = useState(false)
 
   // Ref para acessar o valor atual do token dentro de callbacks estáveis (setInterval).
   const tokenRef = useRef<string | null>(null)
@@ -57,11 +60,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const me = await getMe()
       setUsuario(me)
     } catch {
-      // Token inválido ou expirado — limpa tudo
-      sessionStorage.removeItem(TOKEN_KEY)
-      setToken(null)
-      setNmLogin(null)
-      setUsuario(null)
+      // Token inválido ou expirado — em vez de destruir a tela, pede re-login
+      window.dispatchEvent(new CustomEvent('auth-unauthorized'))
     }
   }, [])
 
@@ -82,17 +82,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchMe])
 
   // Garante consistência entre o estado React e o sessionStorage.
-  // Usa dois mecanismos para cobrir todos os cenários de ocultação do iframe pelo MV:
-  //   • visibilitychange: aba do browser minimizada/restaurada
-  //   • setInterval: MV esconde/mostra iframe via CSS sem alterar visibilidade da aba
   useEffect(() => {
     const syncSession = () => {
-      // Sem token no sessionStorage mas React ainda tem usuário → forçar logout
+      // Sem token no sessionStorage mas React ainda tem usuário → perdeu sessão externa (ex: MV)
       if (!sessionStorage.getItem(TOKEN_KEY) && tokenRef.current !== null) {
-        console.info('[CDM] Token ausente no sessionStorage — encerrando sessão.')
-        setToken(null)
-        setNmLogin(null)
-        setUsuario(null)
+        console.warn('[CDM] Token ausente no sessionStorage — disparando re-login.')
+        window.dispatchEvent(new CustomEvent('auth-unauthorized'))
       }
     }
 
@@ -100,12 +95,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (document.visibilityState === 'visible') syncSession()
     }
 
+    const handleUnauthorized = () => {
+      setIsSessionExpired(true)
+    }
+
     document.addEventListener('visibilitychange', handleVisibility)
+    window.addEventListener('auth-unauthorized', handleUnauthorized)
+    
     // Verifica a cada 2 s — cobre o caso em que o MV usa CSS show/hide no iframe
     const id = setInterval(syncSession, 2000)
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility)
+      window.removeEventListener('auth-unauthorized', handleUnauthorized)
       clearInterval(id)
     }
   }, [])
@@ -139,6 +141,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isCoordenador:   usuario?.ds_perfil === 'COORDENADOR',
         isOperador:      usuario?.ds_perfil === 'OPERADOR',
         isGestor:        usuario?.ds_perfil === 'ADMIN' || usuario?.ds_perfil === 'SUPERVISOR',
+        isSessionExpired,
+        clearSessionExpired: () => setIsSessionExpired(false),
         login,
         logout,
       }}
