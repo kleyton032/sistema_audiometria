@@ -34,31 +34,65 @@ def _timpanograma_base64(resultado) -> str:
     import numpy as np
 
     fig, ax = plt.subplots(figsize=(7, 2.8))
-    pressures = np.linspace(-400, 200, 300)
+    pressures = np.linspace(-600, 400, 500)
 
-    def gaussian_curve(peak_pressure, peak_compliance, width=80):
-        if peak_pressure is None or peak_compliance is None:
-            return None
-        return float(peak_compliance) * np.exp(
-            -((pressures - float(peak_pressure)) ** 2) / (2 * float(width) ** 2)
-        )
+    def asym_profile(p, mu, sL, sR, betaL, betaR):
+        d = abs(p - mu)
+        if p <= mu:
+            return math.exp(-((d / sL) ** betaL))
+        return math.exp(-((d / sR) ** betaR))
 
-    od_peak_p = resultado.od_pressao
-    od_peak_c = resultado.od_pico
-    oe_peak_p = resultado.oe_pressao
-    oe_peak_c = resultado.oe_pico
+    def generate_curve(tipo, pressao, complacencia, ecv):
+        if not tipo:
+            return None, None
+            
+        baseline = float(ecv) if ecv is not None else 0.2
+        comp = float(complacencia) if complacencia is not None else 0.8
+        pres = float(pressao) if pressao is not None else -20
+        
+        if tipo == 'A':
+            amplitude = max(comp - baseline, 0.05)
+            mu, sL, sR, betaL, betaR = pres, 125, 34, 1.55, 1.7
+        elif tipo in ('As', 'Ar'):
+            amplitude = max(comp - baseline, 0.05)
+            mu, sL, sR, betaL, betaR = pres, 120, 34, 1.6, 1.75
+        elif tipo == 'Ad':
+            amplitude = max(comp - baseline, 1.0)
+            mu, sL, sR, betaL, betaR = pres, 16, 12, 1.45, 1.6
+        elif tipo == 'B':
+            comp_b = float(complacencia) if complacencia is not None else 0.1
+            amplitude = max(comp_b - baseline, 0.02)
+            pres_b = float(pressao) if pressao is not None else 0
+            mu, sL, sR, betaL, betaR = pres_b, 300, 300, 2.0, 2.0
+        elif tipo == 'C':
+            comp_c = float(complacencia) if complacencia is not None else 0.9
+            amplitude = max(comp_c - baseline, 0.05)
+            pres_c = float(pressao) if pressao is not None else -180
+            mu, sL, sR, betaL, betaR = pres_c, 60, 110, 1.7, 1.45
+        else:
+            return None, None
+            
+        curve = [baseline + amplitude * asym_profile(p, mu, sL, sR, betaL, betaR) for p in pressures]
+        curve_peak = baseline + amplitude
+        return curve, curve_peak
 
-    od_curve = gaussian_curve(od_peak_p, od_peak_c)
-    oe_curve = gaussian_curve(oe_peak_p, oe_peak_c)
+    od_curve_data = generate_curve(resultado.od_tipo_curva, resultado.od_pressao, resultado.od_pico, resultado.od_ecv)
+    oe_curve_data = generate_curve(resultado.oe_tipo_curva, resultado.oe_pressao, resultado.oe_pico, resultado.oe_ecv)
 
-    def draw_peak_marker(peak_p, peak_c, color: str, label: str, y_offset: float) -> None:
-        if peak_p is None or peak_c is None:
+    od_curve = od_curve_data[0] if od_curve_data else None
+    od_curve_peak = od_curve_data[1] if od_curve_data else None
+    oe_curve = oe_curve_data[0] if oe_curve_data else None
+    oe_curve_peak = oe_curve_data[1] if oe_curve_data else None
+
+    def draw_peak_marker(tipo, peak_p, curve_peak_c, real_c, color: str, label: str, y_offset: float) -> None:
+        if peak_p is None or curve_peak_c is None or tipo == 'B':
             return
         x = float(peak_p)
-        y = float(peak_c)
+        y = float(curve_peak_c)
+        label_y = float(real_c) if real_c is not None else y
         ax.scatter([x], [y], s=36, color=color, edgecolor="white", linewidth=1.0, zorder=6)
         ax.annotate(
-            f"{label}: {x:.0f} daPa | {y:.2f} ml",
+            f"{label}: {x:.0f} daPa | {label_y:.2f} ml",
             xy=(x, y),
             xytext=(x + 12, y + y_offset),
             textcoords="data",
@@ -69,15 +103,20 @@ def _timpanograma_base64(resultado) -> str:
             arrowprops={"arrowstyle": "-", "color": color, "lw": 0.8, "alpha": 0.7},
         )
 
+    all_values = []
     if od_curve is not None:
         ax.plot(pressures, od_curve, color="#e74c3c", linewidth=2, label="OD — Orelha Direita")
-        ax.axvline(float(od_peak_p), color="#e74c3c", linestyle=":", linewidth=0.8, alpha=0.6)
-        draw_peak_marker(od_peak_p, od_peak_c, "#e74c3c", "OD", y_offset=0.06)
+        if resultado.od_tipo_curva != 'B' and resultado.od_pressao is not None:
+            ax.axvline(float(resultado.od_pressao), color="#e74c3c", linestyle=":", linewidth=0.8, alpha=0.6)
+            draw_peak_marker(resultado.od_tipo_curva, resultado.od_pressao, od_curve_peak, resultado.od_pico, "#e74c3c", "OD", y_offset=0.06)
+        all_values.extend(od_curve)
 
     if oe_curve is not None:
         ax.plot(pressures, oe_curve, color="#2980b9", linewidth=2, label="OE — Orelha Esquerda")
-        ax.axvline(float(oe_peak_p), color="#2980b9", linestyle=":", linewidth=0.8, alpha=0.6)
-        draw_peak_marker(oe_peak_p, oe_peak_c, "#2980b9", "OE", y_offset=0.12)
+        if resultado.oe_tipo_curva != 'B' and resultado.oe_pressao is not None:
+            ax.axvline(float(resultado.oe_pressao), color="#2980b9", linestyle=":", linewidth=0.8, alpha=0.6)
+            draw_peak_marker(resultado.oe_tipo_curva, resultado.oe_pressao, oe_curve_peak, resultado.oe_pico, "#2980b9", "OE", y_offset=0.12)
+        all_values.extend(oe_curve)
 
     if od_curve is None and oe_curve is None:
         ax.text(
@@ -85,11 +124,16 @@ def _timpanograma_base64(resultado) -> str:
             transform=ax.transAxes, ha="center", va="center", color="#aaa", fontsize=11,
         )
 
+    y_min = 0.0
+    if all_values:
+        min_val = min(all_values)
+        y_min = max(0.0, math.floor(min_val * 10) / 10.0 - 0.1)
+
     ax.set_xlabel("Pressão (daPa)", fontsize=9)
     ax.set_ylabel("Complacência (ml)", fontsize=9)
     ax.set_title("Timpanograma", fontsize=11, fontweight="bold", pad=10)
-    ax.set_xlim(-400, 200)
-    ax.set_ylim(bottom=0)
+    ax.set_xlim(-600, 400)
+    ax.set_ylim(bottom=y_min)
     ax.axvline(0, color="#888", linestyle="--", linewidth=0.6, alpha=0.5)
     ax.grid(True, alpha=0.2)
 
