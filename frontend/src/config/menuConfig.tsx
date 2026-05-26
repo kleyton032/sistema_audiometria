@@ -7,6 +7,7 @@ import {
   TeamOutlined,
   HomeOutlined,
   SettingOutlined,
+  HeartOutlined,
 } from '@ant-design/icons'
 
 // Perfis e atributos do usuário mapeados do contexto de autenticação
@@ -65,6 +66,31 @@ export const menuTree: MenuConfigItem[] = [
           (perms.ADMIN || perms.SUPERVISOR || perms.COORDENADOR) ? 'Dashboard PTS' : 'Meus PTS',
         icon: <DashboardOutlined />,
         path: '/pts/dashboard',
+      },
+    ],
+  },
+  {
+    key: 'grupo-psicologia',
+    label: 'Psicologia',
+    icon: <HeartOutlined />,
+    children: [
+      {
+        key: '/psicologia/anamnese',
+        label: 'Anamnese',
+        icon: <FileProtectOutlined />,
+        path: '/psicologia/anamnese',
+      },
+      {
+        key: '/psicologia/evolucao',
+        label: 'Evolução',
+        icon: <SearchOutlined />,
+        path: '/psicologia/evolucao',
+      },
+      {
+        key: '/psicologia/avaliacao',
+        label: 'Avaliação',
+        icon: <DashboardOutlined />,
+        path: '/psicologia/avaliacao',
       },
     ],
   },

@@ -13,6 +13,7 @@ import { PacientesPage } from '@/pages/Pacientes'
 import { ConsultaPage } from '@/pages/Consulta'
 import { PTSPage, PtsPacientesPage, PtsDashboardPage } from '@/pages/PTS'
 import { AdminPage } from '@/pages/Admin'
+import { PsicologiaPage } from '@/pages/Psicologia'
 import { useAuth } from '@/contexts'
 
 /** Rota acessível apenas para perfil ADMIN. */
@@ -75,6 +76,9 @@ export default function App() {
                   <Route path="/pts/pacientes" element={<PtsPacientesPage />} />
                   <Route path="/pts/dashboard" element={<PtsDashboardPage />} />
                   <Route path="/pts" element={<PTSPage />} />
+
+                  {/* Psicologia */}
+                  <Route path="/psicologia/*" element={<PsicologiaPage />} />
 
                   {/* Painel Administrativo — exclusivo para ADMIN */}
                   <Route

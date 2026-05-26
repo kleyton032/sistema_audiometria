@@ -15,13 +15,17 @@ const NM_TIP_FONOAUDIOLOGO = 'FONOAUDIOLOGO(A)'
 
 // ── Mapa de nomes legíveis para cada rota ──────────────────────────────────
 const ROUTE_NAMES: Record<string, string> = {
-  '/home':           'Início',
-  '/pacientes':      'Pacientes — Audiometrias',
-  '/consulta':       'Laudos e Consultas',
-  '/pts/pacientes':  'Lista de Pacientes do PTS',
-  '/pts/dashboard':  'Dashboard PTS',
-  '/pts':            'Projeto Terapêutico Singular',
-  '/admin':          'Painel Administrativo',
+  '/home':                'Início',
+  '/pacientes':           'Pacientes — Audiometrias',
+  '/consulta':            'Laudos e Consultas',
+  '/pts/pacientes':       'Lista de Pacientes do PTS',
+  '/pts/dashboard':       'Dashboard PTS',
+  '/pts':                 'Projeto Terapêutico Singular',
+  '/psicologia/anamnese': 'Psicologia — Anamnese',
+  '/psicologia/evolucao': 'Psicologia — Evolução',
+  '/psicologia/avaliacao':'Psicologia — Avaliação',
+  '/psicologia':          'Psicologia',
+  '/admin':               'Painel Administrativo',
 }
 
 function routeLabel(pathname: string): string {

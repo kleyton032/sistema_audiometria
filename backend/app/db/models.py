@@ -387,6 +387,124 @@ class PTSCerTerapia(Base):
     pts = relationship("PTS", back_populates="cer_terapias")
 
 
+# ============================================================================
+# MÓDULO PSICOLOGIA
+# ============================================================================
+
+class PsicologiaDocumento(Base):
+    """Documento psicológico mestre (Anamnese, Evolução, Avaliação)."""
+    __tablename__ = "FAV_TB_PSICOLOGIA_DOCUMENTOS"
+
+    id_psicologia_doc = Column("ID_PSICOLOGIA_DOC", Integer, Sequence("SEQ_PSICOLOGIA_DOC"), primary_key=True, index=True)
+    cd_paciente = Column("CD_PACIENTE", String(20), nullable=False, index=True)
+    id_usuario = Column("ID_USUARIO", Integer, ForeignKey("FAV_TB_SILA_USUARIOS.ID_USUARIO"), nullable=False)
+    ds_tipo_doc = Column("DS_TIPO_DOC", String(30), nullable=False, index=True)  # ANAMNESE, EVOLUCAO, AVALIACAO
+    dt_criacao = Column("DT_CRIACAO", DateTime(timezone=True), server_default=func.now(), nullable=False)
+    dt_atualizacao = Column("DT_ATUALIZACAO", DateTime(timezone=True), onupdate=func.now())
+    id_usuario_ultima_edicao = Column("ID_USUARIO_ULTIMA_EDICAO", Integer, ForeignKey("FAV_TB_SILA_USUARIOS.ID_USUARIO"))
+    fl_ativo = Column("FL_ATIVO", Integer, default=1, nullable=False)
+    ds_observacoes = Column("DS_OBSERVACOES", String(4000))
+
+    usuario = relationship("User", foreign_keys=[id_usuario], lazy="joined")
+    usuario_edicao = relationship("User", foreign_keys=[id_usuario_ultima_edicao])
+    
+    anamnese = relationship("PsicologiaAnamnese", back_populates="documento", uselist=False, cascade="all, delete-orphan")
+    evolucoes = relationship("PsicologiaEvolucao", back_populates="documento", cascade="all, delete-orphan")
+    avaliacao = relationship("PsicologiaAvaliacao", back_populates="documento", uselist=False, cascade="all, delete-orphan")
+    versoes = relationship("PsicologiaVersao", back_populates="documento", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<PsicologiaDocumento tipo={self.ds_tipo_doc} paciente={self.cd_paciente}>"
+
+
+class PsicologiaAnamnese(Base):
+    """Anamnese psicológica do paciente."""
+    __tablename__ = "FAV_TB_PSICOLOGIA_ANAMNESE"
+
+    id_anamnese = Column("ID_ANAMNESE", Integer, Sequence("SEQ_PSICOLOGIA_ANAMNESE"), primary_key=True)
+    id_psicologia_doc = Column("ID_PSICOLOGIA_DOC", Integer, ForeignKey("FAV_TB_PSICOLOGIA_DOCUMENTOS.ID_PSICOLOGIA_DOC", ondelete="CASCADE"), nullable=False, unique=True)
+    ds_historia_familiar = Column("DS_HISTORIA_FAMILIAR", String(4000))
+    ds_historia_pessoal = Column("DS_HISTORIA_PESSOAL", String(4000))
+    ds_escolaridade = Column("DS_ESCOLARIDADE", String(500))
+    ds_socioeconomico = Column("DS_SOCIOECONOMICO", String(500))
+    ds_queixa_principal = Column("DS_QUEIXA_PRINCIPAL", String(4000))
+    ds_hipotese_inicial = Column("DS_HIPOTESE_INICIAL", String(4000))
+    dt_criacao = Column("DT_CRIACAO", DateTime(timezone=True), server_default=func.now(), nullable=False)
+    dt_atualizacao = Column("DT_ATUALIZACAO", DateTime(timezone=True), onupdate=func.now())
+
+    documento = relationship("PsicologiaDocumento", back_populates="anamnese")
+
+    def __repr__(self):
+        return f"<PsicologiaAnamnese id_doc={self.id_psicologia_doc}>"
+
+
+class PsicologiaEvolucao(Base):
+    """Evolução psicológica progressiva por atendimento."""
+    __tablename__ = "FAV_TB_PSICOLOGIA_EVOLUCAO"
+
+    id_evolucao = Column("ID_EVOLUCAO", Integer, Sequence("SEQ_PSICOLOGIA_EVOLUCAO"), primary_key=True)
+    id_psicologia_doc = Column("ID_PSICOLOGIA_DOC", Integer, ForeignKey("FAV_TB_PSICOLOGIA_DOCUMENTOS.ID_PSICOLOGIA_DOC", ondelete="CASCADE"), nullable=False, index=True)
+    nr_atendimento = Column("NR_ATENDIMENTO", String(20))
+    ds_data_atendimento = Column("DS_DATA_ATENDIMENTO", DateTime(timezone=True), nullable=False, index=True)
+    ds_observacoes = Column("DS_OBSERVACOES", String(4000))
+    ds_objetivos_sessao = Column("DS_OBJETIVOS_SESSAO", String(2000))
+    ds_intervencoes = Column("DS_INTERVENCOES", String(4000))
+    ds_proximos_passos = Column("DS_PROXIMOS_PASSOS", String(2000))
+    id_usuario_criou = Column("ID_USUARIO_CRIOU", Integer, ForeignKey("FAV_TB_SILA_USUARIOS.ID_USUARIO"), nullable=False)
+    dt_criacao = Column("DT_CRIACAO", DateTime(timezone=True), server_default=func.now(), nullable=False)
+    dt_atualizacao = Column("DT_ATUALIZACAO", DateTime(timezone=True), onupdate=func.now())
+
+    documento = relationship("PsicologiaDocumento", back_populates="evolucoes")
+    usuario = relationship("User", foreign_keys=[id_usuario_criou], lazy="joined")
+
+    def __repr__(self):
+        return f"<PsicologiaEvolucao id_doc={self.id_psicologia_doc}>"
+
+
+class PsicologiaAvaliacao(Base):
+    """Avaliação e testes psicológicos."""
+    __tablename__ = "FAV_TB_PSICOLOGIA_AVALIACAO"
+
+    id_avaliacao = Column("ID_AVALIACAO", Integer, Sequence("SEQ_PSICOLOGIA_AVALIACAO"), primary_key=True)
+    id_psicologia_doc = Column("ID_PSICOLOGIA_DOC", Integer, ForeignKey("FAV_TB_PSICOLOGIA_DOCUMENTOS.ID_PSICOLOGIA_DOC", ondelete="CASCADE"), nullable=False, unique=True)
+    ds_tipo_teste = Column("DS_TIPO_TESTE", String(100), index=True)  # WISC, WAIS, RORSCHACH, etc
+    ds_resultado = Column("DS_RESULTADO", String(4000))
+    nr_escore = Column("NR_ESCORE", Numeric(5, 2))
+    ds_interpretacao = Column("DS_INTERPRETACAO", String(4000))
+    ds_recomendacoes = Column("DS_RECOMENDACOES", String(4000))
+    id_usuario_fez = Column("ID_USUARIO_FEZ", Integer, ForeignKey("FAV_TB_SILA_USUARIOS.ID_USUARIO"), nullable=False)
+    dt_realizacao = Column("DT_REALIZACAO", DateTime(timezone=True), nullable=False, index=True)
+    dt_criacao = Column("DT_CRIACAO", DateTime(timezone=True), server_default=func.now(), nullable=False)
+    dt_atualizacao = Column("DT_ATUALIZACAO", DateTime(timezone=True), onupdate=func.now())
+    ds_status = Column("DS_STATUS", String(20), default="RASCUNHO", nullable=False)  # RASCUNHO, FINALIZADO, ASSINADO
+
+    documento = relationship("PsicologiaDocumento", back_populates="avaliacao")
+    usuario = relationship("User", foreign_keys=[id_usuario_fez], lazy="joined")
+
+    def __repr__(self):
+        return f"<PsicologiaAvaliacao tipo={self.ds_tipo_teste} status={self.ds_status}>"
+
+
+class PsicologiaVersao(Base):
+    """Histórico de versions e auditoria de edições."""
+    __tablename__ = "FAV_TB_PSICOLOGIA_VERSOES"
+
+    id_versao = Column("ID_VERSAO", Integer, Sequence("SEQ_PSICOLOGIA_VERSAO"), primary_key=True)
+    id_psicologia_doc = Column("ID_PSICOLOGIA_DOC", Integer, ForeignKey("FAV_TB_PSICOLOGIA_DOCUMENTOS.ID_PSICOLOGIA_DOC", ondelete="CASCADE"), nullable=False, index=True)
+    nr_versao = Column("NR_VERSAO", Integer, default=1, nullable=False)
+    ds_conteudo_anterior = Column("DS_CONTEUDO_ANTERIOR", String(4000))
+    id_usuario_editou = Column("ID_USUARIO_EDITOU", Integer, ForeignKey("FAV_TB_SILA_USUARIOS.ID_USUARIO"), nullable=False)
+    dt_edicao = Column("DT_EDICAO", DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+    ds_motivo_alteracao = Column("DS_MOTIVO_ALTERACAO", String(500))
+    ds_campo_alterado = Column("DS_CAMPO_ALTERADO", String(100))
+
+    documento = relationship("PsicologiaDocumento", back_populates="versoes")
+    usuario = relationship("User", foreign_keys=[id_usuario_editou], lazy="joined")
+
+    def __repr__(self):
+        return f"<PsicologiaVersao v={self.nr_versao} id_doc={self.id_psicologia_doc}>"
+
+
 class PTSCondutaMed(Base):
     __tablename__ = "FAV_TB_PTS_CONDUTA_MED"
     id_conduta_med = Column("ID_CONDUTA_MED", Integer, Sequence("SEQ_PTS_CONDUTA_MED"), primary_key=True)

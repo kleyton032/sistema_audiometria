@@ -1,6 +1,6 @@
 # app/api/v1/router.py
 from fastapi import APIRouter
-from app.api.v1 import auth, users, agenda, exames, pts, home, admin
+from app.api.v1 import auth, users, agenda, exames, pts, home, admin, psicologia
 
 api_router = APIRouter()
 
@@ -22,6 +22,9 @@ api_router.include_router(exames.router)
 # Módulo 5 — PTS (Projeto Terapêutico Singular)
 api_router.include_router(pts.router)
 
-# Módulo 6 — Painel Administrativo (apenas ADMIN)
+# Módulo 6 — Psicologia (Documentos psicológicos)
+api_router.include_router(psicologia.router)
+
+# Módulo 7 — Painel Administrativo (apenas ADMIN)
 api_router.include_router(admin.router)
 
