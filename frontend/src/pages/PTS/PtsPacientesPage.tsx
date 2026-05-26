@@ -10,6 +10,9 @@ import {
   Alert,
   Tooltip,
   App,
+  Modal,
+  Popover,
+  List,
 } from 'antd'
 import {
   UserOutlined,
@@ -39,7 +42,7 @@ import dayjs, { type Dayjs } from 'dayjs'
 import 'dayjs/locale/pt-br'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { getAgendaDoPacientes, type AgendaItem } from '@/api/agendaService'
-import { getPTSStatusBatch } from '@/api/ptsService'
+import { getPTSStatusBatch, type PtsStatusBatchItem } from '@/api/ptsService'
 
 dayjs.locale('pt-br')
 
@@ -96,22 +99,40 @@ export default function PtsPacientesPage() {
     }
     return dayjs().format('DD/MM/YYYY')
   })
-  const [ptsStatus, setPtsStatus] = useState<Record<string, { id_pts: number; fl_finalizado: number } | null>>({})
+  const [ptsStatus, setPtsStatus] = useState<Record<string, PtsStatusBatchItem>>({})
 
   // Anuncio acessível do resultado da busca para leitores de tela
   const [searchAnnouncement, setSearchAnnouncement] = useState('')
 
   function abrirPTS(record: AgendaItem) {
-    const status = record.cd_atendimento != null ? ptsStatus[String(record.cd_atendimento)] : null
-    navigate('/pts', {
-      state: {
-        nm_paciente:    record.nm_paciente,
-        cd_paciente:    record.cd_paciente,
-        cd_atendimento: record.cd_atendimento,
-        id_pts:         status?.id_pts ?? null,
-        fl_finalizado:  status?.fl_finalizado ?? 0,
-      },
-    })
+    const status = record.cd_paciente != null ? ptsStatus[String(record.cd_paciente)] : null
+    const meuPts = status?.meu_pts
+    const outrosPts = status?.outros_pts || []
+
+    const navegar = () => {
+      navigate('/pts', {
+        state: {
+          nm_paciente:    record.nm_paciente,
+          cd_paciente:    record.cd_paciente,
+          cd_atendimento: record.cd_atendimento,
+          id_pts:         meuPts?.id_pts ?? null,
+          fl_finalizado:  meuPts?.fl_finalizado ?? 0,
+        },
+      })
+    }
+
+    if (!meuPts && outrosPts.length > 0) {
+      Modal.confirm({
+        title: 'Paciente em acompanhamento multidisciplinar',
+        content: `Este paciente já possui PTS iniciado por outros profissionais nesta vigência (${outrosPts.map(o => o.ds_especialidade).join(', ')}). Deseja iniciar a sua avaliação também?`,
+        okText: 'Sim, iniciar',
+        cancelText: 'Cancelar',
+        onOk: navegar
+      })
+      return
+    }
+
+    navegar()
   }
 
   const columns: ColumnsType<AgendaItem> = [
@@ -205,18 +226,32 @@ export default function PtsPacientesPage() {
     {
       title: 'PTS',
       key: 'preencher_pts',
-      width: 150,
+      width: 170,
       fixed: 'right',
       render: (_, record) => {
-        const status = record.cd_atendimento != null ? ptsStatus[String(record.cd_atendimento)] : null
-        const finalizado = status?.fl_finalizado === 1
-        const temPTS     = status != null
-        const acaoLabel  = finalizado ? 'Ver PTS' : temPTS ? 'Editar PTS' : 'Preencher PTS'
+        const status = record.cd_paciente != null ? ptsStatus[String(record.cd_paciente)] : null
+        const meuPts = status?.meu_pts
+        const outrosPts = status?.outros_pts || []
+        const finalizado = meuPts?.fl_finalizado === 1
+        const temPTS = meuPts != null
+        const acaoLabel  = finalizado ? 'Ver Meu PTS' : temPTS ? 'Continuar PTS' : 'Iniciar PTS'
         const nomePaciente = record.nm_paciente ?? 'paciente'
         const semAtendimento = !record.cd_atendimento
 
+        const contentMulti = (
+          <List
+            size="small"
+            dataSource={outrosPts}
+            renderItem={item => (
+              <List.Item style={{ padding: '4px 0', fontSize: 11 }}>
+                <Text strong>{item.ds_especialidade}</Text> ({item.nm_profissional}) - {item.fl_finalizado ? <Text type="success">Finalizado</Text> : <Text type="warning">Em andamento</Text>}
+              </List.Item>
+            )}
+          />
+        )
+
         return (
-          <Space direction="vertical" size={4} align="center">
+          <Space direction="vertical" size={4} align="flex-start">
             <Tooltip title={semAtendimento ? 'Aguardando recepção (sem código de atendimento)' : undefined}>
               {/* React Aria Button garante que o leitor anuncie o texto exato do aria-label */}
               <AriaButton
@@ -242,37 +277,42 @@ export default function PtsPacientesPage() {
                     ? '#f5f5f5'
                     : finalizado
                     ? '#52c41a'
+                    : temPTS
+                    ? '#faad14'
                     : '#667eea',
                   color: semAtendimento ? '#bfbfbf' : '#fff',
                   transition: 'opacity 0.2s, box-shadow 0.2s',
                   outline: 'none',
                 }}
-                // Estilo de foco visível injetado via CSS global abaixo
                 className="pts-aria-btn"
               >
                 <FileProtectOutlined aria-hidden="true" style={{ fontSize: 13 }} />
                 {acaoLabel}
               </AriaButton>
             </Tooltip>
-            {finalizado && (
-              <Tag
-                color="success"
-                role="status"
-                aria-label="PTS finalizado"
-                style={{ fontSize: 10, margin: 0 }}
-              >
-                Finalizado
-              </Tag>
-            )}
-            {temPTS && !finalizado && (
-              <Tag
-                color="processing"
-                role="status"
-                aria-label="PTS em andamento"
-                style={{ fontSize: 10, margin: 0 }}
-              >
-                Em andamento
-              </Tag>
+            
+            <Space size={2} wrap>
+              {finalizado && (
+                <Tag color="success" role="status" aria-label="PTS finalizado" style={{ fontSize: 10, margin: 0 }}>
+                  Finalizado
+                </Tag>
+              )}
+              {temPTS && !finalizado && (
+                <Tag color="warning" role="status" aria-label="PTS em andamento" style={{ fontSize: 10, margin: 0 }}>
+                  Em andamento
+                </Tag>
+              )}
+              {outrosPts.length > 0 && (
+                <Popover content={contentMulti} title="Outros Acompanhamentos" trigger="hover">
+                  <Tag color="purple" style={{ fontSize: 10, margin: 0, cursor: 'pointer' }}>
+                    Multi ({outrosPts.length})
+                  </Tag>
+                </Popover>
+              )}
+            </Space>
+            
+            {meuPts?.dt_criacao && (
+              <Text type="secondary" style={{ fontSize: 10 }}>Últ. alteração: {meuPts.dt_criacao}</Text>
             )}
           </Space>
         )
@@ -297,8 +337,8 @@ export default function PtsPacientesPage() {
       )
       // Busca status PTS para todos os pacientes da agenda
       const ids = result.items
-        .map((i) => i.cd_atendimento)
-        .filter((id): id is number => id != null)
+        .map((i) => i.cd_paciente)
+        .filter((id): id is string | number => id != null)
       if (ids.length > 0) {
         getPTSStatusBatch(ids).then(setPtsStatus).catch(() => null)
       }
@@ -550,9 +590,10 @@ export default function PtsPacientesPage() {
           scroll={{ x: 'max-content' }}
           aria-label="Lista de pacientes agendados com status de PTS"
           onRow={(record) => {
-            const status = record.cd_atendimento != null ? ptsStatus[String(record.cd_atendimento)] : null
-            const finalizado = status?.fl_finalizado === 1
-            const temPTS = status != null
+            const status = record.cd_paciente != null ? ptsStatus[String(record.cd_paciente)] : null
+            const meuPts = status?.meu_pts
+            const finalizado = meuPts?.fl_finalizado === 1
+            const temPTS = meuPts != null
             const SITUACAO_MAP: Record<string, string> = {
               L: 'Livre', M: 'Marcado', A: 'Aguardando',
               E: 'Atendido', F: 'Falta', C: 'Cancelado', R: 'Em Atendimento',

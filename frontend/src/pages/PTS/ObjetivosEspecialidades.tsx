@@ -71,8 +71,40 @@ const MOTIVOS_NAO_ALCANCADO = [
   { value: 'OUTROS',               label: 'Outros' },
 ]
 
+// Listas específicas para Professor de Braille
+const STATUS_EVOLUCAO_BRAILLE = [
+  { value: 'EM_ANDAMENTO',      label: 'Em andamento' },
+  { value: 'NAO_INICIADO',      label: 'Não iniciado' },
+  { value: 'PARCIAL',           label: 'Parcialmente atingido' },
+  { value: 'ATINGIDO',          label: 'Atingido' },
+  { value: 'NAO_ATINGIDO',      label: 'Não atingido' },
+  { value: 'SUSPENSO',          label: 'Suspenso' },
+  { value: 'CANCELADO',         label: 'Cancelado' },
+  { value: 'REAVALIADO',        label: 'Reavaliado' },
+  { value: 'NAO_SE_APLICA',     label: 'Não se aplica' },
+]
+
+const MOTIVOS_BRAILLE = [
+  { value: 'PRIMEIRO_ACOMPANHAMENTO',   label: 'Primeiro acompanhamento terapêutico' },
+  { value: 'AUSENCIA_HISTORICO',        label: 'Ausência de histórico acessível' },
+  { value: 'MUDANCA_CONDUTA',           label: 'Mudança de conduta terapêutica' },
+  { value: 'EVOLUCAO_CLINICA',          label: 'Evolução clínica do paciente' },
+  { value: 'ALTERACAO_PLANO',           label: 'Alteração de plano terapêutico' },
+  { value: 'RETORNO_ALTA',              label: 'Retorno após alta' },
+  { value: 'REAVALIACAO_MULTI',         label: 'Reavaliação multiprofissional' },
+  { value: 'ATUALIZACAO_OBJETIVOS',     label: 'Atualização de objetivos do PTS' },
+]
+
+const OBJETIVOS_ANTERIORES_BRAILLE = [
+  { value: 'SISTEMA LEGADO SEM ACESSIBILIDADE PARA CONSULTA DOS OBJETIVOS ANTERIORES', label: 'SISTEMA LEGADO SEM ACESSIBILIDADE PARA CONSULTA DOS OBJETIVOS ANTERIORES' },
+  { value: '1º PTS', label: '1º PTS' },
+]
+
 // Apenas esses status exigem motivo
-function exigeMotivo(status: string | undefined) {
+function exigeMotivo(status: string | undefined, espKey?: string) {
+  if (espKey === 'prof_braille') {
+    return !!status && status !== 'ATINGIDO' && status !== 'NAO_SE_APLICA';
+  }
   return status === 'PARCIAL' || status === 'NAO_ALCANCADO'
 }
 
@@ -149,7 +181,7 @@ export function validarObjetivos(
       if (temAlgo) {
         if (!item.objetivo) e.objetivo = true
         if (!item.status) e.status = true
-        if (exigeMotivo(item.status) && !item.motivo) e.motivo = true
+        if (exigeMotivo(item.status, espKey) && !item.motivo) e.motivo = true
         if (item.motivo?.startsWith('OUTROS:') && item.motivo.length <= 8) e.motivo = true
       } else if (isObrigatoria && idx === 0) {
         // Primeira linha do objetivo anterior é obrigatória para a especialidade do usuário
@@ -256,6 +288,7 @@ function LinhaObjetivoAnterior({
   onChange,
   erro,
   especialidadeLabel,
+  espKey,
 }: {
   numero: number
   item: ObjetivoItem
@@ -263,7 +296,18 @@ function LinhaObjetivoAnterior({
   onChange: (updates: Partial<ObjetivoItem>) => void
   erro?: ObjetivoErro | null
   especialidadeLabel: string
+  espKey: string
 }) {
+  const isBraille = espKey === 'prof_braille';
+  const statusOptions = isBraille ? STATUS_EVOLUCAO_BRAILLE : STATUS_EVOLUCAO;
+  const motivoOptions = isBraille ? MOTIVOS_BRAILLE : MOTIVOS_NAO_ALCANCADO;
+  const requiresMotivo = exigeMotivo(item.status, espKey);
+
+  const isSpecialBrailleGoal = isBraille && (
+    item.objetivo === 'SISTEMA LEGADO SEM ACESSIBILIDADE PARA CONSULTA DOS OBJETIVOS ANTERIORES' ||
+    item.objetivo === '1º PTS'
+  );
+
   return (
     <Row gutter={[12, 8]} align="top" style={{ marginBottom: 8, borderBottom: '1px solid #f0f0f0', paddingBottom: 8 }}>
       {/* número */}
@@ -280,13 +324,36 @@ function LinhaObjetivoAnterior({
 
       {/* objetivo — editável na primeira vez, será carregado do PTS anterior nas renovações */}
       <Col flex="1" style={{ minWidth: 180 }}>
-        <InputObjetivoAnterior 
-          value={item.objetivo} 
-          disabled={disabled}
-          status={erro?.objetivo ? 'error' : undefined}
-          ariaLabel={`Descrição do objetivo anterior número ${numero} para ${especialidadeLabel}`}
-          onChange={(val) => onChange({ objetivo: val })} 
-        />
+        {isBraille ? (
+          <Select
+            style={{ width: '100%' }}
+            placeholder="Selecione o objetivo..."
+            aria-label={`Descrição do objetivo anterior número ${numero} para ${especialidadeLabel}`}
+            disabled={disabled}
+            status={erro?.objetivo ? 'error' : undefined}
+            options={OBJETIVOS_ANTERIORES_BRAILLE}
+            value={item.objetivo}
+            onChange={(v) => {
+              const updates: Partial<ObjetivoItem> = { objetivo: v };
+              if (isBraille && (v === 'SISTEMA LEGADO SEM ACESSIBILIDADE PARA CONSULTA DOS OBJETIVOS ANTERIORES' || v === '1º PTS')) {
+                updates.status = 'NAO_SE_APLICA';
+                updates.motivo = undefined;
+              } else if (isBraille && item.status === 'NAO_SE_APLICA') {
+                updates.status = undefined; // Limpa o status se trocar para um objetivo normal
+              }
+              onChange(updates);
+            }}
+            popupMatchSelectWidth={false}
+          />
+        ) : (
+          <InputObjetivoAnterior 
+            value={item.objetivo} 
+            disabled={disabled}
+            status={erro?.objetivo ? 'error' : undefined}
+            ariaLabel={`Descrição do objetivo anterior número ${numero} para ${especialidadeLabel}`}
+            onChange={(val) => onChange({ objetivo: val })} 
+          />
+        )}
         {erro?.objetivo && <div style={{ color: '#ff4d4f', fontSize: 12, marginTop: 2 }}>Campo obrigatório</div>}
       </Col>
 
@@ -297,13 +364,13 @@ function LinhaObjetivoAnterior({
           placeholder="Status da evolução..."
           aria-label={`Status da evolução do objetivo anterior número ${numero} para ${especialidadeLabel}`}
           allowClear
-          disabled={disabled}
+          disabled={disabled || isSpecialBrailleGoal}
           status={erro?.status ? 'error' : undefined}
-          options={STATUS_EVOLUCAO}
+          options={statusOptions}
           value={item.status}
           onChange={(v) => {
             const updates: Partial<ObjetivoItem> = { status: v };
-            if (!exigeMotivo(v)) updates.motivo = undefined;
+            if (!exigeMotivo(v, espKey)) updates.motivo = undefined;
             onChange(updates);
           }}
         />
@@ -311,7 +378,7 @@ function LinhaObjetivoAnterior({
       </Col>
 
       {/* motivo — só exibido quando status exige */}
-      {exigeMotivo(item.status) && (() => {
+      {requiresMotivo && (() => {
         // valor selecionado no select: se começa com 'OUTROS:', seleciona 'OUTROS'
         const selectVal = item.motivo?.startsWith('OUTROS:') ? 'OUTROS' : item.motivo
         const outrosTexto = item.motivo?.startsWith('OUTROS:') ? item.motivo.slice(8) : ''
@@ -325,7 +392,7 @@ function LinhaObjetivoAnterior({
                 allowClear
                 disabled={disabled}
                 status={erro?.motivo ? 'error' : undefined}
-                options={MOTIVOS_NAO_ALCANCADO}
+                options={motivoOptions}
                 value={selectVal}
                 onChange={(v) => {
                   if (!v) { onChange({ motivo: undefined }); return }
@@ -776,6 +843,7 @@ export default function ObjetivosEspecialidades({
                   disabled={!canEdit || ptsFinalizado}
                   erro={erros[esp.key]?.anterior[idx]}
                   especialidadeLabel={esp.label}
+                  espKey={esp.key}
                   onChange={(updates) => handleItem(esp.key, mom, idx, updates)}
                 />
               ) : (
@@ -859,17 +927,17 @@ export default function ObjetivosEspecialidades({
                       borderRadius: 6, padding: '8px 12px', marginBottom: 6,
                     }}
                     role="text"
-                    aria-label={`Objetivo anterior ${idx + 1}: ${obj.objetivo}. Status: ${STATUS_EVOLUCAO.find(s => s.value === obj.status)?.label || obj.status}.${obj.motivo ? ' Motivo: ' + (MOTIVOS_NAO_ALCANCADO.find(m => m.value === obj.motivo)?.label || obj.motivo) : ''}`}
+                    aria-label={`Objetivo anterior ${idx + 1}: ${obj.objetivo}. Status: ${(espKey === 'prof_braille' ? STATUS_EVOLUCAO_BRAILLE : STATUS_EVOLUCAO).find(s => s.value === obj.status)?.label || obj.status}.${obj.motivo ? ' Motivo: ' + ((espKey === 'prof_braille' ? MOTIVOS_BRAILLE : MOTIVOS_NAO_ALCANCADO).find(m => m.value === obj.motivo)?.label || obj.motivo) : ''}`}
                     >
                       <Text style={{ fontSize: 13, textTransform: 'uppercase' }}>{idx + 1}. {obj.objetivo}</Text>
                       {obj.status && (
-                        <Tag color={obj.status === 'ALCANCADO' ? 'green' : obj.status === 'PARCIAL' ? 'orange' : 'red'} style={{ marginLeft: 8, fontSize: 11 }}>
-                          {STATUS_EVOLUCAO.find(s => s.value === obj.status)?.label || obj.status}
+                        <Tag color={obj.status === 'ALCANCADO' || obj.status === 'ATINGIDO' ? 'green' : obj.status === 'PARCIAL' || obj.status === 'EM_ANDAMENTO' ? 'orange' : 'red'} style={{ marginLeft: 8, fontSize: 11 }}>
+                          {(espKey === 'prof_braille' ? STATUS_EVOLUCAO_BRAILLE : STATUS_EVOLUCAO).find(s => s.value === obj.status)?.label || obj.status}
                         </Tag>
                       )}
                       {obj.motivo && (
                         <Text type="secondary" style={{ fontSize: 11, display: 'block', marginTop: 2 }}>
-                          Motivo: {MOTIVOS_NAO_ALCANCADO.find(m => m.value === obj.motivo)?.label || obj.motivo}
+                          Motivo: {(espKey === 'prof_braille' ? MOTIVOS_BRAILLE : MOTIVOS_NAO_ALCANCADO).find(m => m.value === obj.motivo)?.label || obj.motivo}
                         </Text>
                       )}
                     </div>

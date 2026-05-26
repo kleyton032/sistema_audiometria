@@ -88,10 +88,25 @@ export async function getPTSById(idPts: number): Promise<any> {
   return data
 }
 
-export async function getPTSStatusBatch(cdAtendimentos: (number | string)[]): Promise<Record<string, { id_pts: number; fl_finalizado: number } | null>> {
-  if (cdAtendimentos.length === 0) return {}
+export interface OutroPtsStatus {
+  nm_profissional: string
+  ds_especialidade: string
+  fl_finalizado: number
+}
+
+export interface PtsStatusBatchItem {
+  meu_pts: {
+    id_pts: number
+    fl_finalizado: number
+    dt_criacao: string | null
+  } | null
+  outros_pts: OutroPtsStatus[]
+}
+
+export async function getPTSStatusBatch(cdPacientes: (number | string)[]): Promise<Record<string, PtsStatusBatchItem>> {
+  if (cdPacientes.length === 0) return {}
   const { data } = await api.get('/pts/status-batch', {
-    params: { cd_pacientes: cdAtendimentos.join(',') },
+    params: { cd_pacientes: cdPacientes.join(',') },
   })
   return data
 }

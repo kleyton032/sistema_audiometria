@@ -210,10 +210,10 @@ class PTSReportItem(BaseModel):
 
 @router.get(
     "/status-batch",
-    summary="Retorna status do PTS (vigência atual) para uma lista de atendimentos",
+    summary="Retorna status do PTS (vigência atual) para uma lista de pacientes",
 )
 def status_batch(
-    cd_pacientes: str,  # nr_atendimentos separados por vírgula
+    cd_pacientes: str,  # cd_pacientes separados por vírgula
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -221,7 +221,7 @@ def status_batch(
     vigencia = calcular_vigencia()
     session = get_db_session(user, db)
     try:
-        return get_pts_status_batch(session, ids, vigencia)
+        return get_pts_status_batch(session, ids, vigencia, user.id_usuario)
     finally:
         if user.nm_login == 'testesoul':
             session.close()

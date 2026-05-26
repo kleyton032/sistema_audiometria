@@ -161,24 +161,49 @@ def get_pts_by_id(db: Session, id_pts: int) -> PTS | None:
     )
 
 
-def get_pts_status_batch(db: Session, nr_atendimentos: list[str], vigencia: str) -> dict:
-    """Retorna {nr_atendimento: {id_pts, fl_finalizado}} para os atendimentos informados."""
+def get_pts_status_batch(db: Session, cd_pacientes: list[str], vigencia: str, id_usuario: int) -> dict:
+    from sqlalchemy.orm import joinedload
+    from app.db.models import User
+
     rows = (
-        db.query(PTS.nr_atendimento, PTS.id_pts, PTS.fl_finalizado)
+        db.query(PTS)
+        .options(joinedload(PTS.usuario).joinedload(User.prestador))
         .filter(
-            PTS.nr_atendimento.in_(nr_atendimentos),
+            PTS.cd_paciente.in_(cd_pacientes),
             PTS.ds_vigencia == vigencia,
             PTS.fl_ativo == 1,
         )
         .all()
     )
-    return {
-        row.nr_atendimento: {
-            "id_pts":        row.id_pts,
-            "fl_finalizado": getattr(row, "fl_finalizado", 0) or 0,
-        }
-        for row in rows
-    }
+
+    resultado = {cd: {"meu_pts": None, "outros_pts": []} for cd in cd_pacientes}
+
+    for row in rows:
+        if row.cd_paciente not in resultado:
+            resultado[row.cd_paciente] = {"meu_pts": None, "outros_pts": []}
+            
+        if row.id_usuario == id_usuario:
+            resultado[row.cd_paciente]["meu_pts"] = {
+                "id_pts": row.id_pts,
+                "fl_finalizado": getattr(row, "fl_finalizado", 0) or 0,
+                "dt_criacao": row.dt_criacao.strftime('%d/%m/%Y %H:%M') if row.dt_criacao else None
+            }
+        else:
+            nome = row.usuario.nm_usuario.split(' ')[0] if row.usuario and row.usuario.nm_usuario else "Profissional"
+            esp = None
+            if row.usuario:
+                if getattr(row.usuario, "prestador", None) and row.usuario.prestador.nm_tip_presta:
+                    esp = row.usuario.prestador.nm_tip_presta
+                else:
+                    esp = row.usuario.ds_especialidade
+            
+            resultado[row.cd_paciente]["outros_pts"].append({
+                "nm_profissional": nome,
+                "ds_especialidade": esp or "Especialidade não informada",
+                "fl_finalizado": getattr(row, "fl_finalizado", 0) or 0
+            })
+
+    return resultado
 
 
 def _inserir_filhos(db: Session, id_pts: int, vigencia: str, pts_data: PTSCreate):
