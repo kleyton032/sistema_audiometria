@@ -251,7 +251,7 @@ export default function PtsPacientesPage() {
         )
 
         return (
-          <Space direction="vertical" size={4} align="flex-start">
+          <Space direction="vertical" size={4} align="start">
             <Tooltip title={semAtendimento ? 'Aguardando recepção (sem código de atendimento)' : undefined}>
               {/* React Aria Button garante que o leitor anuncie o texto exato do aria-label */}
               <AriaButton
@@ -338,7 +338,7 @@ export default function PtsPacientesPage() {
       // Busca status PTS para todos os pacientes da agenda
       const ids = result.items
         .map((i) => i.cd_paciente)
-        .filter((id): id is string | number => id != null)
+        .filter((id): id is number => id != null)
       if (ids.length > 0) {
         getPTSStatusBatch(ids).then(setPtsStatus).catch(() => null)
       }
