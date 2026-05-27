@@ -746,11 +746,16 @@ export default function PTSPage() {
             rules={[{ required: true, message: 'Por favor, selecione um motivo.' }]}
           >
             <Select placeholder="Selecione o motivo...">
-              <Select.Option value="ERRO_PREENCHIMENTO">Erro de Preenchimento</Select.Option>
-              <Select.Option value="MUDANCA_CONDUTA">Mudança de Conduta Terapêutica</Select.Option>
-              <Select.Option value="SOLICITACAO_PACIENTE">Solicitação do Paciente/Família</Select.Option>
-              <Select.Option value="DUPLICIDADE">Registro em Duplicidade</Select.Option>
-              <Select.Option value="OUTROS">Outros</Select.Option>
+              <Select.Option value="Paciente faltou">Paciente faltou</Select.Option>
+              <Select.Option value="Alta terapêutica">Alta terapêutica</Select.Option>
+              <Select.Option value="Atendimento duplicado">Atendimento duplicado</Select.Option>
+              <Select.Option value="Solicitação incorreta">Solicitação incorreta</Select.Option>
+              <Select.Option value="Mudança de conduta">Mudança de conduta</Select.Option>
+              <Select.Option value="Cancelado pelo profissional">Cancelado pelo profissional</Select.Option>
+              <Select.Option value="Cancelado pela coordenação">Cancelado pela coordenação</Select.Option>
+              <Select.Option value="Paciente transferido">Paciente transferido</Select.Option>
+              <Select.Option value="Erro de preenchimento">Erro de preenchimento</Select.Option>
+              <Select.Option value="Reagendamento necessário">Reagendamento necessário</Select.Option>
             </Select>
           </Form.Item>
           <Form.Item

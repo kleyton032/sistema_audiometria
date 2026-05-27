@@ -206,6 +206,9 @@ class PTSReportItem(BaseModel):
     fl_ativo: int = 1
     terapias: str | None = None
     objetivos: str | None = None
+    ds_motivo_cancelamento: str | None = None
+    ds_detalhe_cancelamento: str | None = None
+    dt_cancelamento: str | None = None
 
 
 @router.get(
@@ -369,6 +372,16 @@ def cancelar_pts(
                 'motivo': motivo_completo,
             },
         )
+        
+        from datetime import datetime
+        from app.db.models import PTS as PTSModel
+        session.query(PTSModel).filter(PTSModel.id_pts == id_pts).update({
+            "ds_motivo_cancelamento": cancel_data.ds_motivo,
+            "ds_detalhe_cancelamento": cancel_data.ds_detalhe,
+            "fl_ativo": 0,
+            "dt_atualizacao": datetime.now()
+        })
+
         session.commit()
         return {
             'status': 'ok',
@@ -610,7 +623,10 @@ def report_dashboard_pts(
                     ' (' || t.NR_QTDE_SESSOES || ')', ', ') WITHIN GROUP (ORDER BY t.NR_ORDEM) 
                  FROM FAV_TB_PTS_TERAPIA t WHERE t.ID_PTS = p.ID_PTS) as TERAPIAS,
                 (SELECT LISTAGG(o.DS_OBJETIVO, '; ') WITHIN GROUP (ORDER BY o.DS_ESPECIALIDADE, o.NR_ITEM) 
-                 FROM FAV_TB_PTS_OBJETIVO o WHERE o.ID_PTS = p.ID_PTS AND o.DS_MOMENTO = 'atual') as OBJETIVOS
+                 FROM FAV_TB_PTS_OBJETIVO o WHERE o.ID_PTS = p.ID_PTS AND o.DS_MOMENTO = 'atual') as OBJETIVOS,
+                p.DS_MOTIVO_CANCELAMENTO,
+                p.DS_DETALHE_CANCELAMENTO,
+                TO_CHAR(p.DT_ATUALIZACAO, 'DD/MM/YYYY HH24:MI') as DT_CANCELAMENTO
             FROM FAV_TB_PTS p
             JOIN FAV_TB_SILA_USUARIOS u ON p.ID_USUARIO = u.ID_USUARIO
             WHERE {base_where}
@@ -631,7 +647,10 @@ def report_dashboard_pts(
                 "fl_finalizado": r[7],
                 "fl_ativo": r[8],
                 "terapias": r[9],
-                "objetivos": r[10]
+                "objetivos": r[10],
+                "ds_motivo_cancelamento": r[11],
+                "ds_detalhe_cancelamento": r[12],
+                "dt_cancelamento": r[13]
             } for r in rows
         ]
     except Exception as e:

@@ -151,6 +151,23 @@ export interface OutroPTSObjetivo {
   motivo: string | null
 }
 
+export interface PTSReportItem {
+  id_pts: number
+  cd_paciente: string
+  nm_paciente: string
+  nr_atendimento: string
+  nm_usuario: string
+  ds_vigencia: string
+  dt_criacao: string
+  fl_finalizado: number
+  fl_ativo: number
+  terapias?: string
+  objetivos?: string
+  ds_motivo_cancelamento?: string
+  ds_detalhe_cancelamento?: string
+  dt_cancelamento?: string
+}
+
 export interface OutroPTSItem {
   id_pts: number
   nm_prestador: string

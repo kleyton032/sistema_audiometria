@@ -8,7 +8,9 @@ import {
   SearchOutlined,
   ReloadOutlined,
   PrinterOutlined,
-  FilterOutlined
+  FilterOutlined,
+  InfoCircleOutlined,
+  HistoryOutlined
 } from '@ant-design/icons'
 import { getPTSDashboardStats, getPTSDashboardReport, getPTSById } from '@/api/ptsService'
 import { Modal, Spin } from 'antd'
@@ -285,13 +287,45 @@ export default function PtsDashboardPage() {
       dataIndex: 'fl_finalizado',
       key: 'fl_finalizado',
       width: 120,
-      render: (val: number, record: any) => (
-        record.fl_ativo === 0
-          ? <Tag color="error" icon={<CloseCircleOutlined />}>Cancelado</Tag>
-          : val === 1 
+      render: (val: number, record: any) => {
+        if (record.fl_ativo === 0) {
+          const isLegacyCancel = !record.ds_motivo_cancelamento;
+
+          return (
+            <Tooltip
+              title={
+                isLegacyCancel ? (
+                  <div>
+                    <div style={{ marginBottom: 8, padding: '4px 8px', background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 4, color: '#d46b08', fontSize: 12 }}>
+                      <strong>⚠️ Cancelamento Legado</strong><br/>
+                      Realizado antes da atualização do sistema. Detalhes indisponíveis.
+                    </div>
+                    <strong>Responsável:</strong> {record.nm_usuario || 'Não informado'}
+                  </div>
+                ) : (
+                  <div>
+                    <strong>Motivo:</strong> {record.ds_motivo_cancelamento || 'Não informado'}<br />
+                    <strong>Observação:</strong> {record.ds_detalhe_cancelamento || 'Nenhuma'}<br />
+                    <strong>Data:</strong> {record.dt_cancelamento || 'Não informada'}<br />
+                    <strong>Responsável:</strong> {record.nm_usuario || 'Não informado'}
+                  </div>
+                )
+              }
+              placement="top"
+              color="#fff"
+              overlayInnerStyle={{ color: '#333', border: '1px solid #d9d9d9', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
+            >
+              <Tag color={isLegacyCancel ? "default" : "error"} icon={isLegacyCancel ? <HistoryOutlined /> : <CloseCircleOutlined />}>
+                Cancelado <InfoCircleOutlined style={{ marginLeft: 4, color: isLegacyCancel ? '#8c8c8c' : 'inherit' }} />
+              </Tag>
+            </Tooltip>
+          );
+        }
+
+        return val === 1 
           ? <Tag color="success" icon={<CheckCircleOutlined />}>Finalizado</Tag>
           : <Tag color="processing" icon={<EditOutlined />}>Rascunho</Tag>
-      )
+      }
     },
     {
       title: 'Imprimir',
