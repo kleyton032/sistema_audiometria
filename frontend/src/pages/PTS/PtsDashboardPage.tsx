@@ -498,11 +498,13 @@ export default function PtsDashboardPage() {
         title={
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '95%' }}>
             <span>{isPreviewFull ? 'Visualização Completa (Tudo)' : 'Visualização de Impressão (Resumida)'}</span>
-            <Space>
-              <Button icon={<PrinterOutlined />} onClick={handlePrintFromPreview} disabled={previewLoading || !currentPtsData}>
-                Imprimir
-              </Button>
-            </Space>
+            {!isPreviewFull && (
+              <Space>
+                <Button icon={<PrinterOutlined />} onClick={handlePrintFromPreview} disabled={previewLoading || !currentPtsData}>
+                  Imprimir
+                </Button>
+              </Space>
+            )}
           </div>
         }
         open={previewVisible}
