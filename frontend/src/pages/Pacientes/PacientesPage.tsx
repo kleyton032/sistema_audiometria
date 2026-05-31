@@ -85,10 +85,10 @@ export default function PacientesPage() {
 
   const columns: ColumnsType<AgendaItem> = [
     {
-      title: 'Cód. Atendimento',
+      title: 'Atendimento',
       dataIndex: 'cd_atendimento',
       key: 'cd_atendimento',
-      width: 110,
+      width: 100,
       sorter: (a, b) => (a.cd_atendimento ?? 0) - (b.cd_atendimento ?? 0),
       render: (v) => <Text strong>{v ?? '—'}</Text>,
     },
@@ -96,7 +96,7 @@ export default function PacientesPage() {
       title: 'Horário',
       dataIndex: 'hr_agenda',
       key: 'hr_agenda',
-      width: 90,
+      width: 80,
       sorter: (a, b) => (a.hr_agenda ?? '').localeCompare(b.hr_agenda ?? ''),
       render: (v) => <Text strong>{v ?? '—'}</Text>,
     },
@@ -110,6 +110,11 @@ export default function PacientesPage() {
           <Space>
             <UserOutlined style={{ color: '#667eea' }} aria-hidden="true" />
             <Text strong>{nome ?? '—'}</Text>
+            {record.nr_fone && (
+              <Tooltip title={record.nr_fone}>
+                <PhoneOutlined style={{ color: '#aaa', fontSize: 11 }} aria-label={`Telefone: ${record.nr_fone}`} />
+              </Tooltip>
+            )}
           </Space>
           {record.cd_paciente && (
             <Text type="secondary" style={{ fontSize: 11 }}>
@@ -121,24 +126,14 @@ export default function PacientesPage() {
       ),
     },
     {
-      title: 'Item Agendado',
+      title: 'Procedimento',
       dataIndex: 'ds_item_agendamento',
       key: 'ds_item_agendamento',
-      width: 180,
+      width: 160,
       ellipsis: true,
-      render: (v) => v ?? <Text type="secondary">—</Text>,
-    },
-    {
-      title: 'Telefone',
-      dataIndex: 'nr_fone',
-      key: 'nr_fone',
-      width: 140,
       render: (v) =>
         v ? (
-          <Space>
-            <PhoneOutlined aria-hidden="true" />
-            <Text>{v}</Text>
-          </Space>
+          <Text ellipsis={{ tooltip: v }}>{v}</Text>
         ) : (
           <Text type="secondary">—</Text>
         ),
@@ -147,7 +142,7 @@ export default function PacientesPage() {
       title: 'Situação',
       dataIndex: 'tp_situacao',
       key: 'tp_situacao',
-      width: 140,
+      width: 120,
       filters: [
         { text: 'Marcado', value: 'M' },
         { text: 'Atendido', value: 'A' },
@@ -306,7 +301,7 @@ export default function PacientesPage() {
           size="middle"
           pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (t) => `${t} registros` }}
           locale={{ emptyText: 'Nenhum paciente agendado para esta data.' }}
-          scroll={{ x: 'max-content' }}
+          scroll={{ x: 780 }}
         />
       </Card>
 

@@ -5,7 +5,7 @@ import base64
 import io
 import math
 import os
-from datetime import datetime
+from datetime import datetime, date
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -15,10 +15,8 @@ if TYPE_CHECKING:
 # ── Logos institucionais (base64 inline para WeasyPrint) ─────────────────────
 
 def _logo_b64(nome: str) -> str:
-    """Lê uma logo do diretório public do frontend e retorna base64."""
-    # Caminho: backend/app/pdf/ -> vai 4 níveis acima para raiz do projeto
-    base = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    path = os.path.join(base, "frontend", "public", nome)
+    """Lê uma logo da pasta assets/ (dentro do backend) e retorna base64."""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", nome)
     if not os.path.exists(path):
         return ""
     with open(path, "rb") as f:
@@ -161,13 +159,26 @@ def _reflex_cell(value) -> str:
 
 # ── Template HTML ─────────────────────────────────────────────────────────────
 
-def _html(exame: "Exame", nm_usuario: str, nr_conselho: str) -> str:
+def _html(exame: "Exame", nm_usuario: str, nr_conselho: str, ds_especialidade: str = "") -> str:
     r = exame.resultado_imitan
     img_b64 = _timpanograma_base64(r)
     logo_fav   = _logo_b64("logo-fav.png")
     logo_ceriv = _logo_b64("logo-ceriv.png")
     dt = exame.dt_exame
-    dt_str = dt.strftime("%d/%m/%Y às %H:%M") if isinstance(dt, datetime) else str(dt)
+    dt_data_str = dt.strftime("%d/%m/%Y") if isinstance(dt, datetime) else str(dt)[:10]
+    dt_hora_str = dt.strftime("%H:%M") if isinstance(dt, datetime) else "—"
+
+    dt_nasc_raw = getattr(exame, "dt_nascimento_paciente", None)
+    if dt_nasc_raw is not None:
+        dt_nasc_str = dt_nasc_raw.strftime("%d/%m/%Y") if hasattr(dt_nasc_raw, "strftime") else str(dt_nasc_raw)[:10]
+        _ref = dt.date() if isinstance(dt, datetime) else date.today()
+        _nasc = dt_nasc_raw.date() if hasattr(dt_nasc_raw, "date") else dt_nasc_raw
+        _idade = _ref.year - _nasc.year - ((_ref.month, _ref.day) < (_nasc.month, _nasc.day))
+        idade_str = f"{_idade} anos"
+    else:
+        dt_nasc_str = "—"
+        idade_str = "—"
+
     obs = exame.ds_observacoes or "—"
     conclusao = (r.ds_conclusao or "").replace("\n", "<br>")
 
@@ -191,10 +202,11 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str) -> str:
   .inst-header-logo img {{ height: 32px; object-fit: contain; }}
   .inst-header-logo-right img {{ height: 40px; object-fit: contain; }}
   .inst-header-title {{ flex: 1; text-align: center; }}
-  .inst-header-data {{ display: flex; gap: 0; padding: 6px 12px; font-size: 9px; }}
-  .inst-header-data-left {{ flex: 2; display: flex; flex-direction: column; gap: 2px; }}
-  .inst-header-data-right {{ flex: 1; display: flex; flex-direction: column; gap: 2px; text-align: right; }}
+  .inst-header-data {{ display: flex; gap: 16px; padding: 8px 12px; font-size: 9px; line-height: 1.55; }}
+  .inst-header-data-left {{ flex: 3; display: flex; flex-direction: column; gap: 1px; }}
+  .inst-header-data-right {{ flex: 2; display: flex; flex-direction: column; gap: 1px; text-align: left; }}
   .inst-header-data strong {{ font-weight: bold; }}
+  .nm-paciente {{ font-size: 11px; font-weight: bold; color: #1e5aa8; text-transform: uppercase; margin-bottom: 2px; }}
   table {{ width: 100%; border-collapse: collapse; margin: 3px 0; font-size: 9px; }}
   th, td {{ border: 1px solid #ccc; padding: 2px 4px; text-align: center; }}
   th {{ background: #f0eaff; font-weight: bold; }}
@@ -204,7 +216,7 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str) -> str:
   .reflexos-row {{ display: flex; gap: 8px; }}
   .reflexos-row > div {{ flex: 1; }}
   .conclusao {{ background: #fafafa; border: 1px solid #ddd; padding: 4px 8px; border-radius: 3px; line-height: 1.4; min-height: 28px; font-size: 9px; }}
-  .assinatura {{ margin-top: 10px; text-align: center; }}
+  .assinatura {{ margin-top: 48px; text-align: center; }}
   .assinatura .linha {{ border-top: 1px solid #333; width: 200px; margin: 0 auto 3px; }}
   .tag {{ display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 9px; font-weight: bold; }}
   .tag-od {{ background: #fde8e8; color: #c0392b; }}
@@ -231,14 +243,14 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str) -> str:
   </div>
   <div class="inst-header-data">
     <div class="inst-header-data-left">
-      <div><strong>Paciente:</strong> {getattr(exame, 'nm_paciente', None) or f'Cód. {exame.id_paciente}'}</div>
-      <div><strong>Profissional:</strong> {nm_usuario}</div>
-      <div><strong>Especialidade / Conselho:</strong> {nr_conselho or '—'}</div>
+      <div class="nm-paciente">{getattr(exame, 'nm_paciente', None) or f'Cód. {exame.id_paciente}'}</div>
+      <div><strong>Nascimento:</strong> {dt_nasc_str} &nbsp;|&nbsp; <strong>Idade:</strong> {idade_str}</div>
+      <div><strong>Cód. Paciente:</strong> {exame.id_paciente}</div>
     </div>
     <div class="inst-header-data-right">
       <div><strong>Atendimento:</strong> {exame.id_atendimento or '—'}</div>
-      <div><strong>Cód. Paciente:</strong> {exame.id_paciente}</div>
-      <div><strong>Data:</strong> {dt_str}</div>
+      <div><strong>Data:</strong> {dt_data_str}</div>
+      <div><strong>Hora:</strong> {dt_hora_str}</div>
       <div><strong>Status:</strong> <span class="{'badge-finalizado' if exame.ds_status == 'FINALIZADO' else 'badge-rascunho'}">{exame.ds_status}</span></div>
     </div>
   </div>
@@ -360,7 +372,7 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str) -> str:
   <div class="linha"></div>
   <div><strong>{nm_usuario}</strong></div>
   {f"<div style='font-size:10px; color:#555;'>{nr_conselho}</div>" if nr_conselho else ""}
-  <div style="font-size:10px; color:#888;">Fonoaudiólogo(a) responsável</div>
+  {f"<div style='font-size:10px; color:#888;'>{ds_especialidade}</div>" if ds_especialidade else "<div style='font-size:10px; color:#888;'>Responsável pelo exame</div>"}
 </div>
 
 </body>
@@ -370,7 +382,7 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str) -> str:
 
 # ── Entrada pública ───────────────────────────────────────────────────────────
 
-def gerar_pdf_imitanciometria(exame: "Exame", nm_usuario: str, nr_conselho: str) -> bytes:
+def gerar_pdf_imitanciometria(exame: "Exame", nm_usuario: str, nr_conselho: str, ds_especialidade: str = "") -> bytes:
     from weasyprint import HTML
-    html = _html(exame, nm_usuario, nr_conselho)
+    html = _html(exame, nm_usuario, nr_conselho, ds_especialidade)
     return HTML(string=html).write_pdf()

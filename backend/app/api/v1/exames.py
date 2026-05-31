@@ -183,18 +183,35 @@ def gerar_laudo(
         raise HTTPException(status_code=404, detail="Exame não encontrado.")
 
     nm_usuario = current_user.nm_usuario
-    nr_conselho = current_user.nr_conselho or ""
+
+    # Especialidade: campo do User, fallback para nm_tip_presta do prestador MV
+    prestador = current_user.prestador
+    ds_especialidade = (
+        current_user.ds_especialidade
+        or (prestador.nm_tip_presta if prestador else None)
+        or ""
+    )
+
+    # Conselho: campo NR_CONSELHO do User; se vazio, monta a partir dos dados do prestador MV
+    if current_user.nr_conselho:
+        nr_conselho = current_user.nr_conselho
+    elif prestador and prestador.ds_conselho and prestador.ds_codigo_conselho:
+        nr_conselho = f"{prestador.ds_conselho} {prestador.ds_codigo_conselho}"
+    elif prestador and prestador.ds_codigo_conselho:
+        nr_conselho = prestador.ds_codigo_conselho
+    else:
+        nr_conselho = ""
 
     if exame.ds_tipo == "AUDIOMETRIA":
         if not exame.resultado_audio:
             raise HTTPException(status_code=400, detail="Exame não possui resultado registrado.")
-        pdf_bytes = gerar_pdf_audiometria(exame, nm_usuario, nr_conselho)
+        pdf_bytes = gerar_pdf_audiometria(exame, nm_usuario, nr_conselho, ds_especialidade)
         nm_arquivo = f"laudo_audio_{exame.id_exame}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
 
     elif exame.ds_tipo == "IMITANCIOMETRIA":
         if not exame.resultado_imitan:
             raise HTTPException(status_code=400, detail="Exame não possui resultado registrado.")
-        pdf_bytes = gerar_pdf_imitanciometria(exame, nm_usuario, nr_conselho)
+        pdf_bytes = gerar_pdf_imitanciometria(exame, nm_usuario, nr_conselho, ds_especialidade)
         nm_arquivo = f"laudo_imitan_{exame.id_exame}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
 
     else:
