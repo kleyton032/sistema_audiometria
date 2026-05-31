@@ -17,7 +17,9 @@ class ExameAudiometriaCreate(BaseModel):
     # Limiares OD — via aérea
     od_va_250:  Optional[float] = None
     od_va_500:  Optional[float] = None
+    od_va_750:  Optional[float] = None
     od_va_1000: Optional[float] = None
+    od_va_1500: Optional[float] = None
     od_va_2000: Optional[float] = None
     od_va_3000: Optional[float] = None
     od_va_4000: Optional[float] = None
@@ -34,7 +36,9 @@ class ExameAudiometriaCreate(BaseModel):
     # Limiares OE — via aérea
     oe_va_250:  Optional[float] = None
     oe_va_500:  Optional[float] = None
+    oe_va_750:  Optional[float] = None
     oe_va_1000: Optional[float] = None
+    oe_va_1500: Optional[float] = None
     oe_va_2000: Optional[float] = None
     oe_va_3000: Optional[float] = None
     oe_va_4000: Optional[float] = None
@@ -78,12 +82,12 @@ class ExameAudiometriaCreate(BaseModel):
     oe_mask_iprf: Optional[float] = None
 
     # Sem resposta por frequência (NR)
-    od_va_250_nr: int = 0;  od_va_500_nr: int = 0;  od_va_1000_nr: int = 0
-    od_va_2000_nr: int = 0; od_va_3000_nr: int = 0; od_va_4000_nr: int = 0
+    od_va_250_nr: int = 0;  od_va_500_nr: int = 0;  od_va_750_nr: int = 0;  od_va_1000_nr: int = 0
+    od_va_1500_nr: int = 0; od_va_2000_nr: int = 0; od_va_3000_nr: int = 0; od_va_4000_nr: int = 0
     od_va_6000_nr: int = 0; od_va_8000_nr: int = 0
     od_vo_500_nr: int = 0;  od_vo_1000_nr: int = 0; od_vo_2000_nr: int = 0; od_vo_3000_nr: int = 0; od_vo_4000_nr: int = 0
-    oe_va_250_nr: int = 0;  oe_va_500_nr: int = 0;  oe_va_1000_nr: int = 0
-    oe_va_2000_nr: int = 0; oe_va_3000_nr: int = 0; oe_va_4000_nr: int = 0
+    oe_va_250_nr: int = 0;  oe_va_500_nr: int = 0;  oe_va_750_nr: int = 0;  oe_va_1000_nr: int = 0
+    oe_va_1500_nr: int = 0; oe_va_2000_nr: int = 0; oe_va_3000_nr: int = 0; oe_va_4000_nr: int = 0
     oe_va_6000_nr: int = 0; oe_va_8000_nr: int = 0
     oe_vo_500_nr: int = 0;  oe_vo_1000_nr: int = 0; oe_vo_2000_nr: int = 0; oe_vo_3000_nr: int = 0; oe_vo_4000_nr: int = 0
 
@@ -103,9 +107,12 @@ class ResultadoAudioResponse(BaseModel):
     id_resultado: int
     id_exame:     int
 
+    # Limiares OD — via aérea
     od_va_250:  Optional[float] = None
     od_va_500:  Optional[float] = None
+    od_va_750:  Optional[float] = None
     od_va_1000: Optional[float] = None
+    od_va_1500: Optional[float] = None
     od_va_2000: Optional[float] = None
     od_va_3000: Optional[float] = None
     od_va_4000: Optional[float] = None
@@ -120,7 +127,9 @@ class ResultadoAudioResponse(BaseModel):
 
     oe_va_250:  Optional[float] = None
     oe_va_500:  Optional[float] = None
+    oe_va_750:  Optional[float] = None
     oe_va_1000: Optional[float] = None
+    oe_va_1500: Optional[float] = None
     oe_va_2000: Optional[float] = None
     oe_va_3000: Optional[float] = None
     oe_va_4000: Optional[float] = None
@@ -162,12 +171,12 @@ class ResultadoAudioResponse(BaseModel):
     oe_mask_iprf: Optional[float] = None
 
     # Sem resposta por frequência (NR)
-    od_va_250_nr: int = 0;  od_va_500_nr: int = 0;  od_va_1000_nr: int = 0
-    od_va_2000_nr: int = 0; od_va_3000_nr: int = 0; od_va_4000_nr: int = 0
+    od_va_250_nr: int = 0;  od_va_500_nr: int = 0;  od_va_750_nr: int = 0;  od_va_1000_nr: int = 0
+    od_va_1500_nr: int = 0; od_va_2000_nr: int = 0; od_va_3000_nr: int = 0; od_va_4000_nr: int = 0
     od_va_6000_nr: int = 0; od_va_8000_nr: int = 0
     od_vo_500_nr: int = 0;  od_vo_1000_nr: int = 0; od_vo_2000_nr: int = 0; od_vo_3000_nr: int = 0; od_vo_4000_nr: int = 0
-    oe_va_250_nr: int = 0;  oe_va_500_nr: int = 0;  oe_va_1000_nr: int = 0
-    oe_va_2000_nr: int = 0; oe_va_3000_nr: int = 0; oe_va_4000_nr: int = 0
+    oe_va_250_nr: int = 0;  oe_va_500_nr: int = 0;  oe_va_750_nr: int = 0;  oe_va_1000_nr: int = 0
+    oe_va_1500_nr: int = 0; oe_va_2000_nr: int = 0; oe_va_3000_nr: int = 0; oe_va_4000_nr: int = 0
     oe_va_6000_nr: int = 0; oe_va_8000_nr: int = 0
     oe_vo_500_nr: int = 0;  oe_vo_1000_nr: int = 0; oe_vo_2000_nr: int = 0; oe_vo_3000_nr: int = 0; oe_vo_4000_nr: int = 0
 

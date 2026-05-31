@@ -11,14 +11,16 @@ export interface ExameAudiometriaCreate {
   ds_observacoes?:      string | null
 
   // Limiares OD — via aérea
-  od_va_250?: number | null; od_va_500?: number | null; od_va_1000?: number | null
+  od_va_250?: number | null; od_va_500?: number | null; od_va_750?: number | null
+  od_va_1000?: number | null; od_va_1500?: number | null
   od_va_2000?: number | null; od_va_3000?: number | null; od_va_4000?: number | null
   od_va_6000?: number | null; od_va_8000?: number | null
   // Limiares OD — via óssea
   od_vo_500?: number | null; od_vo_1000?: number | null
   od_vo_2000?: number | null; od_vo_3000?: number | null; od_vo_4000?: number | null
   // Limiares OE — via aérea
-  oe_va_250?: number | null; oe_va_500?: number | null; oe_va_1000?: number | null
+  oe_va_250?: number | null; oe_va_500?: number | null; oe_va_750?: number | null
+  oe_va_1000?: number | null; oe_va_1500?: number | null
   oe_va_2000?: number | null; oe_va_3000?: number | null; oe_va_4000?: number | null
   oe_va_6000?: number | null; oe_va_8000?: number | null
   // Limiares OE — via óssea
@@ -39,11 +41,13 @@ export interface ExameAudiometriaCreate {
   oe_mask_va?: number | null; oe_mask_vo?: number | null
   oe_mask_lrf?: number | null; oe_mask_iprf?: number | null
   // Sem resposta por frequência (NR)
-  od_va_250_nr?: number; od_va_500_nr?: number; od_va_1000_nr?: number
+  od_va_250_nr?: number; od_va_500_nr?: number; od_va_750_nr?: number
+  od_va_1000_nr?: number; od_va_1500_nr?: number
   od_va_2000_nr?: number; od_va_3000_nr?: number; od_va_4000_nr?: number
   od_va_6000_nr?: number; od_va_8000_nr?: number
   od_vo_500_nr?: number; od_vo_1000_nr?: number; od_vo_2000_nr?: number; od_vo_3000_nr?: number; od_vo_4000_nr?: number
-  oe_va_250_nr?: number; oe_va_500_nr?: number; oe_va_1000_nr?: number
+  oe_va_250_nr?: number; oe_va_500_nr?: number; oe_va_750_nr?: number
+  oe_va_1000_nr?: number; oe_va_1500_nr?: number
   oe_va_2000_nr?: number; oe_va_3000_nr?: number; oe_va_4000_nr?: number
   oe_va_6000_nr?: number; oe_va_8000_nr?: number
   oe_vo_500_nr?: number; oe_vo_1000_nr?: number; oe_vo_2000_nr?: number; oe_vo_3000_nr?: number; oe_vo_4000_nr?: number
@@ -57,12 +61,14 @@ export interface ExameAudiometriaCreate {
 export interface ResultadoAudioResponse {
   id_resultado: number
   id_exame:     number
-  od_va_250?: number | null; od_va_500?: number | null; od_va_1000?: number | null
+  od_va_250?: number | null; od_va_500?: number | null; od_va_750?: number | null
+  od_va_1000?: number | null; od_va_1500?: number | null
   od_va_2000?: number | null; od_va_3000?: number | null; od_va_4000?: number | null
   od_va_6000?: number | null; od_va_8000?: number | null
   od_vo_500?: number | null; od_vo_1000?: number | null
   od_vo_2000?: number | null; od_vo_3000?: number | null; od_vo_4000?: number | null
-  oe_va_250?: number | null; oe_va_500?: number | null; oe_va_1000?: number | null
+  oe_va_250?: number | null; oe_va_500?: number | null; oe_va_750?: number | null
+  oe_va_1000?: number | null; oe_va_1500?: number | null
   oe_va_2000?: number | null; oe_va_3000?: number | null; oe_va_4000?: number | null
   oe_va_6000?: number | null; oe_va_8000?: number | null
   oe_vo_500?: number | null; oe_vo_1000?: number | null
@@ -79,11 +85,13 @@ export interface ResultadoAudioResponse {
   od_mask_lrf?: number | null; od_mask_iprf?: number | null
   oe_mask_va?: number | null; oe_mask_vo?: number | null
   oe_mask_lrf?: number | null; oe_mask_iprf?: number | null
-  od_va_250_nr?: number; od_va_500_nr?: number; od_va_1000_nr?: number
+  od_va_250_nr?: number; od_va_500_nr?: number; od_va_750_nr?: number
+  od_va_1000_nr?: number; od_va_1500_nr?: number
   od_va_2000_nr?: number; od_va_3000_nr?: number; od_va_4000_nr?: number
   od_va_6000_nr?: number; od_va_8000_nr?: number
   od_vo_500_nr?: number; od_vo_1000_nr?: number; od_vo_2000_nr?: number; od_vo_3000_nr?: number; od_vo_4000_nr?: number
-  oe_va_250_nr?: number; oe_va_500_nr?: number; oe_va_1000_nr?: number
+  oe_va_250_nr?: number; oe_va_500_nr?: number; oe_va_750_nr?: number
+  oe_va_1000_nr?: number; oe_va_1500_nr?: number
   oe_va_2000_nr?: number; oe_va_3000_nr?: number; oe_va_4000_nr?: number
   oe_va_6000_nr?: number; oe_va_8000_nr?: number
   oe_vo_500_nr?: number; oe_vo_1000_nr?: number; oe_vo_2000_nr?: number; oe_vo_3000_nr?: number; oe_vo_4000_nr?: number

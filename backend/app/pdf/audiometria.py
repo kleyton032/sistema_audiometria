@@ -35,11 +35,11 @@ def _audiograma_base64(resultado, exame=None) -> str:
     fig, (ax_od, ax_oe) = plt.subplots(1, 2, figsize=(11, 3.8))
     fig.suptitle("Audiograma Tonal", fontsize=10, fontweight="bold")
 
-    freqs_va = [250, 500, 1000, 2000, 3000, 4000, 6000, 8000]
+    freqs_va = [250, 500, 750, 1000, 1500, 2000, 3000, 4000, 6000, 8000]
     freqs_vo = [500, 1000, 2000, 3000, 4000]
     x_va = list(range(len(freqs_va)))
     x_vo = [freqs_va.index(f) for f in freqs_vo]
-    xlabels = ["250", "500", "1k", "2k", "3k", "4k", "6k", "8k"]
+    xlabels = ["250", "500", "750", "1k", "1.5k", "2k", "3k", "4k", "6k", "8k"]
 
     def _get(obj, field):
         v = getattr(obj, field, None)
@@ -106,7 +106,7 @@ def _audiograma_base64(resultado, exame=None) -> str:
         ax.set_title(title, fontsize=10, fontweight="bold", color=color, pad=8)
         ax.axhline(25, color="#aaa", linestyle="--", linewidth=0.8)
         ax.grid(True, which="major", alpha=0.25)
-        ax.set_xlim(-0.5, 7.5)
+        ax.set_xlim(-0.5, 9.5)
         ax.legend(fontsize=7, loc="lower right")
 
     # ── Ouvido Direito (ax_od) ─────────────────────────────────────────────
@@ -180,7 +180,9 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str) -> str:
         cells = (
             "<td>—</td>"
             f"<td>{_fmt(getattr(r, f500))}</td>"
+            "<td>—</td>"
             f"<td>{_fmt(getattr(r, f1000))}</td>"
+            "<td>—</td>"
             f"<td>{_fmt(getattr(r, f2000))}</td>"
             f"<td>{_fmt(getattr(r, f3000))}</td>"
             f"<td>{_fmt(getattr(r, f4000))}</td>"
@@ -267,18 +269,18 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str) -> str:
   <thead>
     <tr class="freq-header">
       <th>Via</th>
-      <th>250 Hz</th><th>500 Hz</th><th>1000 Hz</th><th>2000 Hz</th>
-      <th>3000 Hz</th><th>4000 Hz</th><th>6000 Hz</th><th>8000 Hz</th>
+      <th>250 Hz</th><th>500 Hz</th><th>750 Hz</th><th>1000 Hz</th><th>1500 Hz</th>
+      <th>2000 Hz</th><th>3000 Hz</th><th>4000 Hz</th><th>6000 Hz</th><th>8000 Hz</th>
     </tr>
   </thead>
   <tbody>
-    <tr><td colspan="9" style="background:#fff3f3; font-weight:bold; text-align:left; padding-left:8px;">
+    <tr><td colspan="11" style="background:#fff3f3; font-weight:bold; text-align:left; padding-left:8px;">
       <span class="tag tag-od">OD — Orelha Direita</span></td></tr>
-    {row_va("Aérea", "od_va_250","od_va_500","od_va_1000","od_va_2000","od_va_3000","od_va_4000","od_va_6000","od_va_8000")}
+    {row_va("Aérea", "od_va_250","od_va_500","od_va_750","od_va_1000","od_va_1500","od_va_2000","od_va_3000","od_va_4000","od_va_6000","od_va_8000")}
     {row_vo("Óssea", "od_vo_500","od_vo_1000","od_vo_2000","od_vo_3000","od_vo_4000")}
-    <tr><td colspan="9" style="background:#f0f5ff; font-weight:bold; text-align:left; padding-left:8px;">
+    <tr><td colspan="11" style="background:#f0f5ff; font-weight:bold; text-align:left; padding-left:8px;">
       <span class="tag tag-oe">OE — Orelha Esquerda</span></td></tr>
-    {row_va("Aérea", "oe_va_250","oe_va_500","oe_va_1000","oe_va_2000","oe_va_3000","oe_va_4000","oe_va_6000","oe_va_8000")}
+    {row_va("Aérea", "oe_va_250","oe_va_500","oe_va_750","oe_va_1000","oe_va_1500","oe_va_2000","oe_va_3000","oe_va_4000","oe_va_6000","oe_va_8000")}
     {row_vo("Óssea", "oe_vo_500","oe_vo_1000","oe_vo_2000","oe_vo_3000","oe_vo_4000")}
   </tbody>
 </table>

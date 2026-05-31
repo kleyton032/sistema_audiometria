@@ -112,11 +112,11 @@ def get_laudo_por_id(db: Session, id_laudo: int) -> Optional[Laudo]:
     return db.query(Laudo).filter(Laudo.id_laudo == id_laudo).first()
 
 _RESULTADO_FIELDS = [
-    "od_va_250", "od_va_500", "od_va_1000", "od_va_2000",
-    "od_va_3000", "od_va_4000", "od_va_6000", "od_va_8000",
+    "od_va_250", "od_va_500", "od_va_750", "od_va_1000", "od_va_1500",
+    "od_va_2000", "od_va_3000", "od_va_4000", "od_va_6000", "od_va_8000",
     "od_vo_500", "od_vo_1000", "od_vo_2000", "od_vo_3000", "od_vo_4000",
-    "oe_va_250", "oe_va_500", "oe_va_1000", "oe_va_2000",
-    "oe_va_3000", "oe_va_4000", "oe_va_6000", "oe_va_8000",
+    "oe_va_250", "oe_va_500", "oe_va_750", "oe_va_1000", "oe_va_1500",
+    "oe_va_2000", "oe_va_3000", "oe_va_4000", "oe_va_6000", "oe_va_8000",
     "oe_vo_500", "oe_vo_1000", "oe_vo_2000", "oe_vo_3000", "oe_vo_4000",
     # Logoaudiometria
     "od_lrf", "od_iprf_mon", "od_iprf_int",
@@ -131,11 +131,11 @@ _RESULTADO_FIELDS = [
     "od_mask_va", "od_mask_vo", "od_mask_lrf", "od_mask_iprf",
     "oe_mask_va", "oe_mask_vo", "oe_mask_lrf", "oe_mask_iprf",
     # Sem resposta por frequência (NR)
-    "od_va_250_nr", "od_va_500_nr", "od_va_1000_nr", "od_va_2000_nr",
-    "od_va_3000_nr", "od_va_4000_nr", "od_va_6000_nr", "od_va_8000_nr",
+    "od_va_250_nr", "od_va_500_nr", "od_va_750_nr", "od_va_1000_nr", "od_va_1500_nr",
+    "od_va_2000_nr", "od_va_3000_nr", "od_va_4000_nr", "od_va_6000_nr", "od_va_8000_nr",
     "od_vo_500_nr",  "od_vo_1000_nr", "od_vo_2000_nr", "od_vo_3000_nr", "od_vo_4000_nr",
-    "oe_va_250_nr", "oe_va_500_nr", "oe_va_1000_nr", "oe_va_2000_nr",
-    "oe_va_3000_nr", "oe_va_4000_nr", "oe_va_6000_nr", "oe_va_8000_nr",
+    "oe_va_250_nr", "oe_va_500_nr", "oe_va_750_nr", "oe_va_1000_nr", "oe_va_1500_nr",
+    "oe_va_2000_nr", "oe_va_3000_nr", "oe_va_4000_nr", "oe_va_6000_nr", "oe_va_8000_nr",
     "oe_vo_500_nr",  "oe_vo_1000_nr", "oe_vo_2000_nr", "oe_vo_3000_nr", "oe_vo_4000_nr",
     # Classificação
     "nr_media_od", "nr_media_oe",
