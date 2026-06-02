@@ -1,4 +1,6 @@
 # app/api/v1/pts.py
+import logging
+import time
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import text
@@ -9,6 +11,8 @@ from app.db.models import User, PTS
 from app.schemas.pts import PTSCreate, PtsHistoricoSummaryOut
 from app.db.repositories.pts import create_pts, update_pts, get_pts_by_id, get_pts_status_batch, calcular_vigencia
 from app.db.session import SessionTest
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/pts", tags=["PTS"])
 
@@ -821,6 +825,7 @@ def historico_pts_paciente(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    start_time = time.time()
     session = get_db_session(user, db)
     try:
         sql = """
@@ -888,6 +893,9 @@ def historico_pts_paciente(
         for item in historico_list:
             item.pop("_dt_criacao_raw", None)
 
+        elapsed_ms = (time.time() - start_time) * 1000
+        logger.info(f"AUDIT(HISTORICO_PTS): User={user.nm_login} | Paciente={cd_paciente} | Status=200 | Time={elapsed_ms:.2f}ms")
+
         return {
             "total_pts": total_pts,
             "primeiro_pts_data": primeiro_pts_data,
@@ -895,6 +903,8 @@ def historico_pts_paciente(
             "historico": historico_list
         }
     except Exception as e:
+        elapsed_ms = (time.time() - start_time) * 1000
+        logger.error(f"AUDIT(HISTORICO_PTS): User={user.nm_login} | Paciente={cd_paciente} | Status=500 | Time={elapsed_ms:.2f}ms | Error={str(e)}")
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Erro ao buscar histórico: {str(e)}")

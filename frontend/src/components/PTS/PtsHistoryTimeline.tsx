@@ -34,11 +34,12 @@ export const PtsHistoryTimeline: React.FC<PtsHistoryTimelineProps> = ({ cdPacien
   const getStatusTag = (status: string | null) => {
     if (!status) return null;
     const s = status.toLowerCase();
-    if (s.includes('conclu')) return <Tag color="success" icon={<CheckCircleOutlined />}>{status}</Tag>;
-    if (s.includes('mantid')) return <Tag color="processing" icon={<SyncOutlined />}>{status}</Tag>;
-    if (s.includes('cancel')) return <Tag color="error" icon={<CloseCircleOutlined />}>{status}</Tag>;
+    if (s.includes('conclu') || s.includes('alcan')) return <Tag color="success" icon={<CheckCircleOutlined />}>{status}</Tag>;
+    if (s.includes('parcial') || s.includes('mantid') || s.includes('acompanha')) return <Tag color="processing" icon={<SyncOutlined />}>{status}</Tag>;
+    if (s.includes('cancel')) return <Tag color="default" icon={<CloseCircleOutlined />}>{status}</Tag>;
+    if (s.includes('não alcan')) return <Tag color="error" icon={<CloseCircleOutlined />}>{status}</Tag>;
     if (s.includes('reformul')) return <Tag color="warning" icon={<SyncOutlined spin />}>{status}</Tag>;
-    return <Tag color="default" icon={<MinusCircleOutlined />}>{status}</Tag>;
+    return <Tag color="blue" icon={<MinusCircleOutlined />}>{status}</Tag>;
   }
 
   if (loading) {
