@@ -7,6 +7,7 @@ import {
   TeamOutlined,
   HomeOutlined,
   SettingOutlined,
+  HistoryOutlined,
 } from '@ant-design/icons'
 
 // Perfis e atributos do usuário mapeados do contexto de autenticação
@@ -65,6 +66,12 @@ export const menuTree: MenuConfigItem[] = [
           (perms.ADMIN || perms.SUPERVISOR || perms.COORDENADOR) ? 'Dashboard PTS' : 'Meus PTS',
         icon: <DashboardOutlined />,
         path: '/pts/dashboard',
+      },
+      {
+        key: '/pts/historico',
+        label: 'Consulta de Histórico',
+        icon: <HistoryOutlined />,
+        path: '/pts/historico',
       },
     ],
   },

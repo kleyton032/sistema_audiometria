@@ -196,3 +196,34 @@ export async function getOutrosPTSVigencia(
   })
   return data
 }
+
+export interface PtsHistoricoObjetivoOut {
+  id_objetivo: number
+  ds_especialidade: string
+  ds_momento: string
+  nr_item: number
+  ds_objetivo: string | null
+  ds_status: string | null
+  ds_motivo: string | null
+}
+
+export interface PtsHistoricoItemOut {
+  id_pts: number
+  dt_criacao: string
+  ds_vigencia: string
+  nm_usuario: string
+  fl_finalizado: number
+  objetivos: PtsHistoricoObjetivoOut[]
+}
+
+export interface PtsHistoricoSummaryOut {
+  total_pts: number
+  primeiro_pts_data: string | null
+  ultimo_pts_data: string | null
+  historico: PtsHistoricoItemOut[]
+}
+
+export async function getPTSHistoricoPaciente(cdPaciente: string): Promise<PtsHistoricoSummaryOut> {
+  const { data } = await api.get<PtsHistoricoSummaryOut>(`/pts/${cdPaciente}/historico`)
+  return data
+}

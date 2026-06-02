@@ -43,6 +43,8 @@ import 'dayjs/locale/pt-br'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { getAgendaDoPacientes, type AgendaItem } from '@/api/agendaService'
 import { getPTSStatusBatch, type PtsStatusBatchItem } from '@/api/ptsService'
+import { PtsHistoryTimeline } from '../../components/PTS/PtsHistoryTimeline'
+import { Drawer } from 'antd'
 
 dayjs.locale('pt-br')
 
@@ -100,6 +102,8 @@ export default function PtsPacientesPage() {
     return dayjs().format('DD/MM/YYYY')
   })
   const [ptsStatus, setPtsStatus] = useState<Record<string, PtsStatusBatchItem>>({})
+  const [historyDrawerVisible, setHistoryDrawerVisible] = useState(false)
+  const [historyCdPaciente, setHistoryCdPaciente] = useState<string | null>(null)
 
   // Anuncio acessível do resultado da busca para leitores de tela
   const [searchAnnouncement, setSearchAnnouncement] = useState('')
@@ -282,6 +286,36 @@ export default function PtsPacientesPage() {
               </AriaButton>
             </Tooltip>
             
+            {record.cd_paciente && (
+              <AriaButton
+                onPress={() => {
+                  setHistoryCdPaciente(String(record.cd_paciente))
+                  setHistoryDrawerVisible(true)
+                }}
+                aria-label={`Ver histórico de PTS do paciente ${nomePaciente}`}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '0 10px',
+                  height: 24,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  borderRadius: 4,
+                  border: '1px solid #d9d9d9',
+                  cursor: 'pointer',
+                  background: '#fff',
+                  color: '#595959',
+                  marginTop: 4,
+                  transition: 'all 0.2s',
+                  outline: 'none',
+                }}
+                className="pts-aria-btn"
+              >
+                Histórico
+              </AriaButton>
+            )}
+
             <Space size={2} wrap>
               {finalizado && (
                 <Tag color="success" role="status" aria-label="PTS finalizado" style={{ fontSize: 10, margin: 0 }}>
@@ -615,6 +649,19 @@ export default function PtsPacientesPage() {
           }}
         />
       </Card>
+
+      <Drawer
+        title="Histórico Longitudinal de PTS"
+        placement="right"
+        width={700}
+        onClose={() => {
+          setHistoryDrawerVisible(false)
+          setHistoryCdPaciente(null)
+        }}
+        open={historyDrawerVisible}
+      >
+        {historyCdPaciente && <PtsHistoryTimeline cdPaciente={historyCdPaciente} />}
+      </Drawer>
     </div>
   )
 }

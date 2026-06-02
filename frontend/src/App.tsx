@@ -11,7 +11,7 @@ import { AudiometriaPage } from '@/pages/Audiometria'
 import { ImitanciometriaPage } from '@/pages/Imitanciometria'
 import { PacientesPage } from '@/pages/Pacientes'
 import { ConsultaPage } from '@/pages/Consulta'
-import { PTSPage, PtsPacientesPage, PtsDashboardPage } from '@/pages/PTS'
+import { PTSPage, PtsPacientesPage, PtsDashboardPage, PtsHistoricoPage } from '@/pages/PTS'
 import { AdminPage } from '@/pages/Admin'
 import { useAuth } from '@/contexts'
 
@@ -74,6 +74,7 @@ export default function App() {
                   <Route path="/imitanciometria" element={<ImitanciometriaPage />} />
                   <Route path="/pts/pacientes" element={<PtsPacientesPage />} />
                   <Route path="/pts/dashboard" element={<PtsDashboardPage />} />
+                  <Route path="/pts/historico" element={<PtsHistoricoPage />} />
                   <Route path="/pts" element={<PTSPage />} />
 
                   {/* Painel Administrativo — exclusivo para ADMIN */}

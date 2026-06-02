@@ -20,8 +20,9 @@ import {
   Spin,
   App,
   Modal,
+  Drawer,
 } from 'antd'
-import { SaveOutlined, FileTextOutlined, PlusOutlined, DeleteOutlined, CheckCircleOutlined, CloseCircleOutlined, ArrowLeftOutlined, PrinterOutlined } from '@ant-design/icons'
+import { SaveOutlined, FileTextOutlined, PlusOutlined, DeleteOutlined, CheckCircleOutlined, CloseCircleOutlined, ArrowLeftOutlined, PrinterOutlined, HistoryOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import 'dayjs/locale/pt-br'
 import ObjetivosEspecialidades, {
@@ -33,6 +34,7 @@ import ObjetivosEspecialidades, {
 } from './ObjetivosEspecialidades'
 import type { ColumnsType } from 'antd/es/table'
 import PTSPrintView from './PTSPrintView'
+import { PtsHistoryTimeline } from '../../components/PTS/PtsHistoryTimeline'
 import {
   GRAU_DEFICIENCIA,
   TIPOS_ATENDIMENTO,
@@ -208,6 +210,7 @@ export default function PTSPage() {
   const [idUsuarioAutor, setIdUsuarioAutor] = useState<number | null>(null)
   const [errosObjetivos, setErrosObjetivos] = useState<Record<string, { anterior: (ObjetivoErro | null)[]; atual: (ObjetivoErro | null)[] }>>({})
   const [errosTerapias, setErrosTerapias] = useState(false)
+  const [historyDrawerVisible, setHistoryDrawerVisible] = useState(false)
 
 
   // Consulta situação do documento de conduta interdisciplinar no MV (cd_documento=770)
@@ -785,15 +788,36 @@ export default function PTSPage() {
               </Text>
             </div>
           </Space>
-          <Button
-            icon={<ArrowLeftOutlined />}
-            onClick={() => navigate('/pts/pacientes', { state: { fromPTS: true } })}
-            style={{ background: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.4)', color: '#fff' }}
-          >
-            Voltar para lista
-          </Button>
+          <Space>
+            {paciente.cd_paciente && (
+              <Button
+                icon={<HistoryOutlined />}
+                onClick={() => setHistoryDrawerVisible(true)}
+                style={{ background: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.4)', color: '#fff' }}
+              >
+                Histórico Longitudinal
+              </Button>
+            )}
+            <Button
+              icon={<ArrowLeftOutlined />}
+              onClick={() => navigate('/pts/pacientes', { state: { fromPTS: true } })}
+              style={{ background: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.4)', color: '#fff' }}
+            >
+              Voltar para lista
+            </Button>
+          </Space>
         </Space>
       </Card>
+
+      <Drawer
+        title="Histórico Longitudinal de PTS"
+        placement="right"
+        width={700}
+        onClose={() => setHistoryDrawerVisible(false)}
+        open={historyDrawerVisible}
+      >
+        {paciente.cd_paciente && <PtsHistoryTimeline cdPaciente={String(paciente.cd_paciente)} />}
+      </Drawer>
 
       {/* Card do paciente (quando vem da lista) */}
       {paciente.nm_paciente && (

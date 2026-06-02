@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from app.dependencies import get_db, get_current_user
 from app.db.models import User, PTS
-from app.schemas.pts import PTSCreate
+from app.schemas.pts import PTSCreate, PtsHistoricoSummaryOut
 from app.db.repositories.pts import create_pts, update_pts, get_pts_by_id, get_pts_status_batch, calcular_vigencia
 from app.db.session import SessionTest
 
@@ -807,6 +807,97 @@ def carregar_pts(
         if pts is None:
             raise HTTPException(status_code=404, detail="PTS não encontrado")
         return pts_to_dict(pts)
+    finally:
+        if user.nm_login == 'testesoul':
+            session.close()
+
+@router.get(
+    "/{cd_paciente}/historico",
+    response_model=PtsHistoricoSummaryOut,
+    summary="Carrega o histórico completo de PTS de um paciente, incluindo objetivos e evolução",
+)
+def historico_pts_paciente(
+    cd_paciente: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    session = get_db_session(user, db)
+    try:
+        sql = """
+            SELECT
+                p.id_pts,
+                TO_CHAR(p.dt_criacao, 'DD/MM/YYYY') as dt_criacao_fmt,
+                p.ds_vigencia,
+                u.nm_usuario,
+                p.fl_finalizado,
+                p.dt_criacao,
+                o.id_objetivo,
+                o.ds_especialidade,
+                o.ds_momento,
+                o.nr_item,
+                o.ds_objetivo,
+                o.ds_status,
+                o.ds_motivo
+            FROM FAV_TB_PTS p
+            JOIN FAV_TB_SILA_USUARIOS u ON p.id_usuario = u.id_usuario
+            LEFT JOIN FAV_TB_PTS_OBJETIVO o ON o.id_pts = p.id_pts
+            WHERE p.cd_paciente = :cd_paciente
+              AND p.fl_ativo = 1
+            ORDER BY p.dt_criacao DESC, p.id_pts DESC, o.ds_especialidade, o.ds_momento, o.nr_item
+        """
+        rows = session.execute(text(sql), {"cd_paciente": cd_paciente}).fetchall()
+
+        pts_dict = {}
+        for r in rows:
+            id_pts = r[0]
+            if id_pts not in pts_dict:
+                pts_dict[id_pts] = {
+                    "id_pts": id_pts,
+                    "dt_criacao": r[1] or "",
+                    "ds_vigencia": r[2] or "",
+                    "nm_usuario": r[3] or "",
+                    "fl_finalizado": r[4] or 0,
+                    "_dt_criacao_raw": r[5],
+                    "objetivos": []
+                }
+            
+            # Se tem objetivo
+            if r[6] is not None:
+                pts_dict[id_pts]["objetivos"].append({
+                    "id_objetivo": r[6],
+                    "ds_especialidade": r[7] or "",
+                    "ds_momento": r[8] or "",
+                    "nr_item": r[9] or 0,
+                    "ds_objetivo": r[10],
+                    "ds_status": r[11],
+                    "ds_motivo": r[12]
+                })
+
+        historico_list = list(pts_dict.values())
+        
+        total_pts = len(historico_list)
+        primeiro_pts_data = None
+        ultimo_pts_data = None
+        
+        if total_pts > 0:
+            # A lista está ordenada por dt_criacao DESC (mais recente primeiro)
+            ultimo_pts_data = historico_list[0]["dt_criacao"]
+            primeiro_pts_data = historico_list[-1]["dt_criacao"]
+
+        # Limpar campo temporário
+        for item in historico_list:
+            item.pop("_dt_criacao_raw", None)
+
+        return {
+            "total_pts": total_pts,
+            "primeiro_pts_data": primeiro_pts_data,
+            "ultimo_pts_data": ultimo_pts_data,
+            "historico": historico_list
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar histórico: {str(e)}")
     finally:
         if user.nm_login == 'testesoul':
             session.close()
