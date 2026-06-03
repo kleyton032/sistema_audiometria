@@ -46,6 +46,7 @@ const emptyData = (): AudiometryData => ({
   hearingLossGrade: null,
   conclusion: '',
   observations: '',
+  chiefComplaint: '',
 })
 
 function resultadoToData(r: ResultadoAudioResponse): AudiometryData {
@@ -130,6 +131,7 @@ function resultadoToData(r: ResultadoAudioResponse): AudiometryData {
     hearingLossGrade: (r.ds_class_od as HearingLossGrade) ?? null,
     conclusion: r.ds_conclusao ?? '',
     observations: '',
+    chiefComplaint: '', // Preenchido no componente principal via exameService
   }
 }
 
@@ -212,6 +214,7 @@ function dataToPayload(
     ds_tipo_oe: data.hearingLossType ?? null,
     ds_conclusao: data.conclusion || null,
     ds_observacoes: data.observations || null,
+    ds_queixa_principal: data.chiefComplaint || null,
     fl_cae_od_obstruido: 0,
     fl_cae_oe_obstruido: 0,
   }
@@ -250,6 +253,7 @@ export default function AudiometriaPage({ cdPaciente, cdAtendimento }: Audiometr
       .then((exame) => {
         if (exame?.resultado_audio) {
           const dadosCarregados = resultadoToData(exame.resultado_audio)
+          dadosCarregados.chiefComplaint = exame.ds_queixa_principal ?? ''
           setData(dadosCarregados)
           setDataOriginal(dadosCarregados)
           setIdExame(exame.id_exame)
@@ -261,6 +265,10 @@ export default function AudiometriaPage({ cdPaciente, cdAtendimento }: Audiometr
   }, [cdAtendimento])
 
   async function salvar() {
+    if (!data.chiefComplaint || data.chiefComplaint.trim() === '') {
+      notification.warning({ message: 'A Queixa Principal é obrigatória para salvar o exame.' })
+      return
+    }
     if (!cdPaciente) {
       notification.warning({ message: 'Paciente não identificado.' })
       return
@@ -294,6 +302,10 @@ export default function AudiometriaPage({ cdPaciente, cdAtendimento }: Audiometr
   }
 
   async function finalizar() {
+    if (!data.chiefComplaint || data.chiefComplaint.trim() === '') {
+      notification.warning({ message: 'A Queixa Principal é obrigatória para finalizar o exame.' })
+      return
+    }
     if (!idExame) { await salvar(); return }
     setSaving(true)
     try {
@@ -374,6 +386,21 @@ export default function AudiometriaPage({ cdPaciente, cdAtendimento }: Audiometr
         style={{ marginBottom: 16 }}
         message="Referência: Classificação de acordo com a Organização Mundial de Saúde, 2021 — média quadritonal."
       />
+
+      {/* Queixa Principal */}
+      <Card style={{ marginBottom: 24, boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)', borderLeft: '4px solid #f39c12' }}>
+        <Title level={5}><span style={{ color: '#ff4d4f' }}>*</span> Queixa Principal</Title>
+        <TextArea
+          rows={3}
+          maxLength={500}
+          showCount
+          disabled={isDisabled}
+          value={data.chiefComplaint}
+          onChange={(e) => setData({ ...data, chiefComplaint: e.target.value })}
+          placeholder="Digite a queixa principal relatada pelo paciente (obrigatório para finalização)..."
+          style={{ resize: 'vertical' }}
+        />
+      </Card>
 
       {/* Audiograma */}
       <Card style={{ marginBottom: 32, boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }}>

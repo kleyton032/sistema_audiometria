@@ -168,6 +168,7 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str, ds_especialidade: s
         dt_nasc_str = "—"
         idade_str = "—"
     obs = exame.ds_observacoes or "—"
+    queixa = exame.ds_queixa_principal or ""
 
     conclusao = (r.ds_conclusao or "").replace("\n", "<br>")
     class_od = r.ds_class_od or "—"
@@ -231,6 +232,7 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str, ds_especialidade: s
   .tag-oe {{ background: #e8f0fd; color: #1a5276; }}
   .badge-rascunho {{ color: #e67e22; font-weight: bold; }}
   .badge-finalizado {{ color: #27ae60; font-weight: bold; }}
+  .queixa-principal {{ margin-bottom: 12px; font-size: 10px; line-height: 1.4; padding: 6px 10px; background: #fff8e6; border: 1px solid #fae3b0; border-radius: 4px; }}
 </style>
 </head>
 <body>
@@ -261,8 +263,8 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str, ds_especialidade: s
       <div><strong>Status:</strong> <span class="{'badge-finalizado' if exame.ds_status == 'FINALIZADO' else 'badge-rascunho'}">{exame.ds_status}</span></div>
     </div>
   </div>
+  {f"<div style='padding: 4px 16px 8px; border-top: 1px dashed #ccc; font-size: 10px; line-height: 1.4; color: #444; margin: 0 4px;'><strong>Queixa Principal:</strong> {queixa.replace(chr(10), '<br>')}</div>" if queixa else ""}
 </div>
-
 
 <h2>Audiograma Tonal</h2>
 <div class="audiogram">

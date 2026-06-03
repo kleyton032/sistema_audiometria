@@ -57,6 +57,7 @@ export interface AudiometryData {
   hearingLossGrade: HearingLossGrade | null
   conclusion: string
   observations: string
+  chiefComplaint?: string
 }
 
 /** Retorna o grau de perda baseado na média tritonal (PTA) */
