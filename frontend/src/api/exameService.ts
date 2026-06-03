@@ -191,6 +191,7 @@ export async function buscarStatusAtendimentos(
 export interface ExameImitanciometriaCreate {
   id_paciente:    number
   id_atendimento?: number | null
+  ds_queixa_principal?: string | null
   ds_observacoes?: string | null
 
   // Timpanograma OD

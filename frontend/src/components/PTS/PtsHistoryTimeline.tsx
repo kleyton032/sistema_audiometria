@@ -3,7 +3,7 @@ import { Timeline, Card, Tag, Typography, Spin, Empty, Row, Col, Divider, Space 
 import { ClockCircleOutlined, UserOutlined, CalendarOutlined, CheckCircleOutlined, SyncOutlined, CloseCircleOutlined, MinusCircleOutlined } from '@ant-design/icons'
 import { getPTSHistoricoPaciente, PtsHistoricoSummaryOut } from '../../api/ptsService'
 
-const { Title, Text, Paragraph } = Typography
+const { Title, Text } = Typography
 
 interface PtsHistoryTimelineProps {
   cdPaciente: string
