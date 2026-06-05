@@ -24,6 +24,7 @@ export default function LoginPage() {
   const [step, setStep] = useState<Step>('USER_CHECK')
   const [username, setUsername] = useState('')
   const [prestadorMV, setPrestadorMV] = useState<PrestadorMVInfo | null>(null)
+  const [tempPassword, setTempPassword] = useState('')
   const [form] = Form.useForm<LoginForm>()
 
   const handleCheckUser = async () => {
@@ -68,6 +69,8 @@ export default function LoginPage() {
       let msg = (err as any)?.response?.data?.detail
       if (msg === 'REQUIRE_PASSWORD_CHANGE') {
         setError(null)
+        setTempPassword(values.password!)
+        form.resetFields(['password', 'confirmPassword'])
         setStep('CHANGE_PASSWORD')
         return
       }
@@ -124,8 +127,8 @@ export default function LoginPage() {
       
       await changePassword({
         username: username,
-        current_password: form.getFieldValue('password'), // A senha atual (temporária) que ele usou no passo anterior de LOGIN
-        new_password: values.confirmPassword! // A nova senha (reaproveitando o fluxo do form)
+        current_password: tempPassword, // Senha temporária que o admin resetou
+        new_password: values.confirmPassword! // A nova senha
       })
 
       // Realiza o login com a nova senha
@@ -148,6 +151,7 @@ export default function LoginPage() {
     setStep('USER_CHECK')
     setUsername('')
     setPrestadorMV(null)
+    setTempPassword('')
     form.resetFields(['password', 'confirmPassword'])
     setError(null)
   }

@@ -30,8 +30,8 @@ def _audiograma_base64(resultado, exame=None) -> str:
     import matplotlib.pyplot as plt
     import matplotlib.ticker as ticker
 
-    fig, (ax_od, ax_oe) = plt.subplots(1, 2, figsize=(11, 3.8))
-    fig.suptitle("Audiograma Tonal", fontsize=10, fontweight="bold")
+    fig, (ax_od, ax_oe) = plt.subplots(1, 2, figsize=(11, 2.6))
+    # Título "Audiograma Tonal" já está no <h2> do HTML
 
     freqs_va = [250, 500, 750, 1000, 1500, 2000, 3000, 4000, 6000, 8000]
     freqs_vo = [500, 1000, 2000, 3000, 4000]
@@ -67,19 +67,19 @@ def _audiograma_base64(resultado, exame=None) -> str:
             return
         if connect:
             xs_l, ys_l = zip(*all_pts)
-            ax.plot(xs_l, ys_l, linestyle="-", color=color, linewidth=1.8, zorder=1)
+            ax.plot(xs_l, ys_l, linestyle="-", color=color, linewidth=1.5, zorder=1)
             if sym_pts:
                 xs_s, ys_s = zip(*sym_pts)
                 ax.plot(xs_s, ys_s, linestyle="None", color=color, label=label,
-                        marker=marker, markersize=8, markeredgewidth=2.2, zorder=2,
+                        marker=marker, markersize=6, markeredgewidth=1.8, zorder=2,
                         markerfacecolor="white" if marker not in ("x", "<", ">") else color)
             else:
-                ax.plot([], [], linestyle="-", color=color, label=label, linewidth=1.8)
+                ax.plot([], [], linestyle="-", color=color, label=label, linewidth=1.5)
         else:
             if sym_pts:
                 xs_s, ys_s = zip(*sym_pts)
                 ax.plot(xs_s, ys_s, linestyle="None", color=color, label=label,
-                        marker=marker, markersize=8, markeredgewidth=2.2,
+                        marker=marker, markersize=6, markeredgewidth=1.8,
                         markerfacecolor="white" if marker not in ("x", "<", ">") else color)
             else:
                 ax.plot([], [], linestyle="None", color=color, marker=marker, label=label)
@@ -93,19 +93,19 @@ def _audiograma_base64(resultado, exame=None) -> str:
 
     def _configure_ax(ax, title, color, show_ylabel=True):
         ax.set_xticks(x_va)
-        ax.set_xticklabels(xlabels, fontsize=8)
+        ax.set_xticklabels(xlabels, fontsize=7)
         ax.set_ylim(125, -10)
         ax.set_yticks(range(-10, 130, 10))
         ax.yaxis.set_minor_locator(ticker.MultipleLocator(5))
-        ax.tick_params(axis="y", labelsize=8)
+        ax.tick_params(axis="y", labelsize=7)
         if show_ylabel:
-            ax.set_ylabel("dB HL", fontsize=9)
-        ax.set_xlabel("Frequência (Hz)", fontsize=9)
-        ax.set_title(title, fontsize=10, fontweight="bold", color=color, pad=8)
-        ax.axhline(25, color="#aaa", linestyle="--", linewidth=0.8)
-        ax.grid(True, which="major", alpha=0.25)
+            ax.set_ylabel("dB HL", fontsize=8)
+        ax.set_xlabel("Frequência (Hz)", fontsize=8)
+        ax.set_title(title, fontsize=9, fontweight="bold", color=color, pad=4)
+        ax.axhline(25, color="#aaa", linestyle="--", linewidth=0.6)
+        ax.grid(True, which="major", alpha=0.2)
         ax.set_xlim(-0.5, 9.5)
-        ax.legend(fontsize=7, loc="lower right")
+        ax.legend(fontsize=6, loc="lower right")
 
     # ── Ouvido Direito (ax_od) ─────────────────────────────────────────────
     od_va = [_get(r, f"od_va_{f}") for f in freqs_va]
@@ -202,37 +202,39 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str, ds_especialidade: s
 <head>
 <meta charset="utf-8">
 <style>
-  @page {{ size: A4; margin: 10mm 12mm; }}
+  @page {{ size: A4; margin: 7mm 10mm; }}
   * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-  body {{ font-family: Arial, sans-serif; font-size: 10px; color: #222; padding: 0; }}
-  h1 {{ font-size: 14px; color: #1e5aa8; text-transform: uppercase; margin: 0; }}
-  h2 {{ font-size: 12px; color: #4c2c8a; margin: 12px 0 4px; border-bottom: 1px solid #ddd; padding-bottom: 2px; }}
-  .inst-header {{ border: 1px solid #1e5aa8; border-radius: 8px; margin-bottom: 10px; background: #fff; }}
-  .inst-header-top {{ display: flex; align-items: center; justify-content: space-between; padding: 6px 16px; border-bottom: 1px solid #1e5aa8; min-height: 40px; }}
-  .inst-header-logo {{ flex: 0 0 120px; }}
-  .inst-header-logo img {{ height: 35px; object-fit: contain; }}
-  .inst-header-logo-right img {{ height: 40px; object-fit: contain; }}
+  body {{ font-family: Arial, sans-serif; font-size: 9px; color: #222; padding: 0; }}
+  h1 {{ font-size: 12px; color: #1e5aa8; text-transform: uppercase; margin: 0; }}
+  h2 {{ font-size: 10px; color: #4c2c8a; margin: 6px 0 3px; border-bottom: 1px solid #ddd; padding-bottom: 1px; }}
+  .inst-header {{ border: 1px solid #1e5aa8; border-radius: 6px; margin-bottom: 6px; background: #fff; }}
+  .inst-header-top {{ display: flex; align-items: center; justify-content: space-between; padding: 4px 10px; border-bottom: 1px solid #1e5aa8; min-height: 30px; }}
+  .inst-header-logo {{ flex: 0 0 80px; }}
+  .inst-header-logo img {{ height: 22px; object-fit: contain; }}
+  .inst-header-logo-right img {{ height: 25px; object-fit: contain; }}
   .inst-header-title {{ flex: 1; text-align: center; }}
-  .inst-header-data {{ display: flex; gap: 16px; padding: 8px 16px; font-size: 9px; line-height: 1.55; }}
+  .inst-header-data {{ display: flex; gap: 12px; padding: 4px 10px; font-size: 8px; line-height: 1.4; }}
   .inst-header-data-left {{ flex: 3; display: flex; flex-direction: column; gap: 1px; }}
   .inst-header-data-right {{ flex: 2; display: flex; flex-direction: column; gap: 1px; text-align: left; }}
   .inst-header-data strong {{ font-weight: bold; }}
-  .nm-paciente {{ font-size: 11px; font-weight: bold; color: #1e5aa8; text-transform: uppercase; margin-bottom: 2px; }}
-  table {{ width: 100%; border-collapse: collapse; margin: 4px 0; font-size: 9px; page-break-inside: avoid; }}
-  th, td {{ border: 1px solid #ccc; padding: 2px 4px; text-align: center; }}
+  .nm-paciente {{ font-size: 10px; font-weight: bold; color: #1e5aa8; text-transform: uppercase; margin-bottom: 1px; }}
+  table {{ width: 100%; border-collapse: collapse; margin: 2px 0; font-size: 8px; page-break-inside: avoid; }}
+  th, td {{ border: 1px solid #ccc; padding: 1px 3px; text-align: center; }}
   th {{ background: #f0eaff; font-weight: bold; }}
   .freq-header th {{ background: #4c2c8a; color: white; }}
-  .audiogram {{ text-align: center; margin: 6px 0; page-break-inside: avoid; }}
+  .audiogram {{ text-align: center; margin: 3px 0; page-break-inside: avoid; }}
   .audiogram img {{ max-width: 100%; height: auto; }}
-  .conclusao {{ background: #fafafa; border: 1px solid #ddd; padding: 6px 10px; border-radius: 4px; line-height: 1.4; min-height: 30px; page-break-inside: avoid; }}
-  .assinatura {{ margin-top: 48px; text-align: center; page-break-inside: avoid; }}
-  .assinatura .linha {{ border-top: 1px solid #333; width: 250px; margin: 0 auto 4px; }}
-  .tag {{ display: inline-block; padding: 2px 6px; border-radius: 10px; font-size: 9px; font-weight: bold; }}
+  .conclusao {{ background: #fafafa; border: 1px solid #ddd; padding: 4px 8px; border-radius: 4px; line-height: 1.3; min-height: 18px; page-break-inside: avoid; }}
+  .tables-row {{ display: flex; gap: 8px; page-break-inside: avoid; }}
+  .table-col {{ flex: 1; min-width: 0; }}
+  .assinatura {{ margin-top: 24px; text-align: center; page-break-inside: avoid; }}
+  .assinatura .linha {{ border-top: 1px solid #333; width: 220px; margin: 0 auto 3px; }}
+  .tag {{ display: inline-block; padding: 1px 4px; border-radius: 8px; font-size: 8px; font-weight: bold; }}
   .tag-od {{ background: #fde8e8; color: #c0392b; }}
   .tag-oe {{ background: #e8f0fd; color: #1a5276; }}
   .badge-rascunho {{ color: #e67e22; font-weight: bold; }}
   .badge-finalizado {{ color: #27ae60; font-weight: bold; }}
-  .queixa-principal {{ margin-bottom: 12px; font-size: 10px; line-height: 1.4; padding: 6px 10px; background: #fff8e6; border: 1px solid #fae3b0; border-radius: 4px; }}
+  .queixa-principal {{ margin-bottom: 6px; font-size: 9px; line-height: 1.3; padding: 4px 8px; background: #fff8e6; border: 1px solid #fae3b0; border-radius: 4px; }}
 </style>
 </head>
 <body>
@@ -292,7 +294,9 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str, ds_especialidade: s
   </tbody>
 </table>
 
-<h2>Logoaudiometria</h2>
+<div class="tables-row">
+<div class="table-col">
+<h2 style="margin-top:0;">Logoaudiometria</h2>
 <table>
   <thead>
     <tr class="freq-header">
@@ -334,14 +338,15 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str, ds_especialidade: s
     </tr>
   </tbody>
 </table>
-
-<h2>Mascaramento (dB NB)</h2>
+</div>
+<div class="table-col">
+<h2 style="margin-top:0;">Mascaramento (dB NB)</h2>
 <table>
   <thead>
     <tr class="freq-header">
       <th>Via</th>
-      <th>OD — até</th>
-      <th>OE — até</th>
+      <th>OD</th>
+      <th>OE</th>
     </tr>
   </thead>
   <tbody>
@@ -367,12 +372,13 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str, ds_especialidade: s
     </tr>
   </tbody>
 </table>
-
-<h2>Classificação Audiológica</h2>
+</div>
+<div class="table-col">
+<h2 style="margin-top:0;">Classificação Audiológica</h2>
 <table>
   <thead>
     <tr class="freq-header">
-      <th>Orelha</th><th>PTA (dBHL)</th><th>Grau de Perda</th><th>Tipo de Perda</th>
+      <th>Orelha</th><th>PTA (dBHL)</th><th>Grau</th><th>Tipo</th>
     </tr>
   </thead>
   <tbody>
@@ -390,9 +396,11 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str, ds_especialidade: s
     </tr>
   </tbody>
 </table>
-<p style="font-size:9px; color:#666; margin-top:4px;">
-  Referência: Classificação de acordo com a Organização Mundial de Saúde, 2021 — média quadritonal.
+<p style="font-size:7px; color:#666; margin-top:2px;">
+  Classificação OMS 2021 — média quadritonal.
 </p>
+</div>
+</div>
 
 <h2>Conclusão Clínica</h2>
 <div class="conclusao">{conclusao or "—"}</div>
@@ -402,8 +410,8 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str, ds_especialidade: s
 <div class="assinatura">
   <div class="linha"></div>
   <div><strong>{nm_usuario}</strong></div>
-  {f"<div style='font-size:10px; color:#555;'>{nr_conselho}</div>" if nr_conselho else ""}
-  {f"<div style='font-size:10px; color:#888;'>{ds_especialidade}</div>" if ds_especialidade else "<div style='font-size:10px; color:#888;'>Responsável pelo exame</div>"}
+  {f"<div style='font-size:9px; color:#555;'>{nr_conselho}</div>" if nr_conselho else ""}
+  {f"<div style='font-size:9px; color:#888;'>{ds_especialidade}</div>" if ds_especialidade else "<div style='font-size:9px; color:#888;'>Responsável pelo exame</div>"}
 </div>
 
 </body>
