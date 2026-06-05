@@ -2,9 +2,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from app.schemas.auth import TokenResponse
+from app.schemas.auth import TokenResponse, ChangePasswordRequest
 from app.schemas.user import UserCreate, UserResponse, CheckMVResponse
-from app.core.security import verify_password, create_access_token
+from app.core.security import verify_password, create_access_token, hash_password
 from app.db.repositories.user import (
     get_by_login,
     buscar_prestador_mv,
@@ -30,11 +30,44 @@ def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    if getattr(usuario, "fl_troca_senha", 0) == 1:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="REQUIRE_PASSWORD_CHANGE"
+        )
+
     if usuario.cd_usuario_mv:
         usuario = sync_existing_user_from_mv(db, usuario)
 
     token = create_access_token({"sub": usuario.nm_login})
     return TokenResponse(access_token=token)
+
+
+@router.post("/change-password")
+def change_password(
+    payload: ChangePasswordRequest,
+    db: Session = Depends(get_db),
+):
+    usuario = get_by_login(db, payload.username)
+
+    if not usuario or not verify_password(payload.current_password, usuario.ds_senha_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="A senha atual está incorreta."
+        )
+
+    if len(payload.new_password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A nova senha deve ter no mínimo 8 caracteres."
+        )
+
+    usuario.ds_senha_hash = hash_password(payload.new_password)
+    usuario.fl_troca_senha = 0
+    db.commit()
+
+    return {"detail": "Senha alterada com sucesso"}
+
 
 
 @router.get("/check/{cd_usuario}", response_model=CheckMVResponse)

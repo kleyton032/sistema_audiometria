@@ -33,6 +33,7 @@ class User(Base):
     dt_criacao       = Column("DT_CRIACAO",       DateTime(timezone=True), server_default=func.now(), nullable=False)
     dt_ultimo_acesso = Column("DT_ULTIMO_ACESSO", DateTime(timezone=True))
     fl_ativo         = Column("FL_ATIVO",         Integer,              default=1, nullable=False)
+    fl_troca_senha   = Column("FL_TROCA_SENHA",   Integer,              default=0, nullable=False)
 
     prestador = relationship("UsuarioPrestador", back_populates="usuario", uselist=False)
     perfil    = relationship("Perfil", lazy="joined", foreign_keys=[id_perfil])

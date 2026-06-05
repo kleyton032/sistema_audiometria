@@ -38,3 +38,8 @@ export async function registerUser(cdUsuarioMv: string, dsSenha: string, dsEmail
   })
   return data
 }
+
+export async function changePassword(payload: any): Promise<any> {
+  const { data } = await api.post('/auth/change-password', payload)
+  return data
+}

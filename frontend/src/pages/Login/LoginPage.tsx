@@ -13,7 +13,7 @@ interface LoginForm {
   confirmPassword?: string
 }
 
-type Step = 'USER_CHECK' | 'LOGIN' | 'REGISTER'
+type Step = 'USER_CHECK' | 'LOGIN' | 'REGISTER' | 'CHANGE_PASSWORD'
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false)
@@ -66,6 +66,11 @@ export default function LoginPage() {
       navigate('/home')
     } catch (err: unknown) {
       let msg = (err as any)?.response?.data?.detail
+      if (msg === 'REQUIRE_PASSWORD_CHANGE') {
+        setError(null)
+        setStep('CHANGE_PASSWORD')
+        return
+      }
       if (Array.isArray(msg)) {
         msg = msg.map((e: any) => e.msg).join(', ')
       } else if (typeof msg === 'object' && msg !== null) {
@@ -100,6 +105,40 @@ export default function LoginPage() {
         msg = JSON.stringify(msg)
       }
       setError(msg || 'Erro ao cadastrar sistema.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleChangePasswordSubmit = async (values: LoginForm) => {
+    if (step !== 'CHANGE_PASSWORD') return
+    setLoading(true)
+    setError(null)
+    try {
+      if (values.password !== values.confirmPassword) {
+        setError('As senhas não coincidem.')
+        return
+      }
+
+      const { changePassword } = await import('@/api/authService')
+      
+      await changePassword({
+        username: username,
+        current_password: form.getFieldValue('password'), // A senha atual (temporária) que ele usou no passo anterior de LOGIN
+        new_password: values.confirmPassword! // A nova senha (reaproveitando o fluxo do form)
+      })
+
+      // Realiza o login com a nova senha
+      await login(username, values.confirmPassword!)
+      navigate('/home')
+    } catch (err: unknown) {
+      let msg = (err as any)?.response?.data?.detail
+      if (Array.isArray(msg)) {
+        msg = msg.map((e: any) => e.msg).join(', ')
+      } else if (typeof msg === 'object' && msg !== null) {
+        msg = JSON.stringify(msg)
+      }
+      setError(msg || 'Erro ao redefinir a senha.')
     } finally {
       setLoading(false)
     }
@@ -143,7 +182,12 @@ export default function LoginPage() {
           <Form<LoginForm>
             form={form}
             name="login_flow"
-            onFinish={step === 'LOGIN' ? handleLoginSubmit : handleRegisterSubmit}
+            onFinish={
+              step === 'LOGIN' ? handleLoginSubmit :
+              step === 'REGISTER' ? handleRegisterSubmit :
+              step === 'CHANGE_PASSWORD' ? handleChangePasswordSubmit :
+              undefined
+            }
             layout="vertical"
             size="large"
             autoComplete="off"
@@ -179,6 +223,50 @@ export default function LoginPage() {
                 <Form.Item>
                   <Button type="primary" htmlType="submit" loading={loading} block>
                     Entrar
+                  </Button>
+                </Form.Item>
+              </>
+            )}
+
+            {step === 'CHANGE_PASSWORD' && (
+              <>
+                <div style={{ marginBottom: 16, textAlign: 'left' }}>
+                  <Text type="secondary">Usuário:</Text> <Text strong>{username}</Text>{' '}
+                  <Button type="link" size="small" onClick={resetStep}>Cancelar</Button>
+                </div>
+                <Alert 
+                   message="Redefinição de Senha"
+                   description="O administrador redefiniu a sua senha temporariamente. Por segurança, você precisa criar uma nova senha agora para prosseguir."
+                   type="warning"
+                   showIcon
+                   style={{ marginBottom: 16, textAlign: 'left' }}
+                />
+                <Form.Item
+                  name="password"
+                  rules={[{ required: true, message: 'Crie uma nova senha' }, { min: 8, message: 'Mínimo 8 caracteres'}]}
+                >
+                  <Input.Password prefix={<LockOutlined />} placeholder="Nova Senha" autoFocus />
+                </Form.Item>
+                <Form.Item
+                  name="confirmPassword"
+                  dependencies={['password']}
+                  rules={[
+                    { required: true, message: 'Confirme a nova senha' },
+                    ({ getFieldValue }) => ({
+                      validator(_, value) {
+                        if (!value || getFieldValue('password') === value) {
+                          return Promise.resolve();
+                        }
+                        return Promise.reject(new Error('As senhas não coincidem!'));
+                      },
+                    }),
+                  ]}
+                >
+                  <Input.Password prefix={<LockOutlined />} placeholder="Confirmar Nova Senha" />
+                </Form.Item>
+                <Form.Item>
+                  <Button type="primary" htmlType="submit" loading={loading} block>
+                    Atualizar Senha e Entrar
                   </Button>
                 </Form.Item>
               </>
