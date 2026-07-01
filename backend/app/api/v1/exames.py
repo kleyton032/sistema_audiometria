@@ -6,7 +6,7 @@ import io
 from datetime import datetime
 from typing import Any, Optional
 
-from app.dependencies import get_db, get_current_user
+from app.dependencies import get_db, get_current_user, require_escrita
 from app.db.models import User
 from app.db.repositories import exame as repo
 from app.schemas.exame import (
@@ -69,7 +69,7 @@ def status_por_atendimentos(
 )
 def criar_exame(
     payload: ExameAudiometriaCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_escrita()),
     db: Session = Depends(get_db),
 ):
     exame = repo.criar_exame_audiometria(db, payload, current_user.id_usuario)
@@ -80,7 +80,7 @@ def criar_exame(
 def atualizar_exame(
     id_exame: int,
     payload: ExameAudiometriaCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_escrita()),
     db: Session = Depends(get_db),
 ):
     exame = repo.get_exame_por_id(db, id_exame)
@@ -98,7 +98,7 @@ def atualizar_exame(
 def alterar_exame_finalizado(
     id_exame: int,
     payload: ExameAudiometriaCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_escrita()),
     db: Session = Depends(get_db),
 ):
     """Permite alterar um exame de audiometria mesmo quando está FINALIZADO."""
@@ -161,7 +161,7 @@ def download_ultimo_laudo(
 @router.post("/{id_exame}/finalizar", response_model=ExameResponse)
 def finalizar_exame(
     id_exame: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_escrita()),
     db: Session = Depends(get_db),
 ):
     exame = repo.get_exame_por_id(db, id_exame)
@@ -175,7 +175,7 @@ def finalizar_exame(
 @router.post("/{id_exame}/laudo")
 def gerar_laudo(
     id_exame: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_escrita()),
     db: Session = Depends(get_db),
 ):
     exame = repo.get_exame_por_id(db, id_exame)
@@ -235,7 +235,7 @@ def gerar_laudo(
 )
 def criar_exame_imitanciometria(
     payload: ExameImitanciometriaCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_escrita()),
     db: Session = Depends(get_db),
 ):
     return repo.criar_exame_imitanciometria(db, payload, current_user.id_usuario)
@@ -245,7 +245,7 @@ def criar_exame_imitanciometria(
 def atualizar_exame_imitanciometria(
     id_exame: int,
     payload: ExameImitanciometriaCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_escrita()),
     db: Session = Depends(get_db),
 ):
     exame = repo.get_exame_por_id(db, id_exame)
@@ -260,7 +260,7 @@ def atualizar_exame_imitanciometria(
 def alterar_exame_imitanciometria_finalizado(
     id_exame: int,
     payload: ExameImitanciometriaCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_escrita()),
     db: Session = Depends(get_db),
 ):
     """Permite alterar um exame de imitanciometria mesmo quando está FINALIZADO."""

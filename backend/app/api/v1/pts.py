@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql import text
 from pydantic import BaseModel
 
-from app.dependencies import get_db, get_current_user
+from app.dependencies import get_db, get_current_user, require_escrita
 from app.db.models import User, PTS
 from app.schemas.pts import PTSCreate, PtsHistoricoSummaryOut
 from app.db.repositories.pts import create_pts, update_pts, get_pts_by_id, get_pts_status_batch, calcular_vigencia
@@ -29,12 +29,12 @@ def _pts_access_filter(user: User) -> tuple[str, dict]:
     Retorna (extra_where, params) para filtrar PTS conforme o perfil do usuário.
 
     Regras:
-      ADMIN / SUPERVISOR → vê tudo
-      COORDENADOR        → vê apenas PTS de profissionais da sua especialidade
-      OPERADOR (demais)  → vê apenas os próprios PTS
+      ADMIN / SUPERVISOR / CONSULTA → vê tudo
+      COORDENADOR                   → vê apenas PTS de profissionais da sua especialidade
+      OPERADOR (demais)             → vê apenas os próprios PTS
     """
     perfil = user.perfil_nome
-    if perfil in ("ADMIN", "SUPERVISOR"):
+    if perfil in ("ADMIN", "SUPERVISOR", "CONSULTA"):
         return "", {}
     if perfil == "COORDENADOR":
         extra_where = """
@@ -242,7 +242,7 @@ def status_batch(
 def salvar_pts(
     pts_data: PTSCreate,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_escrita()),
 ):
     try:
         session = get_db_session(user, db)
@@ -278,7 +278,7 @@ def atualizar_pts(
     id_pts: int,
     pts_data: PTSCreate,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_escrita()),
 ):
     session = get_db_session(user, db)
     try:
@@ -303,7 +303,7 @@ def atualizar_pts(
 def finalizar_pts(
     id_pts: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_escrita()),
 ):
     session = get_db_session(current_user, db)
     try:
@@ -349,7 +349,7 @@ def cancelar_pts(
     id_pts: int,
     cancel_data: PTSCancel,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_escrita()),
 ):
     session = get_db_session(user, db)
     
