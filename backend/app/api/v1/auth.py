@@ -8,6 +8,7 @@ from app.core.security import verify_password, create_access_token, hash_passwor
 from app.db.repositories.user import (
     get_by_login,
     buscar_prestador_mv,
+    buscar_usuario_mv,
     create_user,
     sync_existing_user_from_mv,
 )
@@ -77,21 +78,40 @@ def check_user_status(
 ):
     """
     Verifica o usuário MV e retorna seus dados profissionais.
+
+    Cenários possíveis:
     - existe_local=True  → já tem cadastro, pode ir direto para a tela de senha
-    - prestador=None     → usuário não encontrado no MV, não pode se cadastrar
+    - sem_prestador=True → usuário existe no MV mas sem prestador (será CONSULTA)
+    - prestador preenchido → usuário com prestador, pode se cadastrar normalmente
     """
     usuario_local = get_by_login(db, cd_usuario.lower())
     if usuario_local:
         return CheckMVResponse(existe_local=True, prestador=None)
 
-    prestador = buscar_prestador_mv(db, cd_usuario)
-    if prestador is None:
+    # Verifica se o usuário existe no MV (mesmo sem prestador)
+    nm_usuario_mv = buscar_usuario_mv(db, cd_usuario)
+    if nm_usuario_mv is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Usuário não encontrado no MV ou sem vínculo com prestador ativo.",
+            detail="Usuário não encontrado no MV.",
         )
 
-    return CheckMVResponse(existe_local=False, prestador=prestador)
+    # Busca dados do prestador (pode ser None)
+    prestador = buscar_prestador_mv(db, cd_usuario)
+
+    if prestador is None:
+        # Usuário existe no MV mas não tem prestador → perfil CONSULTA
+        return CheckMVResponse(
+            existe_local=False,
+            prestador=None,
+            sem_prestador=True,
+        )
+
+    return CheckMVResponse(
+        existe_local=False,
+        prestador=prestador,
+        sem_prestador=False,
+    )
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -99,21 +119,32 @@ def register_mv_user(
     payload: UserCreate,
     db: Session = Depends(get_db),
 ):
-    """Cria conta para usuário válido do MV. Dados profissionais são buscados automaticamente."""
+    """
+    Cria conta para usuário válido do MV.
+
+    Se o usuário tiver prestador vinculado, será criado como OPERADOR.
+    Se NÃO tiver prestador (sem_prestador), será criado como CONSULTA (somente leitura).
+    """
     from sqlalchemy.exc import IntegrityError
 
-    # Busca dados do prestador no MV
-    prestador = buscar_prestador_mv(db, payload.cd_usuario_mv)
-    if prestador is None:
+    # Verifica se o usuário existe no MV
+    nm_usuario_mv = buscar_usuario_mv(db, payload.cd_usuario_mv)
+    if nm_usuario_mv is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Usuário MV não encontrado ou sem vínculo com prestador ativo.",
+            detail="Usuário MV não encontrado.",
         )
 
-    payload.ds_perfil = "OPERADOR"
+    # Busca dados do prestador (pode ser None para CONSULTA)
+    prestador = buscar_prestador_mv(db, payload.cd_usuario_mv)
 
     try:
-        user = create_user(db, payload, prestador)
+        user = create_user(
+            db,
+            payload,
+            prestador=prestador,
+            nm_usuario_mv=nm_usuario_mv,
+        )
     except IntegrityError as exc:
         db.rollback()
         raise HTTPException(
