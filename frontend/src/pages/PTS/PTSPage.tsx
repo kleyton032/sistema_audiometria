@@ -22,7 +22,7 @@ import {
   Modal,
   Drawer,
 } from 'antd'
-import { SaveOutlined, FileTextOutlined, PlusOutlined, DeleteOutlined, CheckCircleOutlined, CloseCircleOutlined, ArrowLeftOutlined, PrinterOutlined, HistoryOutlined, EyeOutlined } from '@ant-design/icons'
+import { SaveOutlined, FileTextOutlined, PlusOutlined, DeleteOutlined, CheckCircleOutlined, CloseCircleOutlined, ArrowLeftOutlined, PrinterOutlined, HistoryOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import 'dayjs/locale/pt-br'
 import ObjetivosEspecialidades, {
