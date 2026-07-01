@@ -11,7 +11,7 @@ import {
 } from '@ant-design/icons'
 
 // Perfis e atributos do usuário mapeados do contexto de autenticação
-export type MenuRole = 'ADMIN' | 'SUPERVISOR' | 'COORDENADOR' | 'FONOAUDIOLOGO'
+export type MenuRole = 'ADMIN' | 'SUPERVISOR' | 'COORDENADOR' | 'FONOAUDIOLOGO' | 'OPERADOR'
 
 export interface MenuConfigItem {
   key: string
@@ -59,11 +59,15 @@ export const menuTree: MenuConfigItem[] = [
         label: 'Pacientes PTS',
         icon: <TeamOutlined />,
         path: '/pts/pacientes',
+        roles: ['ADMIN', 'SUPERVISOR', 'COORDENADOR', 'FONOAUDIOLOGO', 'OPERADOR'],
       },
       {
         key: '/pts/dashboard',
-        label: (perms) => 
-          (perms.ADMIN || perms.SUPERVISOR || perms.COORDENADOR) ? 'Dashboard PTS' : 'Meus PTS',
+        label: (perms) => {
+          if (perms.ADMIN || perms.SUPERVISOR || perms.COORDENADOR) return 'Dashboard PTS'
+          if (perms.OPERADOR || perms.FONOAUDIOLOGO) return 'Meus PTS'
+          return 'Consultar PTS'
+        },
         icon: <DashboardOutlined />,
         path: '/pts/dashboard',
       },

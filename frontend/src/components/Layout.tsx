@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Layout as AntLayout, theme } from 'antd'
+import { Layout as AntLayout, theme, Alert, Space, Typography } from 'antd'
 import { useNavigate, useLocation, Outlet } from 'react-router-dom'
 import { useAuth } from '@/contexts'
 import { Sidebar } from './Sidebar/Sidebar'
@@ -7,8 +7,10 @@ import { MenuRole } from '../config/menuConfig'
 import { AppHeader } from './Header/AppHeader'
 import { UserProfileDrawer } from './Profile/UserProfileDrawer'
 import { ReLoginModal } from './ReLoginModal'
+import { EyeOutlined } from '@ant-design/icons'
 
 const { Content } = AntLayout
+const { Text } = Typography
 
 // nm_tip_presta do MV para Fonoaudiólogo (cd_tip_presta = 6)
 const NM_TIP_FONOAUDIOLOGO = 'FONOAUDIOLOGO(A)'
@@ -102,7 +104,7 @@ export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false)
   const [profileVisible, setProfileVisible] = useState(false)
   const navigate = useNavigate()
-  const { logout, usuario, isAdmin, isSupervisor, isCoordenador } = useAuth()
+  const { logout, usuario, isAdmin, isSupervisor, isCoordenador, isOperador, isConsulta } = useAuth()
   const { token: themeToken } = theme.useToken()
 
   const isFonoaudiologo = usuario?.nm_tip_presta === NM_TIP_FONOAUDIOLOGO
@@ -112,6 +114,7 @@ export default function AppLayout() {
     SUPERVISOR: !!isSupervisor,
     COORDENADOR: !!isCoordenador,
     FONOAUDIOLOGO: !!isFonoaudiologo,
+    OPERADOR: !!isOperador,
   }
 
   const handleLogout = () => {
@@ -168,6 +171,25 @@ export default function AppLayout() {
             minHeight: 360,
           }}
         >
+          {/* Indicador de Modo Somente Consulta (global) */}
+          {isConsulta && (
+            <Alert
+              style={{ marginBottom: 16 }}
+              type="warning"
+              showIcon
+              icon={<EyeOutlined />}
+              message={
+                <Space direction="vertical" size={0}>
+                  <Text strong>Modo Somente Consulta</Text>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    Seu usuário não possui prestador vinculado ao MV. 
+                    Você pode visualizar todas as informações, mas não pode criar, editar, cancelar ou finalizar registros.
+                  </Text>
+                </Space>
+              }
+              banner
+            />
+          )}
           <Outlet />
         </Content>
       </AntLayout>
