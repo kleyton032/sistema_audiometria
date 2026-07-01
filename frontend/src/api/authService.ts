@@ -23,6 +23,7 @@ export interface PrestadorMVInfo {
 export interface CheckMvResponse {
   existe_local: boolean
   prestador:    PrestadorMVInfo | null
+  sem_prestador: boolean
 }
 
 export async function checkMvCode(codigoMv: string): Promise<CheckMvResponse> {

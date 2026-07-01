@@ -24,6 +24,7 @@ export default function LoginPage() {
   const [step, setStep] = useState<Step>('USER_CHECK')
   const [username, setUsername] = useState('')
   const [prestadorMV, setPrestadorMV] = useState<PrestadorMVInfo | null>(null)
+  const [semPrestador, setSemPrestador] = useState(false)
   const [tempPassword, setTempPassword] = useState('')
   const [form] = Form.useForm<LoginForm>()
 
@@ -39,8 +40,14 @@ export default function LoginPage() {
       
       if (data.existe_local) {
         setStep('LOGIN')
+      } else if (data.sem_prestador) {
+        // Usuário existe no MV mas sem prestador → cadastro como CONSULTA
+        setSemPrestador(true)
+        setPrestadorMV(null)
+        setStep('REGISTER')
       } else if (data.prestador) {
         setPrestadorMV(data.prestador)
+        setSemPrestador(false)
         setStep('REGISTER')
       } else {
         setError('Usuário não encontrado na base, ou não possui qualificação registrada no MV.')
@@ -151,6 +158,7 @@ export default function LoginPage() {
     setStep('USER_CHECK')
     setUsername('')
     setPrestadorMV(null)
+    setSemPrestador(false)
     setTempPassword('')
     form.resetFields(['password', 'confirmPassword'])
     setError(null)
@@ -282,26 +290,38 @@ export default function LoginPage() {
                   <Text type="secondary">Primeiro acesso verificado:</Text> <Text strong>{username}</Text>{' '}
                   <Button type="link" size="small" onClick={resetStep}>Alterar</Button>
                 </div>
-                <Alert 
-                   message="Seja bem-vindo(a)!"
-                   description="Crie uma senha segura para o seu primeiro acesso ao CDM."
-                   type="info"
-                   showIcon
-                   style={{ marginBottom: 16, textAlign: 'left' }}
-                />
-                {prestadorMV && (
-                  <Alert
-                    type="success"
+                {semPrestador ? (
+                  <Alert 
+                    message="Acesso Somente Consulta"
+                    description="Seu usuário não possui prestador vinculado ao MV. Você terá acesso apenas para visualização de PTS, sem permissão para criar, editar ou cancelar registros."
+                    type="warning"
                     showIcon
                     style={{ marginBottom: 16, textAlign: 'left' }}
-                    message={prestadorMV.nm_prestador}
-                    description={[
-                      prestadorMV.nm_tip_presta,
-                      prestadorMV.ds_conselho && prestadorMV.ds_codigo_conselho
-                        ? `${prestadorMV.ds_conselho} ${prestadorMV.ds_codigo_conselho}`
-                        : prestadorMV.ds_conselho || prestadorMV.ds_codigo_conselho,
-                    ].filter(Boolean).join(' · ')}
                   />
+                ) : (
+                  <>
+                    <Alert 
+                      message="Seja bem-vindo(a)!"
+                      description="Crie uma senha segura para o seu primeiro acesso ao CDM."
+                      type="info"
+                      showIcon
+                      style={{ marginBottom: 16, textAlign: 'left' }}
+                    />
+                    {prestadorMV && (
+                      <Alert
+                        type="success"
+                        showIcon
+                        style={{ marginBottom: 16, textAlign: 'left' }}
+                        message={prestadorMV.nm_prestador}
+                        description={[
+                          prestadorMV.nm_tip_presta,
+                          prestadorMV.ds_conselho && prestadorMV.ds_codigo_conselho
+                            ? `${prestadorMV.ds_conselho} ${prestadorMV.ds_codigo_conselho}`
+                            : prestadorMV.ds_conselho || prestadorMV.ds_codigo_conselho,
+                        ].filter(Boolean).join(' · ')}
+                      />
+                    )}
+                  </>
                 )}
                 <Form.Item
                   name="password"
