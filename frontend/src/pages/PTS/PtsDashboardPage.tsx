@@ -10,17 +10,20 @@ import {
   PrinterOutlined,
   FilterOutlined,
   InfoCircleOutlined,
-  HistoryOutlined
+  HistoryOutlined,
+  EyeOutlined
 } from '@ant-design/icons'
 import { getPTSDashboardStats, getPTSDashboardReport, getPTSById } from '@/api/ptsService'
 import { Modal, Spin } from 'antd'
 import PTSPrintView from './PTSPrintView'
 import { Area } from './data/listas'
 import { criarObjetivosIniciais } from './ObjetivosEspecialidades'
+import { useAuth } from '@/contexts'
 
 const { Title, Text } = Typography
 
 export default function PtsDashboardPage() {
+  const { isConsulta } = useAuth()
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({ total_pts: 0, finalizados: 0, em_rascunho: 0, cancelados: 0 })
   const [report, setReport] = useState<any[]>([])
@@ -346,6 +349,25 @@ export default function PtsDashboardPage() {
 
   return (
     <div style={{ padding: '0 8px' }}>
+      {/* Indicador de Modo Somente Consulta */}
+      {isConsulta && (
+        <Alert
+          style={{ marginBottom: 16 }}
+          type="warning"
+          showIcon
+          icon={<EyeOutlined />}
+          message={
+            <Space direction="vertical" size={0}>
+              <Text strong>Modo Somente Consulta</Text>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Seu usuário não possui prestador vinculado ao MV. 
+                Você pode visualizar todas as informações, mas não pode criar, editar ou cancelar PTS.
+              </Text>
+            </Space>
+          }
+          banner
+        />
+      )}
       <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
         <Col>
           <Title level={1} style={{ margin: 0 }}>Dashboard PTS</Title>

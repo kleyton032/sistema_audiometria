@@ -22,7 +22,7 @@ import {
   Modal,
   Drawer,
 } from 'antd'
-import { SaveOutlined, FileTextOutlined, PlusOutlined, DeleteOutlined, CheckCircleOutlined, CloseCircleOutlined, ArrowLeftOutlined, PrinterOutlined, HistoryOutlined } from '@ant-design/icons'
+import { SaveOutlined, FileTextOutlined, PlusOutlined, DeleteOutlined, CheckCircleOutlined, CloseCircleOutlined, ArrowLeftOutlined, PrinterOutlined, HistoryOutlined, EyeOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import 'dayjs/locale/pt-br'
 import ObjetivosEspecialidades, {
@@ -47,6 +47,7 @@ import {
 import { getMe, getPTSDiagnosticosPrincipais, getPTSDiagnosticosArea, getPTSDiagnosticosTerapeuticos, getPTSEspecialidades, getPTSItensMultidisciplinar, getPTSTerapiasIndicadas, getPTSInstrumentosAvaliacao, finalizarPTS, cancelarPTS, savePTS, updatePTS, getPTSById, getCondutaInterdisciplinarStatus } from '@/api'
 import type { CondutaInterdisciplinarStatus } from '@/api/ptsService'
 import type { User } from '@/types'
+import { useAuth } from '@/contexts'
 
 const { Title, Text } = Typography
 dayjs.locale('pt-br')
@@ -172,9 +173,22 @@ interface PacienteState {
 
 export default function PTSPage() {
   const { message, notification, modal } = App.useApp()
+  const { isConsulta } = useAuth()
   const location  = useLocation()
   const navigate   = useNavigate()
   const paciente  = (location.state ?? {}) as Partial<PacienteState>
+
+  // ── Redireciona usuários CONSULTA para o dashboard ──────────────────────
+  useEffect(() => {
+    if (isConsulta) {
+      notification.warning({
+        message: 'Acesso Restrito',
+        description: 'Seu perfil (CONSULTA) permite apenas visualização de PTS. Você está sendo redirecionado.',
+        duration: 5,
+      })
+      navigate('/pts/dashboard', { replace: true })
+    }
+  }, [isConsulta, navigate, notification])
 
   const [form] = Form.useForm<PTSFormValues>()
   const [diagnosticosArea, setDiagnosticosArea] = useState<Record<Area, string | undefined>>(

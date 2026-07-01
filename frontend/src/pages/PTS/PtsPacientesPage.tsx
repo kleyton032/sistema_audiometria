@@ -45,6 +45,7 @@ import { getAgendaDoPacientes, type AgendaItem } from '@/api/agendaService'
 import { getPTSStatusBatch, type PtsStatusBatchItem } from '@/api/ptsService'
 import { PtsHistoryTimeline } from '../../components/PTS/PtsHistoryTimeline'
 import { Drawer } from 'antd'
+import { useAuth } from '@/contexts'
 
 dayjs.locale('pt-br')
 
@@ -79,6 +80,7 @@ function encaixeBadge(sn: string | null) {
 
 export default function PtsPacientesPage() {
   const { notification } = App.useApp()
+  const { isConsulta } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const isReturning = location.state?.fromPTS
@@ -109,6 +111,17 @@ export default function PtsPacientesPage() {
   const [searchAnnouncement, setSearchAnnouncement] = useState('')
 
   function abrirPTS(record: AgendaItem) {
+    // Usuários CONSULTA são redirecionados para o dashboard (somente leitura)
+    if (isConsulta) {
+      notification.info({
+        message: 'Modo Somente Consulta',
+        description: 'Seu perfil permite apenas visualização. Redirecionando para o Dashboard de PTS.',
+        duration: 4,
+      })
+      navigate('/pts/dashboard')
+      return
+    }
+
     const status = record.cd_paciente != null ? ptsStatus[String(record.cd_paciente)] : null
     const meuPts = status?.meu_pts
     const outrosPts = status?.outros_pts || []
@@ -229,7 +242,9 @@ export default function PtsPacientesPage() {
         const outrosPts = status?.outros_pts || []
         const finalizado = meuPts?.fl_finalizado === 1
         const temPTS = meuPts != null
-        const acaoLabel  = finalizado ? 'Ver Meu PTS' : temPTS ? 'Continuar PTS' : 'Iniciar PTS'
+        const acaoLabel  = isConsulta
+          ? 'Visualizar'
+          : finalizado ? 'Ver Meu PTS' : temPTS ? 'Continuar PTS' : 'Iniciar PTS'
         const nomePaciente = record.nm_paciente ?? 'paciente'
         const semAtendimento = !record.cd_atendimento
 
