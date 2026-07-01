@@ -32,6 +32,9 @@ interface AuthContextType {
   isSupervisor:    boolean
   isCoordenador:   boolean
   isOperador:      boolean
+  isConsulta:      boolean
+  /** true se o usuário NÃO possui prestador vinculado ao MV (perfil CONSULTA automático) */
+  hasPrestador:    boolean
   /** true para ADMIN e SUPERVISOR (visão global) */
   isGestor:        boolean
   isSessionExpired: boolean
@@ -140,6 +143,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isSupervisor:    usuario?.ds_perfil === 'SUPERVISOR',
         isCoordenador:   usuario?.ds_perfil === 'COORDENADOR',
         isOperador:      usuario?.ds_perfil === 'OPERADOR',
+        isConsulta:      usuario?.ds_perfil === 'CONSULTA',
+        hasPrestador:    usuario?.cd_prestador != null,
         isGestor:        usuario?.ds_perfil === 'ADMIN' || usuario?.ds_perfil === 'SUPERVISOR',
         isSessionExpired,
         clearSessionExpired: () => setIsSessionExpired(false),
