@@ -30,7 +30,7 @@ def _audiograma_base64(resultado, exame=None) -> str:
     import matplotlib.pyplot as plt
     import matplotlib.ticker as ticker
 
-    fig, (ax_od, ax_oe) = plt.subplots(1, 2, figsize=(11, 3.0))
+    fig, (ax_od, ax_oe) = plt.subplots(1, 2, figsize=(11, 2.7))
     # Título "Audiograma Tonal" já está no <h2> do HTML
 
     freqs_va = [250, 500, 750, 1000, 1500, 2000, 3000, 4000, 6000, 8000]
@@ -93,15 +93,15 @@ def _audiograma_base64(resultado, exame=None) -> str:
 
     def _configure_ax(ax, title, color, show_ylabel=True):
         ax.set_xticks(x_va)
-        ax.set_xticklabels(xlabels, fontsize=8)
+        ax.set_xticklabels(xlabels, fontsize=7.5)
         ax.set_ylim(125, -10)
         ax.set_yticks(range(-10, 130, 10))
         ax.yaxis.set_minor_locator(ticker.MultipleLocator(5))
-        ax.tick_params(axis="y", labelsize=8)
+        ax.tick_params(axis="y", labelsize=7.5)
         if show_ylabel:
-            ax.set_ylabel("dB HL", fontsize=9)
-        ax.set_xlabel("Frequência (Hz)", fontsize=9)
-        ax.set_title(title, fontsize=10, fontweight="bold", color=color, pad=4)
+            ax.set_ylabel("dB HL", fontsize=8.5)
+        ax.set_xlabel("Frequência (Hz)", fontsize=8.5)
+        ax.set_title(title, fontsize=9.5, fontweight="bold", color=color, pad=3)
         ax.axhline(25, color="#aaa", linestyle="--", linewidth=0.6)
         ax.grid(True, which="major", alpha=0.2)
         ax.set_xlim(-0.5, 9.5)
@@ -204,9 +204,9 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str, ds_especialidade: s
 <style>
   @page {{ size: A4; margin: 6mm 8mm; }}
   * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-  body {{ font-family: Arial, sans-serif; font-size: 9.5px; color: #222; padding: 0; }}
+  body {{ font-family: Arial, sans-serif; font-size: 9px; color: #222; padding: 0; }}
   h1 {{ font-size: 12px; color: #1e5aa8; text-transform: uppercase; margin: 0; }}
-  h2 {{ font-size: 11px; color: #4c2c8a; margin: 6px 0 3px; border-bottom: 1px solid #ddd; padding-bottom: 1px; }}
+  h2 {{ font-size: 10px; color: #4c2c8a; margin: 5px 0 2px; border-bottom: 1px solid #ddd; padding-bottom: 1px; }}
   .inst-header {{ border: 1px solid #1e5aa8; border-radius: 6px; margin-bottom: 6px; background: #fff; }}
   .inst-header-top {{ display: flex; align-items: center; justify-content: space-between; padding: 4px 10px; border-bottom: 1px solid #1e5aa8; min-height: 30px; }}
   .inst-header-logo {{ flex: 0 0 80px; }}
@@ -218,8 +218,8 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str, ds_especialidade: s
   .inst-header-data-right {{ flex: 2; display: flex; flex-direction: column; gap: 1px; text-align: left; }}
   .inst-header-data strong {{ font-weight: bold; }}
   .nm-paciente {{ font-size: 10px; font-weight: bold; color: #1e5aa8; text-transform: uppercase; margin-bottom: 1px; }}
-  table {{ width: 100%; border-collapse: collapse; margin: 3px 0; font-size: 9px; page-break-inside: avoid; }}
-  th, td {{ border: 1px solid #ccc; padding: 2px 5px; text-align: center; }}
+  table {{ width: 100%; border-collapse: collapse; margin: 2px 0; font-size: 8.5px; page-break-inside: avoid; }}
+  th, td {{ border: 1px solid #ccc; padding: 1.5px 4px; text-align: center; }}
   th {{ background: #f0eaff; font-weight: bold; }}
   .freq-header th {{ background: #4c2c8a; color: white; }}
   .audiogram {{ text-align: center; margin: 3px 0; page-break-inside: avoid; }}
