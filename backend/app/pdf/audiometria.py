@@ -30,7 +30,7 @@ def _audiograma_base64(resultado, exame=None) -> str:
     import matplotlib.pyplot as plt
     import matplotlib.ticker as ticker
 
-    fig, (ax_od, ax_oe) = plt.subplots(1, 2, figsize=(11, 2.6))
+    fig, (ax_od, ax_oe) = plt.subplots(1, 2, figsize=(11, 3.4))
     # Título "Audiograma Tonal" já está no <h2> do HTML
 
     freqs_va = [250, 500, 750, 1000, 1500, 2000, 3000, 4000, 6000, 8000]
@@ -71,7 +71,7 @@ def _audiograma_base64(resultado, exame=None) -> str:
             if sym_pts:
                 xs_s, ys_s = zip(*sym_pts)
                 ax.plot(xs_s, ys_s, linestyle="None", color=color, label=label,
-                        marker=marker, markersize=6, markeredgewidth=1.8, zorder=2,
+                        marker=marker, markersize=7, markeredgewidth=1.8, zorder=2,
                         markerfacecolor="white" if marker not in ("x", "<", ">") else color)
             else:
                 ax.plot([], [], linestyle="-", color=color, label=label, linewidth=1.5)
@@ -79,7 +79,7 @@ def _audiograma_base64(resultado, exame=None) -> str:
             if sym_pts:
                 xs_s, ys_s = zip(*sym_pts)
                 ax.plot(xs_s, ys_s, linestyle="None", color=color, label=label,
-                        marker=marker, markersize=6, markeredgewidth=1.8,
+                        marker=marker, markersize=7, markeredgewidth=1.8,
                         markerfacecolor="white" if marker not in ("x", "<", ">") else color)
             else:
                 ax.plot([], [], linestyle="None", color=color, marker=marker, label=label)
@@ -93,19 +93,19 @@ def _audiograma_base64(resultado, exame=None) -> str:
 
     def _configure_ax(ax, title, color, show_ylabel=True):
         ax.set_xticks(x_va)
-        ax.set_xticklabels(xlabels, fontsize=7)
+        ax.set_xticklabels(xlabels, fontsize=8)
         ax.set_ylim(125, -10)
         ax.set_yticks(range(-10, 130, 10))
         ax.yaxis.set_minor_locator(ticker.MultipleLocator(5))
-        ax.tick_params(axis="y", labelsize=7)
+        ax.tick_params(axis="y", labelsize=8)
         if show_ylabel:
-            ax.set_ylabel("dB HL", fontsize=8)
-        ax.set_xlabel("Frequência (Hz)", fontsize=8)
-        ax.set_title(title, fontsize=9, fontweight="bold", color=color, pad=4)
+            ax.set_ylabel("dB HL", fontsize=9)
+        ax.set_xlabel("Frequência (Hz)", fontsize=9)
+        ax.set_title(title, fontsize=10, fontweight="bold", color=color, pad=4)
         ax.axhline(25, color="#aaa", linestyle="--", linewidth=0.6)
         ax.grid(True, which="major", alpha=0.2)
         ax.set_xlim(-0.5, 9.5)
-        ax.legend(fontsize=6, loc="lower right")
+        ax.legend(fontsize=7, loc="lower right")
 
     # ── Ouvido Direito (ax_od) ─────────────────────────────────────────────
     od_va = [_get(r, f"od_va_{f}") for f in freqs_va]
@@ -135,7 +135,7 @@ def _audiograma_base64(resultado, exame=None) -> str:
 
     fig.tight_layout()
     buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=130, bbox_inches="tight")
+    fig.savefig(buf, format="png", dpi=150, bbox_inches="tight")
     plt.close(fig)
     buf.seek(0)
     return base64.b64encode(buf.read()).decode()
@@ -202,24 +202,24 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str, ds_especialidade: s
 <head>
 <meta charset="utf-8">
 <style>
-  @page {{ size: A4; margin: 7mm 10mm; }}
+  @page {{ size: A4; margin: 6mm 8mm; }}
   * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-  body {{ font-family: Arial, sans-serif; font-size: 9px; color: #222; padding: 0; }}
+  body {{ font-family: Arial, sans-serif; font-size: 10px; color: #222; padding: 0; }}
   h1 {{ font-size: 12px; color: #1e5aa8; text-transform: uppercase; margin: 0; }}
-  h2 {{ font-size: 10px; color: #4c2c8a; margin: 6px 0 3px; border-bottom: 1px solid #ddd; padding-bottom: 1px; }}
+  h2 {{ font-size: 11px; color: #4c2c8a; margin: 6px 0 3px; border-bottom: 1px solid #ddd; padding-bottom: 1px; }}
   .inst-header {{ border: 1px solid #1e5aa8; border-radius: 6px; margin-bottom: 6px; background: #fff; }}
   .inst-header-top {{ display: flex; align-items: center; justify-content: space-between; padding: 4px 10px; border-bottom: 1px solid #1e5aa8; min-height: 30px; }}
   .inst-header-logo {{ flex: 0 0 80px; }}
   .inst-header-logo img {{ height: 22px; object-fit: contain; }}
   .inst-header-logo-right img {{ height: 25px; object-fit: contain; }}
   .inst-header-title {{ flex: 1; text-align: center; }}
-  .inst-header-data {{ display: flex; gap: 12px; padding: 4px 10px; font-size: 8px; line-height: 1.4; }}
+  .inst-header-data {{ display: flex; gap: 12px; padding: 4px 10px; font-size: 9px; line-height: 1.5; }}
   .inst-header-data-left {{ flex: 3; display: flex; flex-direction: column; gap: 1px; }}
   .inst-header-data-right {{ flex: 2; display: flex; flex-direction: column; gap: 1px; text-align: left; }}
   .inst-header-data strong {{ font-weight: bold; }}
   .nm-paciente {{ font-size: 10px; font-weight: bold; color: #1e5aa8; text-transform: uppercase; margin-bottom: 1px; }}
-  table {{ width: 100%; border-collapse: collapse; margin: 2px 0; font-size: 8px; page-break-inside: avoid; }}
-  th, td {{ border: 1px solid #ccc; padding: 1px 3px; text-align: center; }}
+  table {{ width: 100%; border-collapse: collapse; margin: 3px 0; font-size: 9px; page-break-inside: avoid; }}
+  th, td {{ border: 1px solid #ccc; padding: 2px 5px; text-align: center; }}
   th {{ background: #f0eaff; font-weight: bold; }}
   .freq-header th {{ background: #4c2c8a; color: white; }}
   .audiogram {{ text-align: center; margin: 3px 0; page-break-inside: avoid; }}
