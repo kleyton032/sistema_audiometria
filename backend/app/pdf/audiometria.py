@@ -210,8 +210,8 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str, ds_especialidade: s
   .inst-header {{ border: 1px solid #1e5aa8; border-radius: 6px; margin-bottom: 6px; background: #fff; }}
   .inst-header-top {{ display: flex; align-items: center; justify-content: space-between; padding: 4px 10px; border-bottom: 1px solid #1e5aa8; min-height: 30px; }}
   .inst-header-logo {{ flex: 0 0 80px; }}
-  .inst-header-logo img {{ height: 22px; object-fit: contain; }}
-  .inst-header-logo-right img {{ height: 25px; object-fit: contain; }}
+  .inst-header-logo img {{ height: 28px; object-fit: contain; }}
+  .inst-header-logo-right img {{ height: 32px; object-fit: contain; }}
   .inst-header-title {{ flex: 1; text-align: center; }}
   .inst-header-data {{ display: flex; gap: 12px; padding: 4px 10px; font-size: 9px; line-height: 1.5; }}
   .inst-header-data-left {{ flex: 3; display: flex; flex-direction: column; gap: 1px; }}
