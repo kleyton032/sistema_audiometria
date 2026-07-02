@@ -30,7 +30,7 @@ def _audiograma_base64(resultado, exame=None) -> str:
     import matplotlib.pyplot as plt
     import matplotlib.ticker as ticker
 
-    fig, (ax_od, ax_oe) = plt.subplots(1, 2, figsize=(11, 3.4))
+    fig, (ax_od, ax_oe) = plt.subplots(1, 2, figsize=(11, 3.0))
     # Título "Audiograma Tonal" já está no <h2> do HTML
 
     freqs_va = [250, 500, 750, 1000, 1500, 2000, 3000, 4000, 6000, 8000]
@@ -204,7 +204,7 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str, ds_especialidade: s
 <style>
   @page {{ size: A4; margin: 6mm 8mm; }}
   * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-  body {{ font-family: Arial, sans-serif; font-size: 10px; color: #222; padding: 0; }}
+  body {{ font-family: Arial, sans-serif; font-size: 9.5px; color: #222; padding: 0; }}
   h1 {{ font-size: 12px; color: #1e5aa8; text-transform: uppercase; margin: 0; }}
   h2 {{ font-size: 11px; color: #4c2c8a; margin: 6px 0 3px; border-bottom: 1px solid #ddd; padding-bottom: 1px; }}
   .inst-header {{ border: 1px solid #1e5aa8; border-radius: 6px; margin-bottom: 6px; background: #fff; }}
