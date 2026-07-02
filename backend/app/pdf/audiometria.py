@@ -340,7 +340,35 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str, ds_especialidade: s
 </table>
 </div>
 <div class="table-col">
-<h2 style="margin-top:0;">Mascaramento (dB NB)</h2>
+<h2 style="margin-top:0;">Classificação Audiológica</h2>
+<table>
+  <thead>
+    <tr class="freq-header">
+      <th>Orelha</th><th>PTA (dBHL)</th><th>Grau</th><th>Tipo</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th><span class="tag tag-od">OD</span></th>
+      <td>{media_od}</td>
+      <td>{class_od}</td>
+      <td>{tipo_od}</td>
+    </tr>
+    <tr>
+      <th><span class="tag tag-oe">OE</span></th>
+      <td>{media_oe}</td>
+      <td>{class_oe}</td>
+      <td>{tipo_oe}</td>
+    </tr>
+  </tbody>
+</table>
+<p style="font-size:7px; color:#666; margin-top:2px;">
+  Classificação OMS 2021 — média quadritonal.
+</p>
+</div>
+</div>
+
+<h2>Mascaramento (dB NB)</h2>
 <table>
   <thead>
     <tr class="freq-header">
@@ -372,35 +400,6 @@ def _html(exame: "Exame", nm_usuario: str, nr_conselho: str, ds_especialidade: s
     </tr>
   </tbody>
 </table>
-</div>
-<div class="table-col">
-<h2 style="margin-top:0;">Classificação Audiológica</h2>
-<table>
-  <thead>
-    <tr class="freq-header">
-      <th>Orelha</th><th>PTA (dBHL)</th><th>Grau</th><th>Tipo</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th><span class="tag tag-od">OD</span></th>
-      <td>{media_od}</td>
-      <td>{class_od}</td>
-      <td>{tipo_od}</td>
-    </tr>
-    <tr>
-      <th><span class="tag tag-oe">OE</span></th>
-      <td>{media_oe}</td>
-      <td>{class_oe}</td>
-      <td>{tipo_oe}</td>
-    </tr>
-  </tbody>
-</table>
-<p style="font-size:7px; color:#666; margin-top:2px;">
-  Classificação OMS 2021 — média quadritonal.
-</p>
-</div>
-</div>
 
 <h2>Conclusão Clínica</h2>
 <div class="conclusao">{conclusao or "—"}</div>
