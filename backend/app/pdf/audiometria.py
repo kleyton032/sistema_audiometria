@@ -30,7 +30,7 @@ def _audiograma_base64(resultado, exame=None) -> str:
     import matplotlib.pyplot as plt
     import matplotlib.ticker as ticker
 
-    fig, (ax_od, ax_oe) = plt.subplots(1, 2, figsize=(11, 2.7))
+    fig, (ax_od, ax_oe) = plt.subplots(1, 2, figsize=(11, 3.2))
     # Título "Audiograma Tonal" já está no <h2> do HTML
 
     freqs_va = [250, 500, 750, 1000, 1500, 2000, 3000, 4000, 6000, 8000]
@@ -93,15 +93,15 @@ def _audiograma_base64(resultado, exame=None) -> str:
 
     def _configure_ax(ax, title, color, show_ylabel=True):
         ax.set_xticks(x_va)
-        ax.set_xticklabels(xlabels, fontsize=7.5)
+        ax.set_xticklabels(xlabels, fontsize=8)
         ax.set_ylim(125, -10)
         ax.set_yticks(range(-10, 130, 10))
         ax.yaxis.set_minor_locator(ticker.MultipleLocator(5))
-        ax.tick_params(axis="y", labelsize=7.5)
+        ax.tick_params(axis="y", labelsize=8)
         if show_ylabel:
-            ax.set_ylabel("dB HL", fontsize=8.5)
-        ax.set_xlabel("Frequência (Hz)", fontsize=8.5)
-        ax.set_title(title, fontsize=9.5, fontweight="bold", color=color, pad=3)
+            ax.set_ylabel("dB HL", fontsize=9)
+        ax.set_xlabel("Frequência (Hz)", fontsize=9)
+        ax.set_title(title, fontsize=10, fontweight="bold", color=color, pad=3)
         ax.axhline(25, color="#aaa", linestyle="--", linewidth=0.6)
         ax.grid(True, which="major", alpha=0.2)
         ax.set_xlim(-0.5, 9.5)
