@@ -10,7 +10,6 @@ from app.dependencies import get_db, get_current_user, require_escrita
 from app.db.models import User, PTS
 from app.schemas.pts import PTSCreate, PtsHistoricoSummaryOut
 from app.db.repositories.pts import create_pts, update_pts, get_pts_by_id, get_pts_status_batch, calcular_vigencia
-from app.db.session import SessionTest
 
 logger = logging.getLogger(__name__)
 
@@ -18,9 +17,10 @@ router = APIRouter(prefix="/pts", tags=["PTS"])
 
 
 def get_db_session(user: User, db: Session) -> Session:
-    """Retorna a sessão de teste se o usuário for 'testesoul', senão retorna a sessão padrão."""
+    """Retorna a sessão do banco. Para testesoul, cria uma nova sessão independente."""
     if user.nm_login == 'testesoul':
-        return SessionTest()
+        from app.db.session import SessionLocal
+        return SessionLocal()
     return db
 
 

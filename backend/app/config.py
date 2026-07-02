@@ -1,5 +1,4 @@
 # app/config.py
-import os
 import logging
 from pydantic_settings import BaseSettings
 from functools import lru_cache
@@ -12,10 +11,6 @@ class Settings(BaseSettings):
     ORACLE_PASSWORD: str
     ORACLE_DSN: str
 
-    ORACLE_TEST_USER: str = "system"
-    ORACLE_TEST_PASSWORD: str = "oracle"
-    ORACLE_TEST_DSN: str = "oracle-test:1521/?service_name=FREEPDB1" if os.getenv("RUNNING_IN_DOCKER") else "localhost:1521/?service_name=FREEPDB1"
-
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480  # 8 horas — duração de um turno de trabalho
@@ -24,7 +19,7 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list[str] = ["*"]  # Em desenvolvimento, aceita qualquer origem
 
     class Config:
-        env_file = ".env.test" if os.getenv("APP_ENV") == "test" else ".env"
+        env_file = ".env"
         env_file_encoding = "utf-8"
 
     def __init__(self, **data):
