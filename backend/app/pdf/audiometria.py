@@ -58,7 +58,7 @@ def _audiograma_base64(resultado, exame=None) -> str:
     od_vo_marker = "$[$" if mask_od_vo else "<"
     oe_vo_marker = "$]$" if mask_oe_vo else ">"
 
-    def _plot_line(ax, vals, xs, color, marker, label, connect=True, nr=None):
+    def _plot_line(ax, vals, xs, color, marker, label, connect=True, nr=None, linestyle="-"):
         if nr is None:
             nr = [False] * len(vals)
         all_pts = [(x, y) for x, y in zip(xs, vals) if y is not None]
@@ -67,7 +67,7 @@ def _audiograma_base64(resultado, exame=None) -> str:
             return
         if connect:
             xs_l, ys_l = zip(*all_pts)
-            ax.plot(xs_l, ys_l, linestyle="-", color=color, linewidth=1.5, zorder=1)
+            ax.plot(xs_l, ys_l, linestyle=linestyle, color=color, linewidth=1.5, zorder=1)
             if sym_pts:
                 xs_s, ys_s = zip(*sym_pts)
                 ax.plot(xs_s, ys_s, linestyle="None", color=color, label=label,
@@ -79,7 +79,7 @@ def _audiograma_base64(resultado, exame=None) -> str:
             if sym_pts:
                 xs_s, ys_s = zip(*sym_pts)
                 ax.plot(xs_s, ys_s, linestyle="None", color=color, label=label,
-                        marker=marker, markersize=7, markeredgewidth=1.8,
+                        marker=marker, markersize=7, markeredgewidth=1.8, zorder=2,
                         markerfacecolor="white" if marker not in ("x", "<", ">") else color)
             else:
                 ax.plot([], [], linestyle="None", color=color, marker=marker, label=label)
@@ -88,13 +88,14 @@ def _audiograma_base64(resultado, exame=None) -> str:
         for x, y, is_nr in zip(xs_all, vals, nr_flags):
             if not is_nr or y is None:
                 continue
-            ax.annotate("", xy=(x, y + 10), xytext=(x, y - 2),
-                        arrowprops=dict(arrowstyle="-|>", color=color, lw=2))
+            ax.annotate("", xy=(x, y + 10), xytext=(x, y),
+                        arrowprops=dict(arrowstyle="-|>", color=color, lw=2),
+                        zorder=1)
 
     def _configure_ax(ax, title, color, show_ylabel=True):
         ax.set_xticks(x_va)
         ax.set_xticklabels(xlabels, fontsize=8)
-        ax.set_ylim(125, -10)
+        ax.set_ylim(135, -10)
         ax.set_yticks(range(-10, 130, 10))
         ax.yaxis.set_minor_locator(ticker.MultipleLocator(5))
         ax.tick_params(axis="y", labelsize=8)
@@ -123,7 +124,7 @@ def _audiograma_base64(resultado, exame=None) -> str:
     # ── Ouvido Esquerdo (ax_oe) ────────────────────────────────────────────
     oe_va = [_get(r, f"oe_va_{f}") for f in freqs_va]
     _plot_line(ax_oe, oe_va, x_va, "#2980b9", oe_va_marker,
-               f"VA {'(□ mascarado)' if mask_oe_va else '(X)'}", nr=nr_oe_va)
+               f"VA {'(□ mascarado)' if mask_oe_va else '(X)'}", nr=nr_oe_va, linestyle="--")
     _plot_nr(ax_oe, x_va, oe_va, nr_oe_va, "#2980b9")
 
     oe_vo = [_get(r, f"oe_vo_{f}") for f in freqs_vo]
