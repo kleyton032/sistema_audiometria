@@ -203,6 +203,7 @@ def reset_user_password(
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
 
     user.ds_senha_hash = hash_password(payload.nova_senha)
+    user.fl_troca_senha = 1
     db.commit()
 
     _log_audit(db, "FAV_TB_SILA_USUARIOS", "UPDATE", current_admin,

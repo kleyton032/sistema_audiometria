@@ -34,10 +34,6 @@ engine = create_engine(
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# SessionTest agora aponta para o banco principal (mesmo engine)
-# Mantida para compatibilidade com o usuário testesoul
-SessionTest = SessionLocal
-
 
 class Base(DeclarativeBase):
     pass

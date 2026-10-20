@@ -220,6 +220,7 @@ function EarChart({ ear, side, masking }: EarChartProps) {
             dataKey="air"
             stroke={color}
             strokeWidth={2}
+            strokeDasharray={side === 'OE' ? "5 5" : undefined}
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             dot={AirDot as any}
             activeDot={{ r: 5, fill: color }}

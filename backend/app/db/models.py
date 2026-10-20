@@ -33,6 +33,7 @@ class User(Base):
     dt_criacao       = Column("DT_CRIACAO",       DateTime(timezone=True), server_default=func.now(), nullable=False)
     dt_ultimo_acesso = Column("DT_ULTIMO_ACESSO", DateTime(timezone=True))
     fl_ativo         = Column("FL_ATIVO",         Integer,              default=1, nullable=False)
+    fl_troca_senha   = Column("FL_TROCA_SENHA",   Integer,              default=0, nullable=False)
 
     prestador = relationship("UsuarioPrestador", back_populates="usuario", uselist=False)
     perfil    = relationship("Perfil", lazy="joined", foreign_keys=[id_perfil])
@@ -96,7 +97,9 @@ class ResultadoAudio(Base):
     # Via aérea OD
     od_va_250  = Column("OD_VA_250",  Numeric(5, 1))
     od_va_500  = Column("OD_VA_500",  Numeric(5, 1))
+    od_va_750  = Column("OD_VA_750",  Numeric(5, 1))
     od_va_1000 = Column("OD_VA_1000", Numeric(5, 1))
+    od_va_1500 = Column("OD_VA_1500", Numeric(5, 1))
     od_va_2000 = Column("OD_VA_2000", Numeric(5, 1))
     od_va_3000 = Column("OD_VA_3000", Numeric(5, 1))
     od_va_4000 = Column("OD_VA_4000", Numeric(5, 1))
@@ -113,7 +116,9 @@ class ResultadoAudio(Base):
     # Via aérea OE
     oe_va_250  = Column("OE_VA_250",  Numeric(5, 1))
     oe_va_500  = Column("OE_VA_500",  Numeric(5, 1))
+    oe_va_750  = Column("OE_VA_750",  Numeric(5, 1))
     oe_va_1000 = Column("OE_VA_1000", Numeric(5, 1))
+    oe_va_1500 = Column("OE_VA_1500", Numeric(5, 1))
     oe_va_2000 = Column("OE_VA_2000", Numeric(5, 1))
     oe_va_3000 = Column("OE_VA_3000", Numeric(5, 1))
     oe_va_4000 = Column("OE_VA_4000", Numeric(5, 1))
@@ -159,7 +164,9 @@ class ResultadoAudio(Base):
     # Sem resposta por frequência (NR) — VA OD
     od_va_250_nr  = Column("OD_VA_250_NR",  Integer, default=0)
     od_va_500_nr  = Column("OD_VA_500_NR",  Integer, default=0)
+    od_va_750_nr  = Column("OD_VA_750_NR",  Integer, default=0)
     od_va_1000_nr = Column("OD_VA_1000_NR", Integer, default=0)
+    od_va_1500_nr = Column("OD_VA_1500_NR", Integer, default=0)
     od_va_2000_nr = Column("OD_VA_2000_NR", Integer, default=0)
     od_va_3000_nr = Column("OD_VA_3000_NR", Integer, default=0)
     od_va_4000_nr = Column("OD_VA_4000_NR", Integer, default=0)
@@ -174,7 +181,9 @@ class ResultadoAudio(Base):
     # VA OE
     oe_va_250_nr  = Column("OE_VA_250_NR",  Integer, default=0)
     oe_va_500_nr  = Column("OE_VA_500_NR",  Integer, default=0)
+    oe_va_750_nr  = Column("OE_VA_750_NR",  Integer, default=0)
     oe_va_1000_nr = Column("OE_VA_1000_NR", Integer, default=0)
+    oe_va_1500_nr = Column("OE_VA_1500_NR", Integer, default=0)
     oe_va_2000_nr = Column("OE_VA_2000_NR", Integer, default=0)
     oe_va_3000_nr = Column("OE_VA_3000_NR", Integer, default=0)
     oe_va_4000_nr = Column("OE_VA_4000_NR", Integer, default=0)

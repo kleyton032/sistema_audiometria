@@ -16,11 +16,22 @@ from app.db.models import (
 from app.schemas.pts import PTSCreate
 
 def calcular_vigencia() -> str:
-    """Retorna a vigência atual no formato YYYY-MM, sendo 05 ou 11."""
+    """Retorna a vigência atual no formato YYYY-MM.
+
+    Regra:
+    - Vigência 05: rege de maio a outubro do mesmo ano
+    - Vigência 11: rege de novembro a abril do ano seguinte
+    """
     now = datetime.now()
-    if now.month <= 6:
+    if 5 <= now.month <= 10:
+        # Maio a Outubro → vigência de maio do ano corrente
         return f"{now.year}-05"
-    return f"{now.year}-11"
+    elif now.month >= 11:
+        # Novembro e Dezembro → vigência de novembro do ano corrente
+        return f"{now.year}-11"
+    else:
+        # Janeiro a Abril → vigência de novembro do ano anterior
+        return f"{now.year - 1}-11"
 
 
 def pts_to_dict(pts: PTS) -> dict:

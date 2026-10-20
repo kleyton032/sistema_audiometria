@@ -46,6 +46,7 @@ const emptyData = (): AudiometryData => ({
   hearingLossGrade: null,
   conclusion: '',
   observations: '',
+  chiefComplaint: '',
 })
 
 function resultadoToData(r: ResultadoAudioResponse): AudiometryData {
@@ -53,7 +54,8 @@ function resultadoToData(r: ResultadoAudioResponse): AudiometryData {
     rightEar: {
       airConduction: {
         250: r.od_va_250 ?? undefined, 500: r.od_va_500 ?? undefined,
-        1000: r.od_va_1000 ?? undefined, 2000: r.od_va_2000 ?? undefined,
+        750: r.od_va_750 ?? undefined, 1000: r.od_va_1000 ?? undefined,
+        1500: r.od_va_1500 ?? undefined, 2000: r.od_va_2000 ?? undefined,
         3000: r.od_va_3000 ?? undefined, 4000: r.od_va_4000 ?? undefined,
         6000: r.od_va_6000 ?? undefined, 8000: r.od_va_8000 ?? undefined,
       },
@@ -62,8 +64,10 @@ function resultadoToData(r: ResultadoAudioResponse): AudiometryData {
         2000: r.od_vo_2000 ?? undefined, 3000: r.od_vo_3000 ?? undefined, 4000: r.od_vo_4000 ?? undefined,
       },
       airNR: {
-        250: !!(r.od_va_250_nr), 500: !!(r.od_va_500_nr), 1000: !!(r.od_va_1000_nr),
-        2000: !!(r.od_va_2000_nr), 3000: !!(r.od_va_3000_nr), 4000: !!(r.od_va_4000_nr),
+        250: !!(r.od_va_250_nr), 500: !!(r.od_va_500_nr),
+        750: !!(r.od_va_750_nr), 1000: !!(r.od_va_1000_nr),
+        1500: !!(r.od_va_1500_nr), 2000: !!(r.od_va_2000_nr),
+        3000: !!(r.od_va_3000_nr), 4000: !!(r.od_va_4000_nr),
         6000: !!(r.od_va_6000_nr), 8000: !!(r.od_va_8000_nr),
       },
       boneNR: {
@@ -74,7 +78,8 @@ function resultadoToData(r: ResultadoAudioResponse): AudiometryData {
     leftEar: {
       airConduction: {
         250: r.oe_va_250 ?? undefined, 500: r.oe_va_500 ?? undefined,
-        1000: r.oe_va_1000 ?? undefined, 2000: r.oe_va_2000 ?? undefined,
+        750: r.oe_va_750 ?? undefined, 1000: r.oe_va_1000 ?? undefined,
+        1500: r.oe_va_1500 ?? undefined, 2000: r.oe_va_2000 ?? undefined,
         3000: r.oe_va_3000 ?? undefined, 4000: r.oe_va_4000 ?? undefined,
         6000: r.oe_va_6000 ?? undefined, 8000: r.oe_va_8000 ?? undefined,
       },
@@ -83,8 +88,10 @@ function resultadoToData(r: ResultadoAudioResponse): AudiometryData {
         2000: r.oe_vo_2000 ?? undefined, 3000: r.oe_vo_3000 ?? undefined, 4000: r.oe_vo_4000 ?? undefined,
       },
       airNR: {
-        250: !!(r.oe_va_250_nr), 500: !!(r.oe_va_500_nr), 1000: !!(r.oe_va_1000_nr),
-        2000: !!(r.oe_va_2000_nr), 3000: !!(r.oe_va_3000_nr), 4000: !!(r.oe_va_4000_nr),
+        250: !!(r.oe_va_250_nr), 500: !!(r.oe_va_500_nr),
+        750: !!(r.oe_va_750_nr), 1000: !!(r.oe_va_1000_nr),
+        1500: !!(r.oe_va_1500_nr), 2000: !!(r.oe_va_2000_nr),
+        3000: !!(r.oe_va_3000_nr), 4000: !!(r.oe_va_4000_nr),
         6000: !!(r.oe_va_6000_nr), 8000: !!(r.oe_va_8000_nr),
       },
       boneNR: {
@@ -124,6 +131,7 @@ function resultadoToData(r: ResultadoAudioResponse): AudiometryData {
     hearingLossGrade: (r.ds_class_od as HearingLossGrade) ?? null,
     conclusion: r.ds_conclusao ?? '',
     observations: '',
+    chiefComplaint: '', // Preenchido no componente principal via exameService
   }
 }
 
@@ -142,13 +150,15 @@ function dataToPayload(
     id_paciente: cdPaciente,
     id_atendimento: cdAtendimento,
     od_va_250: ac[250] ?? null, od_va_500: ac[500] ?? null,
-    od_va_1000: ac[1000] ?? null, od_va_2000: ac[2000] ?? null,
+    od_va_750: ac[750] ?? null, od_va_1000: ac[1000] ?? null,
+    od_va_1500: ac[1500] ?? null, od_va_2000: ac[2000] ?? null,
     od_va_3000: ac[3000] ?? null, od_va_4000: ac[4000] ?? null,
     od_va_6000: ac[6000] ?? null, od_va_8000: ac[8000] ?? null,
     od_vo_500: bc[500] ?? null, od_vo_1000: bc[1000] ?? null,
     od_vo_2000: bc[2000] ?? null, od_vo_3000: bc[3000] ?? null, od_vo_4000: bc[4000] ?? null,
     oe_va_250: acL[250] ?? null, oe_va_500: acL[500] ?? null,
-    oe_va_1000: acL[1000] ?? null, oe_va_2000: acL[2000] ?? null,
+    oe_va_750: acL[750] ?? null, oe_va_1000: acL[1000] ?? null,
+    oe_va_1500: acL[1500] ?? null, oe_va_2000: acL[2000] ?? null,
     oe_va_3000: acL[3000] ?? null, oe_va_4000: acL[4000] ?? null,
     oe_va_6000: acL[6000] ?? null, oe_va_8000: acL[8000] ?? null,
     oe_vo_500: bcL[500] ?? null, oe_vo_1000: bcL[1000] ?? null,
@@ -169,7 +179,9 @@ function dataToPayload(
     oe_mask_lrf: data.maskingLeft.lrf, oe_mask_iprf: data.maskingLeft.iprf,
     od_va_250_nr: ac[250] != null && data.rightEar.airNR?.[250] ? 1 : 0,
     od_va_500_nr: ac[500] != null && data.rightEar.airNR?.[500] ? 1 : 0,
+    od_va_750_nr: ac[750] != null && data.rightEar.airNR?.[750] ? 1 : 0,
     od_va_1000_nr: ac[1000] != null && data.rightEar.airNR?.[1000] ? 1 : 0,
+    od_va_1500_nr: ac[1500] != null && data.rightEar.airNR?.[1500] ? 1 : 0,
     od_va_2000_nr: ac[2000] != null && data.rightEar.airNR?.[2000] ? 1 : 0,
     od_va_3000_nr: ac[3000] != null && data.rightEar.airNR?.[3000] ? 1 : 0,
     od_va_4000_nr: ac[4000] != null && data.rightEar.airNR?.[4000] ? 1 : 0,
@@ -182,7 +194,9 @@ function dataToPayload(
     od_vo_4000_nr: bc[4000] != null && data.rightEar.boneNR?.[4000] ? 1 : 0,
     oe_va_250_nr: acL[250] != null && data.leftEar.airNR?.[250] ? 1 : 0,
     oe_va_500_nr: acL[500] != null && data.leftEar.airNR?.[500] ? 1 : 0,
+    oe_va_750_nr: acL[750] != null && data.leftEar.airNR?.[750] ? 1 : 0,
     oe_va_1000_nr: acL[1000] != null && data.leftEar.airNR?.[1000] ? 1 : 0,
+    oe_va_1500_nr: acL[1500] != null && data.leftEar.airNR?.[1500] ? 1 : 0,
     oe_va_2000_nr: acL[2000] != null && data.leftEar.airNR?.[2000] ? 1 : 0,
     oe_va_3000_nr: acL[3000] != null && data.leftEar.airNR?.[3000] ? 1 : 0,
     oe_va_4000_nr: acL[4000] != null && data.leftEar.airNR?.[4000] ? 1 : 0,
@@ -200,6 +214,7 @@ function dataToPayload(
     ds_tipo_oe: data.hearingLossType ?? null,
     ds_conclusao: data.conclusion || null,
     ds_observacoes: data.observations || null,
+    ds_queixa_principal: data.chiefComplaint || null,
     fl_cae_od_obstruido: 0,
     fl_cae_oe_obstruido: 0,
   }
@@ -238,6 +253,7 @@ export default function AudiometriaPage({ cdPaciente, cdAtendimento }: Audiometr
       .then((exame) => {
         if (exame?.resultado_audio) {
           const dadosCarregados = resultadoToData(exame.resultado_audio)
+          dadosCarregados.chiefComplaint = exame.ds_queixa_principal ?? ''
           setData(dadosCarregados)
           setDataOriginal(dadosCarregados)
           setIdExame(exame.id_exame)
@@ -249,6 +265,10 @@ export default function AudiometriaPage({ cdPaciente, cdAtendimento }: Audiometr
   }, [cdAtendimento])
 
   async function salvar() {
+    if (!data.chiefComplaint || data.chiefComplaint.trim() === '') {
+      notification.warning({ message: 'A Queixa Principal é obrigatória para salvar o exame.' })
+      return
+    }
     if (!cdPaciente) {
       notification.warning({ message: 'Paciente não identificado.' })
       return
@@ -282,6 +302,10 @@ export default function AudiometriaPage({ cdPaciente, cdAtendimento }: Audiometr
   }
 
   async function finalizar() {
+    if (!data.chiefComplaint || data.chiefComplaint.trim() === '') {
+      notification.warning({ message: 'A Queixa Principal é obrigatória para finalizar o exame.' })
+      return
+    }
     if (!idExame) { await salvar(); return }
     setSaving(true)
     try {
@@ -362,6 +386,21 @@ export default function AudiometriaPage({ cdPaciente, cdAtendimento }: Audiometr
         style={{ marginBottom: 16 }}
         message="Referência: Classificação de acordo com a Organização Mundial de Saúde, 2021 — média quadritonal."
       />
+
+      {/* Queixa Principal */}
+      <Card style={{ marginBottom: 24, boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)', borderLeft: '4px solid #f39c12' }}>
+        <Title level={5}><span style={{ color: '#ff4d4f' }}>*</span> Queixa Principal</Title>
+        <TextArea
+          rows={3}
+          maxLength={500}
+          showCount
+          disabled={isDisabled}
+          value={data.chiefComplaint}
+          onChange={(e) => setData({ ...data, chiefComplaint: e.target.value })}
+          placeholder="Digite a queixa principal relatada pelo paciente (obrigatório para finalização)..."
+          style={{ resize: 'vertical' }}
+        />
+      </Card>
 
       {/* Audiograma */}
       <Card style={{ marginBottom: 32, boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }}>

@@ -1,22 +1,26 @@
 # app/api/v1/pts.py
+import logging
+import time
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import text
 from pydantic import BaseModel
 
-from app.dependencies import get_db, get_current_user
+from app.dependencies import get_db, get_current_user, require_escrita
 from app.db.models import User, PTS
-from app.schemas.pts import PTSCreate
+from app.schemas.pts import PTSCreate, PtsHistoricoSummaryOut
 from app.db.repositories.pts import create_pts, update_pts, get_pts_by_id, get_pts_status_batch, calcular_vigencia
-from app.db.session import SessionTest
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/pts", tags=["PTS"])
 
 
 def get_db_session(user: User, db: Session) -> Session:
-    """Retorna a sessão de teste se o usuário for 'testesoul', senão retorna a sessão padrão."""
+    """Retorna a sessão do banco. Para testesoul, cria uma nova sessão independente."""
     if user.nm_login == 'testesoul':
-        return SessionTest()
+        from app.db.session import SessionLocal
+        return SessionLocal()
     return db
 
 
@@ -25,12 +29,12 @@ def _pts_access_filter(user: User) -> tuple[str, dict]:
     Retorna (extra_where, params) para filtrar PTS conforme o perfil do usuário.
 
     Regras:
-      ADMIN / SUPERVISOR → vê tudo
-      COORDENADOR        → vê apenas PTS de profissionais da sua especialidade
-      OPERADOR (demais)  → vê apenas os próprios PTS
+      ADMIN / SUPERVISOR / CONSULTA → vê tudo
+      COORDENADOR                   → vê apenas PTS de profissionais da sua especialidade
+      OPERADOR (demais)             → vê apenas os próprios PTS
     """
     perfil = user.perfil_nome
-    if perfil in ("ADMIN", "SUPERVISOR"):
+    if perfil in ("ADMIN", "SUPERVISOR", "CONSULTA"):
         return "", {}
     if perfil == "COORDENADOR":
         extra_where = """
@@ -206,6 +210,9 @@ class PTSReportItem(BaseModel):
     fl_ativo: int = 1
     terapias: str | None = None
     objetivos: str | None = None
+    ds_motivo_cancelamento: str | None = None
+    ds_detalhe_cancelamento: str | None = None
+    dt_cancelamento: str | None = None
 
 
 @router.get(
@@ -235,7 +242,7 @@ def status_batch(
 def salvar_pts(
     pts_data: PTSCreate,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_escrita()),
 ):
     try:
         session = get_db_session(user, db)
@@ -271,7 +278,7 @@ def atualizar_pts(
     id_pts: int,
     pts_data: PTSCreate,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_escrita()),
 ):
     session = get_db_session(user, db)
     try:
@@ -296,7 +303,7 @@ def atualizar_pts(
 def finalizar_pts(
     id_pts: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_escrita()),
 ):
     session = get_db_session(current_user, db)
     try:
@@ -342,7 +349,7 @@ def cancelar_pts(
     id_pts: int,
     cancel_data: PTSCancel,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_escrita()),
 ):
     session = get_db_session(user, db)
     
@@ -369,6 +376,16 @@ def cancelar_pts(
                 'motivo': motivo_completo,
             },
         )
+        
+        from datetime import datetime
+        from app.db.models import PTS as PTSModel
+        session.query(PTSModel).filter(PTSModel.id_pts == id_pts).update({
+            "ds_motivo_cancelamento": cancel_data.ds_motivo,
+            "ds_detalhe_cancelamento": cancel_data.ds_detalhe,
+            "fl_ativo": 0,
+            "dt_atualizacao": datetime.now()
+        })
+
         session.commit()
         return {
             'status': 'ok',
@@ -610,7 +627,10 @@ def report_dashboard_pts(
                     ' (' || t.NR_QTDE_SESSOES || ')', ', ') WITHIN GROUP (ORDER BY t.NR_ORDEM) 
                  FROM FAV_TB_PTS_TERAPIA t WHERE t.ID_PTS = p.ID_PTS) as TERAPIAS,
                 (SELECT LISTAGG(o.DS_OBJETIVO, '; ') WITHIN GROUP (ORDER BY o.DS_ESPECIALIDADE, o.NR_ITEM) 
-                 FROM FAV_TB_PTS_OBJETIVO o WHERE o.ID_PTS = p.ID_PTS AND o.DS_MOMENTO = 'atual') as OBJETIVOS
+                 FROM FAV_TB_PTS_OBJETIVO o WHERE o.ID_PTS = p.ID_PTS AND o.DS_MOMENTO = 'atual') as OBJETIVOS,
+                p.DS_MOTIVO_CANCELAMENTO,
+                p.DS_DETALHE_CANCELAMENTO,
+                TO_CHAR(p.DT_ATUALIZACAO, 'DD/MM/YYYY HH24:MI') as DT_CANCELAMENTO
             FROM FAV_TB_PTS p
             JOIN FAV_TB_SILA_USUARIOS u ON p.ID_USUARIO = u.ID_USUARIO
             WHERE {base_where}
@@ -631,7 +651,10 @@ def report_dashboard_pts(
                 "fl_finalizado": r[7],
                 "fl_ativo": r[8],
                 "terapias": r[9],
-                "objetivos": r[10]
+                "objetivos": r[10],
+                "ds_motivo_cancelamento": r[11],
+                "ds_detalhe_cancelamento": r[12],
+                "dt_cancelamento": r[13]
             } for r in rows
         ]
     except Exception as e:
@@ -788,6 +811,103 @@ def carregar_pts(
         if pts is None:
             raise HTTPException(status_code=404, detail="PTS não encontrado")
         return pts_to_dict(pts)
+    finally:
+        if user.nm_login == 'testesoul':
+            session.close()
+
+@router.get(
+    "/{cd_paciente}/historico",
+    response_model=PtsHistoricoSummaryOut,
+    summary="Carrega o histórico completo de PTS de um paciente, incluindo objetivos e evolução",
+)
+def historico_pts_paciente(
+    cd_paciente: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    start_time = time.time()
+    session = get_db_session(user, db)
+    try:
+        sql = """
+            SELECT
+                p.id_pts,
+                TO_CHAR(p.dt_criacao, 'DD/MM/YYYY') as dt_criacao_fmt,
+                p.ds_vigencia,
+                u.nm_usuario,
+                p.fl_finalizado,
+                p.dt_criacao,
+                o.id_objetivo,
+                o.ds_especialidade,
+                o.ds_momento,
+                o.nr_item,
+                o.ds_objetivo,
+                o.ds_status,
+                o.ds_motivo
+            FROM FAV_TB_PTS p
+            JOIN FAV_TB_SILA_USUARIOS u ON p.id_usuario = u.id_usuario
+            LEFT JOIN FAV_TB_PTS_OBJETIVO o ON o.id_pts = p.id_pts
+            WHERE p.cd_paciente = :cd_paciente
+              AND p.fl_ativo = 1
+            ORDER BY p.dt_criacao DESC, p.id_pts DESC, o.ds_especialidade, o.ds_momento, o.nr_item
+        """
+        rows = session.execute(text(sql), {"cd_paciente": cd_paciente}).fetchall()
+
+        pts_dict = {}
+        for r in rows:
+            id_pts = r[0]
+            if id_pts not in pts_dict:
+                pts_dict[id_pts] = {
+                    "id_pts": id_pts,
+                    "dt_criacao": r[1] or "",
+                    "ds_vigencia": r[2] or "",
+                    "nm_usuario": r[3] or "",
+                    "fl_finalizado": r[4] or 0,
+                    "_dt_criacao_raw": r[5],
+                    "objetivos": []
+                }
+            
+            # Se tem objetivo
+            if r[6] is not None:
+                pts_dict[id_pts]["objetivos"].append({
+                    "id_objetivo": r[6],
+                    "ds_especialidade": r[7] or "",
+                    "ds_momento": r[8] or "",
+                    "nr_item": r[9] or 0,
+                    "ds_objetivo": r[10],
+                    "ds_status": r[11],
+                    "ds_motivo": r[12]
+                })
+
+        historico_list = list(pts_dict.values())
+        
+        total_pts = len(historico_list)
+        primeiro_pts_data = None
+        ultimo_pts_data = None
+        
+        if total_pts > 0:
+            # A lista está ordenada por dt_criacao DESC (mais recente primeiro)
+            ultimo_pts_data = historico_list[0]["dt_criacao"]
+            primeiro_pts_data = historico_list[-1]["dt_criacao"]
+
+        # Limpar campo temporário
+        for item in historico_list:
+            item.pop("_dt_criacao_raw", None)
+
+        elapsed_ms = (time.time() - start_time) * 1000
+        logger.info(f"AUDIT(HISTORICO_PTS): User={user.nm_login} | Paciente={cd_paciente} | Status=200 | Time={elapsed_ms:.2f}ms")
+
+        return {
+            "total_pts": total_pts,
+            "primeiro_pts_data": primeiro_pts_data,
+            "ultimo_pts_data": ultimo_pts_data,
+            "historico": historico_list
+        }
+    except Exception as e:
+        elapsed_ms = (time.time() - start_time) * 1000
+        logger.error(f"AUDIT(HISTORICO_PTS): User={user.nm_login} | Paciente={cd_paciente} | Status=500 | Time={elapsed_ms:.2f}ms | Error={str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar histórico: {str(e)}")
     finally:
         if user.nm_login == 'testesoul':
             session.close()

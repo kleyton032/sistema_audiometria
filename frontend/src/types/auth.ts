@@ -2,7 +2,7 @@
 // Types — User & Auth
 // ============================
 
-export type Perfil = 'ADMIN' | 'SUPERVISOR' | 'COORDENADOR' | 'OPERADOR'
+export type Perfil = 'ADMIN' | 'SUPERVISOR' | 'COORDENADOR' | 'OPERADOR' | 'CONSULTA'
 
 export interface User {
   id_usuario:         number

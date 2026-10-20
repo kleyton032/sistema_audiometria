@@ -47,6 +47,7 @@ export interface ImmittanceData {
   rightReflexes: ReflexTable
   leftReflexes: ReflexTable
   conclusion: string
+  chiefComplaint?: string
 }
 
 /** Cria uma tabela de reflexos vazia */

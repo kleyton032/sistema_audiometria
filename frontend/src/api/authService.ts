@@ -23,6 +23,7 @@ export interface PrestadorMVInfo {
 export interface CheckMvResponse {
   existe_local: boolean
   prestador:    PrestadorMVInfo | null
+  sem_prestador: boolean
 }
 
 export async function checkMvCode(codigoMv: string): Promise<CheckMvResponse> {
@@ -36,5 +37,10 @@ export async function registerUser(cdUsuarioMv: string, dsSenha: string, dsEmail
     ds_senha:      dsSenha,
     ds_email:      dsEmail,
   })
+  return data
+}
+
+export async function changePassword(payload: any): Promise<any> {
+  const { data } = await api.post('/auth/change-password', payload)
   return data
 }

@@ -3,7 +3,7 @@
 // ============================
 
 /** Frequências padrão do audiograma (Hz) */
-export const FREQUENCIES = [250, 500, 1000, 2000, 3000, 4000, 6000, 8000] as const
+export const FREQUENCIES = [250, 500, 750, 1000, 1500, 2000, 3000, 4000, 6000, 8000] as const
 export type Frequency = (typeof FREQUENCIES)[number]
 
 /** Limiares de uma orelha (dBHL por frequência) */
@@ -57,6 +57,7 @@ export interface AudiometryData {
   hearingLossGrade: HearingLossGrade | null
   conclusion: string
   observations: string
+  chiefComplaint?: string
 }
 
 /** Retorna o grau de perda baseado na média tritonal (PTA) */

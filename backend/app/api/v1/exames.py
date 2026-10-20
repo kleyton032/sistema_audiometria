@@ -6,7 +6,7 @@ import io
 from datetime import datetime
 from typing import Any, Optional
 
-from app.dependencies import get_db, get_current_user
+from app.dependencies import get_db, get_current_user, require_escrita
 from app.db.models import User
 from app.db.repositories import exame as repo
 from app.schemas.exame import (
@@ -69,7 +69,7 @@ def status_por_atendimentos(
 )
 def criar_exame(
     payload: ExameAudiometriaCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_escrita()),
     db: Session = Depends(get_db),
 ):
     exame = repo.criar_exame_audiometria(db, payload, current_user.id_usuario)
@@ -80,7 +80,7 @@ def criar_exame(
 def atualizar_exame(
     id_exame: int,
     payload: ExameAudiometriaCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_escrita()),
     db: Session = Depends(get_db),
 ):
     exame = repo.get_exame_por_id(db, id_exame)
@@ -98,7 +98,7 @@ def atualizar_exame(
 def alterar_exame_finalizado(
     id_exame: int,
     payload: ExameAudiometriaCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_escrita()),
     db: Session = Depends(get_db),
 ):
     """Permite alterar um exame de audiometria mesmo quando está FINALIZADO."""
@@ -161,7 +161,7 @@ def download_ultimo_laudo(
 @router.post("/{id_exame}/finalizar", response_model=ExameResponse)
 def finalizar_exame(
     id_exame: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_escrita()),
     db: Session = Depends(get_db),
 ):
     exame = repo.get_exame_por_id(db, id_exame)
@@ -175,7 +175,7 @@ def finalizar_exame(
 @router.post("/{id_exame}/laudo")
 def gerar_laudo(
     id_exame: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_escrita()),
     db: Session = Depends(get_db),
 ):
     exame = repo.get_exame_por_id(db, id_exame)
@@ -183,18 +183,35 @@ def gerar_laudo(
         raise HTTPException(status_code=404, detail="Exame não encontrado.")
 
     nm_usuario = current_user.nm_usuario
-    nr_conselho = current_user.nr_conselho or ""
+
+    # Especialidade: campo do User, fallback para nm_tip_presta do prestador MV
+    prestador = current_user.prestador
+    ds_especialidade = (
+        current_user.ds_especialidade
+        or (prestador.nm_tip_presta if prestador else None)
+        or ""
+    )
+
+    # Conselho: campo NR_CONSELHO do User; se vazio, monta a partir dos dados do prestador MV
+    if current_user.nr_conselho:
+        nr_conselho = current_user.nr_conselho
+    elif prestador and prestador.ds_conselho and prestador.ds_codigo_conselho:
+        nr_conselho = f"{prestador.ds_conselho} {prestador.ds_codigo_conselho}"
+    elif prestador and prestador.ds_codigo_conselho:
+        nr_conselho = prestador.ds_codigo_conselho
+    else:
+        nr_conselho = ""
 
     if exame.ds_tipo == "AUDIOMETRIA":
         if not exame.resultado_audio:
             raise HTTPException(status_code=400, detail="Exame não possui resultado registrado.")
-        pdf_bytes = gerar_pdf_audiometria(exame, nm_usuario, nr_conselho)
+        pdf_bytes = gerar_pdf_audiometria(exame, nm_usuario, nr_conselho, ds_especialidade)
         nm_arquivo = f"laudo_audio_{exame.id_exame}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
 
     elif exame.ds_tipo == "IMITANCIOMETRIA":
         if not exame.resultado_imitan:
             raise HTTPException(status_code=400, detail="Exame não possui resultado registrado.")
-        pdf_bytes = gerar_pdf_imitanciometria(exame, nm_usuario, nr_conselho)
+        pdf_bytes = gerar_pdf_imitanciometria(exame, nm_usuario, nr_conselho, ds_especialidade)
         nm_arquivo = f"laudo_imitan_{exame.id_exame}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
 
     else:
@@ -218,7 +235,7 @@ def gerar_laudo(
 )
 def criar_exame_imitanciometria(
     payload: ExameImitanciometriaCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_escrita()),
     db: Session = Depends(get_db),
 ):
     return repo.criar_exame_imitanciometria(db, payload, current_user.id_usuario)
@@ -228,7 +245,7 @@ def criar_exame_imitanciometria(
 def atualizar_exame_imitanciometria(
     id_exame: int,
     payload: ExameImitanciometriaCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_escrita()),
     db: Session = Depends(get_db),
 ):
     exame = repo.get_exame_por_id(db, id_exame)
@@ -243,7 +260,7 @@ def atualizar_exame_imitanciometria(
 def alterar_exame_imitanciometria_finalizado(
     id_exame: int,
     payload: ExameImitanciometriaCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_escrita()),
     db: Session = Depends(get_db),
 ):
     """Permite alterar um exame de imitanciometria mesmo quando está FINALIZADO."""

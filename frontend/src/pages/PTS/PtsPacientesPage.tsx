@@ -43,6 +43,9 @@ import 'dayjs/locale/pt-br'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { getAgendaDoPacientes, type AgendaItem } from '@/api/agendaService'
 import { getPTSStatusBatch, type PtsStatusBatchItem } from '@/api/ptsService'
+import { PtsHistoryTimeline } from '../../components/PTS/PtsHistoryTimeline'
+import { Drawer } from 'antd'
+import { useAuth } from '@/contexts'
 
 dayjs.locale('pt-br')
 
@@ -77,6 +80,7 @@ function encaixeBadge(sn: string | null) {
 
 export default function PtsPacientesPage() {
   const { notification } = App.useApp()
+  const { isConsulta } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const isReturning = location.state?.fromPTS
@@ -100,11 +104,24 @@ export default function PtsPacientesPage() {
     return dayjs().format('DD/MM/YYYY')
   })
   const [ptsStatus, setPtsStatus] = useState<Record<string, PtsStatusBatchItem>>({})
+  const [historyDrawerVisible, setHistoryDrawerVisible] = useState(false)
+  const [historyCdPaciente, setHistoryCdPaciente] = useState<string | null>(null)
 
   // Anuncio acessível do resultado da busca para leitores de tela
   const [searchAnnouncement, setSearchAnnouncement] = useState('')
 
   function abrirPTS(record: AgendaItem) {
+    // Usuários CONSULTA são redirecionados para o dashboard (somente leitura)
+    if (isConsulta) {
+      notification.info({
+        message: 'Modo Somente Consulta',
+        description: 'Seu perfil permite apenas visualização. Redirecionando para o Dashboard de PTS.',
+        duration: 4,
+      })
+      navigate('/pts/dashboard')
+      return
+    }
+
     const status = record.cd_paciente != null ? ptsStatus[String(record.cd_paciente)] : null
     const meuPts = status?.meu_pts
     const outrosPts = status?.outros_pts || []
@@ -137,10 +154,10 @@ export default function PtsPacientesPage() {
 
   const columns: ColumnsType<AgendaItem> = [
     {
-      title: 'Cód. Atendimento',
+      title: 'Atendimento',
       dataIndex: 'cd_atendimento',
       key: 'cd_atendimento',
-      width: 110,
+      width: 100,
       sorter: (a, b) => (a.cd_atendimento ?? 0) - (b.cd_atendimento ?? 0),
       render: (v) => <Text strong>{v ?? '—'}</Text>,
     },
@@ -148,7 +165,7 @@ export default function PtsPacientesPage() {
       title: 'Horário',
       dataIndex: 'hr_agenda',
       key: 'hr_agenda',
-      width: 90,
+      width: 80,
       sorter: (a, b) => (a.hr_agenda ?? '').localeCompare(b.hr_agenda ?? ''),
       render: (v) => <Text strong>{v ?? '—'}</Text>,
     },
@@ -162,12 +179,18 @@ export default function PtsPacientesPage() {
           nome ?? 'Nome não informado',
           record.cd_paciente ? `código ${record.cd_paciente}` : null,
           record.sn_encaixe === 'S' ? 'encaixe' : null,
+          record.nr_fone ? `telefone ${record.nr_fone}` : null,
         ].filter(Boolean).join(', ')
         return (
           <Space direction="vertical" size={0} aria-label={`Paciente: ${label}`}>
             <Space>
               <UserOutlined style={{ color: '#667eea' }} aria-hidden="true" />
               <Text strong>{nome ?? '—'}</Text>
+              {record.nr_fone && (
+                <Tooltip title={record.nr_fone}>
+                  <PhoneOutlined style={{ color: '#aaa', fontSize: 11 }} aria-hidden="true" />
+                </Tooltip>
+              )}
             </Space>
             {record.cd_paciente && (
               <Text type="secondary" style={{ fontSize: 11 }} aria-hidden="true">
@@ -180,38 +203,23 @@ export default function PtsPacientesPage() {
       },
     },
     {
-      title: 'Item Agendado',
+      title: 'Procedimento',
       dataIndex: 'ds_item_agendamento',
       key: 'ds_item_agendamento',
-      width: 180,
+      width: 160,
       ellipsis: true,
       render: (v) =>
         v ? (
-          v
+          <Text ellipsis={{ tooltip: v }}>{v}</Text>
         ) : (
           <Text type="secondary" aria-label="Item agendado não informado">—</Text>
-        ),
-    },
-    {
-      title: 'Telefone',
-      dataIndex: 'nr_fone',
-      key: 'nr_fone',
-      width: 140,
-      render: (v) =>
-        v ? (
-          <Space aria-label={`Telefone: ${v}`}>
-            <PhoneOutlined aria-hidden="true" />
-            <Text>{v}</Text>
-          </Space>
-        ) : (
-          <Text type="secondary" aria-label="Telefone não informado">—</Text>
         ),
     },
     {
       title: 'Situação',
       dataIndex: 'tp_situacao',
       key: 'tp_situacao',
-      width: 140,
+      width: 120,
       filters: [
         { text: 'Marcado',          value: 'M' },
         { text: 'Atendido',         value: 'A' },
@@ -234,7 +242,9 @@ export default function PtsPacientesPage() {
         const outrosPts = status?.outros_pts || []
         const finalizado = meuPts?.fl_finalizado === 1
         const temPTS = meuPts != null
-        const acaoLabel  = finalizado ? 'Ver Meu PTS' : temPTS ? 'Continuar PTS' : 'Iniciar PTS'
+        const acaoLabel  = isConsulta
+          ? 'Visualizar'
+          : finalizado ? 'Ver Meu PTS' : temPTS ? 'Continuar PTS' : 'Iniciar PTS'
         const nomePaciente = record.nm_paciente ?? 'paciente'
         const semAtendimento = !record.cd_atendimento
 
@@ -251,7 +261,7 @@ export default function PtsPacientesPage() {
         )
 
         return (
-          <Space direction="vertical" size={4} align="flex-start">
+          <Space direction="vertical" size={4} align="start">
             <Tooltip title={semAtendimento ? 'Aguardando recepção (sem código de atendimento)' : undefined}>
               {/* React Aria Button garante que o leitor anuncie o texto exato do aria-label */}
               <AriaButton
@@ -291,6 +301,36 @@ export default function PtsPacientesPage() {
               </AriaButton>
             </Tooltip>
             
+            {record.cd_paciente && (
+              <AriaButton
+                onPress={() => {
+                  setHistoryCdPaciente(String(record.cd_paciente))
+                  setHistoryDrawerVisible(true)
+                }}
+                aria-label={`Ver histórico de PTS do paciente ${nomePaciente}`}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '0 10px',
+                  height: 24,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  borderRadius: 4,
+                  border: '1px solid #d9d9d9',
+                  cursor: 'pointer',
+                  background: '#fff',
+                  color: '#595959',
+                  marginTop: 4,
+                  transition: 'all 0.2s',
+                  outline: 'none',
+                }}
+                className="pts-aria-btn"
+              >
+                Histórico
+              </AriaButton>
+            )}
+
             <Space size={2} wrap>
               {finalizado && (
                 <Tag color="success" role="status" aria-label="PTS finalizado" style={{ fontSize: 10, margin: 0 }}>
@@ -338,7 +378,7 @@ export default function PtsPacientesPage() {
       // Busca status PTS para todos os pacientes da agenda
       const ids = result.items
         .map((i) => i.cd_paciente)
-        .filter((id): id is string | number => id != null)
+        .filter((id): id is number => id != null)
       if (ids.length > 0) {
         getPTSStatusBatch(ids).then(setPtsStatus).catch(() => null)
       }
@@ -587,7 +627,7 @@ export default function PtsPacientesPage() {
           caption="Lista de pacientes agendados com status de PTS"
           pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (t) => `${t} registros` }}
           locale={{ emptyText: 'Nenhum paciente agendado para esta data.' }}
-          scroll={{ x: 'max-content' }}
+          scroll={{ x: 780 }}
           aria-label="Lista de pacientes agendados com status de PTS"
           onRow={(record) => {
             const status = record.cd_paciente != null ? ptsStatus[String(record.cd_paciente)] : null
@@ -624,6 +664,19 @@ export default function PtsPacientesPage() {
           }}
         />
       </Card>
+
+      <Drawer
+        title="Histórico Longitudinal de PTS"
+        placement="right"
+        width={700}
+        onClose={() => {
+          setHistoryDrawerVisible(false)
+          setHistoryCdPaciente(null)
+        }}
+        open={historyDrawerVisible}
+      >
+        {historyCdPaciente && <PtsHistoryTimeline cdPaciente={historyCdPaciente} />}
+      </Drawer>
     </div>
   )
 }

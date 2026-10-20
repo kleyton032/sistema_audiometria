@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import text
 
-from app.db.models import User, UsuarioPrestador
+from app.db.models import User, UsuarioPrestador, Perfil
 from app.schemas.user import UserCreate, PrestadorMVInfo
 from app.core.security import hash_password
 
@@ -48,6 +48,23 @@ def buscar_prestador_mv(db: Session, cd_usuario: str) -> PrestadorMVInfo | None:
         ds_codigo_conselho = row.ds_codigo_conselho,
         nm_tip_presta      = row.nm_tip_presta,
     )
+
+
+def buscar_usuario_mv(db: Session, cd_usuario: str) -> str | None:
+    """
+    Verifica se o usuário existe no MV (dbasgu.usuarios), independentemente
+    de possuir prestador vinculado. Retorna o nm_usuario do MV ou None.
+    """
+    query = text("""
+        SELECT u.nm_usuario
+        FROM dbasgu.usuarios u
+        WHERE UPPER(u.cd_usuario) = UPPER(:cd_usuario)
+          AND u.sn_ativo = 'S'
+    """)
+    row = db.execute(query, {"cd_usuario": cd_usuario}).first()
+    if row is None:
+        return None
+    return row.nm_usuario
 
 
 def sync_user_prestador(db: Session, user: User, prestador: PrestadorMVInfo) -> User:
@@ -103,30 +120,44 @@ def sync_existing_user_from_mv(db: Session, user: User) -> User:
     return sync_user_prestador(db, user, prestador)
 
 
-def create_user(db: Session, payload: UserCreate, prestador: PrestadorMVInfo) -> User:
-    """Cria usuário local + perfil profissional a partir dos dados do MV."""
+def create_user(db: Session, payload: UserCreate, prestador: PrestadorMVInfo | None = None, nm_usuario_mv: str | None = None) -> User:
+    """
+    Cria usuário local a partir dos dados do MV.
+    
+    Se prestador for None (usuário sem prestador vinculado), o perfil será CONSULTA
+    e o nome será obtido de nm_usuario_mv.
+    """
     email = payload.ds_email or f"{payload.cd_usuario_mv.lower()}@sistema.local"
+
+    nome = prestador.nm_prestador if prestador else (nm_usuario_mv or payload.cd_usuario_mv)
+    perfil_nome = "CONSULTA" if prestador is None else "OPERADOR"
+
+    # Busca o ID do perfil correspondente
+    perfil_db = db.query(Perfil).filter(Perfil.ds_perfil == perfil_nome).first()
 
     new_user = User(
         nm_login      = payload.cd_usuario_mv.lower(),
-        nm_usuario    = prestador.nm_prestador,
+        nm_usuario    = nome,
         ds_email      = email,
         ds_senha_hash = hash_password(payload.ds_senha),
-        ds_perfil     = payload.ds_perfil,
+        ds_perfil     = perfil_nome,
+        id_perfil     = perfil_db.id_perfil if perfil_db else None,
         cd_usuario_mv = payload.cd_usuario_mv,
     )
     db.add(new_user)
     db.flush()  # gera ID_USUARIO sem commit
 
-    new_prestador = UsuarioPrestador(
-        id_usuario         = new_user.id_usuario,
-        cd_prestador       = prestador.cd_prestador,
-        nm_prestador       = prestador.nm_prestador,
-        ds_conselho        = prestador.ds_conselho,
-        ds_codigo_conselho = prestador.ds_codigo_conselho,
-        nm_tip_presta      = prestador.nm_tip_presta,
-    )
-    db.add(new_prestador)
+    if prestador:
+        new_prestador = UsuarioPrestador(
+            id_usuario         = new_user.id_usuario,
+            cd_prestador       = prestador.cd_prestador,
+            nm_prestador       = prestador.nm_prestador,
+            ds_conselho        = prestador.ds_conselho,
+            ds_codigo_conselho = prestador.ds_codigo_conselho,
+            nm_tip_presta      = prestador.nm_tip_presta,
+        )
+        db.add(new_prestador)
+
     db.commit()
     db.refresh(new_user)
     return new_user

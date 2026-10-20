@@ -4,7 +4,7 @@ from typing import Literal, Optional
 from datetime import datetime
 
 
-PerfilLiteral = Literal["ADMIN", "SUPERVISOR", "COORDENADOR", "OPERADOR"]
+PerfilLiteral = Literal["ADMIN", "SUPERVISOR", "COORDENADOR", "OPERADOR", "CONSULTA"]
 
 
 class PrestadorMVInfo(BaseModel):
@@ -20,6 +20,7 @@ class CheckMVResponse(BaseModel):
     """Resposta do endpoint GET /auth/check/{cd_usuario}."""
     existe_local: bool
     prestador:    Optional[PrestadorMVInfo] = None  # None se não encontrado no MV
+    sem_prestador: bool = False  # True se o usuário existe no MV mas sem prestador vinculado
 
 
 class UserCreate(BaseModel):

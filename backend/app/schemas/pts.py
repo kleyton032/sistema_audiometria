@@ -111,3 +111,26 @@ class PTSCreate(BaseModel):
     # Status e Vigência
     pts_nao_concluido: bool = False
     pts_vigencia: Optional[str] = None
+
+class PtsHistoricoObjetivoOut(BaseModel):
+    id_objetivo: int
+    ds_especialidade: str
+    ds_momento: str
+    nr_item: int
+    ds_objetivo: Optional[str] = None
+    ds_status: Optional[str] = None
+    ds_motivo: Optional[str] = None
+
+class PtsHistoricoItemOut(BaseModel):
+    id_pts: int
+    dt_criacao: str
+    ds_vigencia: str
+    nm_usuario: str
+    fl_finalizado: int
+    objetivos: List[PtsHistoricoObjetivoOut] = []
+
+class PtsHistoricoSummaryOut(BaseModel):
+    total_pts: int
+    primeiro_pts_data: Optional[str] = None
+    ultimo_pts_data: Optional[str] = None
+    historico: List[PtsHistoricoItemOut] = []

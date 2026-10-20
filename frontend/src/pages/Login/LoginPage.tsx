@@ -13,7 +13,7 @@ interface LoginForm {
   confirmPassword?: string
 }
 
-type Step = 'USER_CHECK' | 'LOGIN' | 'REGISTER'
+type Step = 'USER_CHECK' | 'LOGIN' | 'REGISTER' | 'CHANGE_PASSWORD'
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false)
@@ -24,6 +24,8 @@ export default function LoginPage() {
   const [step, setStep] = useState<Step>('USER_CHECK')
   const [username, setUsername] = useState('')
   const [prestadorMV, setPrestadorMV] = useState<PrestadorMVInfo | null>(null)
+  const [semPrestador, setSemPrestador] = useState(false)
+  const [tempPassword, setTempPassword] = useState('')
   const [form] = Form.useForm<LoginForm>()
 
   const handleCheckUser = async () => {
@@ -38,8 +40,14 @@ export default function LoginPage() {
       
       if (data.existe_local) {
         setStep('LOGIN')
+      } else if (data.sem_prestador) {
+        // Usuário existe no MV mas sem prestador → cadastro como CONSULTA
+        setSemPrestador(true)
+        setPrestadorMV(null)
+        setStep('REGISTER')
       } else if (data.prestador) {
         setPrestadorMV(data.prestador)
+        setSemPrestador(false)
         setStep('REGISTER')
       } else {
         setError('Usuário não encontrado na base, ou não possui qualificação registrada no MV.')
@@ -66,6 +74,13 @@ export default function LoginPage() {
       navigate('/home')
     } catch (err: unknown) {
       let msg = (err as any)?.response?.data?.detail
+      if (msg === 'REQUIRE_PASSWORD_CHANGE') {
+        setError(null)
+        setTempPassword(values.password!)
+        form.resetFields(['password', 'confirmPassword'])
+        setStep('CHANGE_PASSWORD')
+        return
+      }
       if (Array.isArray(msg)) {
         msg = msg.map((e: any) => e.msg).join(', ')
       } else if (typeof msg === 'object' && msg !== null) {
@@ -105,10 +120,46 @@ export default function LoginPage() {
     }
   }
 
+  const handleChangePasswordSubmit = async (values: LoginForm) => {
+    if (step !== 'CHANGE_PASSWORD') return
+    setLoading(true)
+    setError(null)
+    try {
+      if (values.password !== values.confirmPassword) {
+        setError('As senhas não coincidem.')
+        return
+      }
+
+      const { changePassword } = await import('@/api/authService')
+      
+      await changePassword({
+        username: username,
+        current_password: tempPassword, // Senha temporária que o admin resetou
+        new_password: values.confirmPassword! // A nova senha
+      })
+
+      // Realiza o login com a nova senha
+      await login(username, values.confirmPassword!)
+      navigate('/home')
+    } catch (err: unknown) {
+      let msg = (err as any)?.response?.data?.detail
+      if (Array.isArray(msg)) {
+        msg = msg.map((e: any) => e.msg).join(', ')
+      } else if (typeof msg === 'object' && msg !== null) {
+        msg = JSON.stringify(msg)
+      }
+      setError(msg || 'Erro ao redefinir a senha.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const resetStep = () => {
     setStep('USER_CHECK')
     setUsername('')
     setPrestadorMV(null)
+    setSemPrestador(false)
+    setTempPassword('')
     form.resetFields(['password', 'confirmPassword'])
     setError(null)
   }
@@ -143,7 +194,12 @@ export default function LoginPage() {
           <Form<LoginForm>
             form={form}
             name="login_flow"
-            onFinish={step === 'LOGIN' ? handleLoginSubmit : handleRegisterSubmit}
+            onFinish={
+              step === 'LOGIN' ? handleLoginSubmit :
+              step === 'REGISTER' ? handleRegisterSubmit :
+              step === 'CHANGE_PASSWORD' ? handleChangePasswordSubmit :
+              undefined
+            }
             layout="vertical"
             size="large"
             autoComplete="off"
@@ -184,32 +240,88 @@ export default function LoginPage() {
               </>
             )}
 
+            {step === 'CHANGE_PASSWORD' && (
+              <>
+                <div style={{ marginBottom: 16, textAlign: 'left' }}>
+                  <Text type="secondary">Usuário:</Text> <Text strong>{username}</Text>{' '}
+                  <Button type="link" size="small" onClick={resetStep}>Cancelar</Button>
+                </div>
+                <Alert 
+                   message="Redefinição de Senha"
+                   description="O administrador redefiniu a sua senha temporariamente. Por segurança, você precisa criar uma nova senha agora para prosseguir."
+                   type="warning"
+                   showIcon
+                   style={{ marginBottom: 16, textAlign: 'left' }}
+                />
+                <Form.Item
+                  name="password"
+                  rules={[{ required: true, message: 'Crie uma nova senha' }, { min: 8, message: 'Mínimo 8 caracteres'}]}
+                >
+                  <Input.Password prefix={<LockOutlined />} placeholder="Nova Senha" autoFocus />
+                </Form.Item>
+                <Form.Item
+                  name="confirmPassword"
+                  dependencies={['password']}
+                  rules={[
+                    { required: true, message: 'Confirme a nova senha' },
+                    ({ getFieldValue }) => ({
+                      validator(_, value) {
+                        if (!value || getFieldValue('password') === value) {
+                          return Promise.resolve();
+                        }
+                        return Promise.reject(new Error('As senhas não coincidem!'));
+                      },
+                    }),
+                  ]}
+                >
+                  <Input.Password prefix={<LockOutlined />} placeholder="Confirmar Nova Senha" />
+                </Form.Item>
+                <Form.Item>
+                  <Button type="primary" htmlType="submit" loading={loading} block>
+                    Atualizar Senha e Entrar
+                  </Button>
+                </Form.Item>
+              </>
+            )}
+
             {step === 'REGISTER' && (
               <>
                 <div style={{ marginBottom: 16, textAlign: 'left' }}>
                   <Text type="secondary">Primeiro acesso verificado:</Text> <Text strong>{username}</Text>{' '}
                   <Button type="link" size="small" onClick={resetStep}>Alterar</Button>
                 </div>
-                <Alert 
-                   message="Seja bem-vindo(a)!"
-                   description="Crie uma senha segura para o seu primeiro acesso ao CDM."
-                   type="info"
-                   showIcon
-                   style={{ marginBottom: 16, textAlign: 'left' }}
-                />
-                {prestadorMV && (
-                  <Alert
-                    type="success"
+                {semPrestador ? (
+                  <Alert 
+                    message="Acesso Somente Consulta"
+                    description="Seu usuário não possui prestador vinculado ao MV. Você terá acesso apenas para visualização de PTS, sem permissão para criar, editar ou cancelar registros."
+                    type="warning"
                     showIcon
                     style={{ marginBottom: 16, textAlign: 'left' }}
-                    message={prestadorMV.nm_prestador}
-                    description={[
-                      prestadorMV.nm_tip_presta,
-                      prestadorMV.ds_conselho && prestadorMV.ds_codigo_conselho
-                        ? `${prestadorMV.ds_conselho} ${prestadorMV.ds_codigo_conselho}`
-                        : prestadorMV.ds_conselho || prestadorMV.ds_codigo_conselho,
-                    ].filter(Boolean).join(' · ')}
                   />
+                ) : (
+                  <>
+                    <Alert 
+                      message="Seja bem-vindo(a)!"
+                      description="Crie uma senha segura para o seu primeiro acesso ao CDM."
+                      type="info"
+                      showIcon
+                      style={{ marginBottom: 16, textAlign: 'left' }}
+                    />
+                    {prestadorMV && (
+                      <Alert
+                        type="success"
+                        showIcon
+                        style={{ marginBottom: 16, textAlign: 'left' }}
+                        message={prestadorMV.nm_prestador}
+                        description={[
+                          prestadorMV.nm_tip_presta,
+                          prestadorMV.ds_conselho && prestadorMV.ds_codigo_conselho
+                            ? `${prestadorMV.ds_conselho} ${prestadorMV.ds_codigo_conselho}`
+                            : prestadorMV.ds_conselho || prestadorMV.ds_codigo_conselho,
+                        ].filter(Boolean).join(' · ')}
+                      />
+                    )}
+                  </>
                 )}
                 <Form.Item
                   name="password"

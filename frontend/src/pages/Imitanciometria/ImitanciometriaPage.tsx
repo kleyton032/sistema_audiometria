@@ -131,6 +131,7 @@ function resultadoToData(r: ResultadoImitanResponse): ImmittanceData {
       r.oe_contra_500, r.oe_contra_1000, r.oe_contra_2000, r.oe_contra_4000,
     ),
     conclusion: r.ds_conclusao ?? '',
+    chiefComplaint: '', // Carregado em useEffect via exameService
   }
 }
 
@@ -171,6 +172,7 @@ function dataToPayload(
     oe_contra_2000: lr[2000].contralateral.present ? lr[2000].contralateral.threshold  : null,
     oe_contra_4000: lr[4000].contralateral.present ? lr[4000].contralateral.threshold  : null,
     ds_conclusao:   data.conclusion || null,
+    ds_queixa_principal: data.chiefComplaint || null,
   }
 }
 
@@ -189,6 +191,7 @@ export default function ImitanciometriaPage({ cdPaciente, cdAtendimento }: Imita
     rightReflexes: createEmptyReflexTable(),
     leftReflexes: createEmptyReflexTable(),
     conclusion: '',
+    chiefComplaint: '',
   })
   const [idExame, setIdExame] = useState<number | null>(null)
   const [status, setStatus] = useState<string | null>(null)
@@ -202,6 +205,7 @@ export default function ImitanciometriaPage({ cdPaciente, cdAtendimento }: Imita
     rightReflexes: createEmptyReflexTable(),
     leftReflexes: createEmptyReflexTable(),
     conclusion: '',
+    chiefComplaint: '',
   })
 
   const isFinalizado = status === 'FINALIZADO'
@@ -215,6 +219,7 @@ export default function ImitanciometriaPage({ cdPaciente, cdAtendimento }: Imita
       .then((exame) => {
         if (exame?.resultado_imitan) {
           const dadosCarregados = resultadoToData(exame.resultado_imitan as ResultadoImitanResponse)
+          dadosCarregados.chiefComplaint = exame.ds_queixa_principal ?? ''
           setData(dadosCarregados)
           setDataOriginal(dadosCarregados)
           setIdExame(exame.id_exame)
@@ -226,6 +231,10 @@ export default function ImitanciometriaPage({ cdPaciente, cdAtendimento }: Imita
   }, [cdAtendimento])
 
   async function salvar() {
+    if (!data.chiefComplaint || data.chiefComplaint.trim() === '') {
+      notification.warning({ message: 'A Queixa Principal é obrigatória para salvar o exame.' })
+      return
+    }
     if (!cdPaciente) {
       notification.warning({ message: 'Paciente não identificado.' })
       return
@@ -259,6 +268,10 @@ export default function ImitanciometriaPage({ cdPaciente, cdAtendimento }: Imita
   }
 
   async function finalizar() {
+    if (!data.chiefComplaint || data.chiefComplaint.trim() === '') {
+      notification.warning({ message: 'A Queixa Principal é obrigatória para finalizar o exame.' })
+      return
+    }
     if (!idExame) { await salvar(); return }
     setSaving(true)
     try {
@@ -331,6 +344,21 @@ export default function ImitanciometriaPage({ cdPaciente, cdAtendimento }: Imita
           }
         />
       )}
+
+      {/* Queixa Principal */}
+      <Card style={{ marginBottom: 24, boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)', borderLeft: '4px solid #f39c12' }}>
+        <Title level={5}><span style={{ color: '#ff4d4f' }}>*</span> Queixa Principal</Title>
+        <TextArea
+          rows={3}
+          maxLength={500}
+          showCount
+          disabled={isDisabled}
+          value={data.chiefComplaint}
+          onChange={(e) => setData({ ...data, chiefComplaint: e.target.value })}
+          placeholder="Digite a queixa principal relatada pelo paciente (obrigatório para finalização)..."
+          style={{ resize: 'vertical' }}
+        />
+      </Card>
 
       {/* Referências de Jerger */}
       <ReferenciasJerger />

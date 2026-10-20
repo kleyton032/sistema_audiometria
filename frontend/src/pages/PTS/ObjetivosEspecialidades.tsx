@@ -246,7 +246,7 @@ function canEditEspecialidade(espKey: string, _espLabel: string, user: any): boo
   if ((espKey === 'fisioterapia' || espKey === 'fisio_aquatica') && userTip.includes('FISIOTERA')) return true
   if (espKey === 'fonoaudiologia' && userTip.includes('FONOAUDIO')) return true
   if (espKey === 'terapia_ocupacional' && userTip.includes('OCUPACIONAL')) return true
-  if (espKey === 'ed_fisica' && (userTip.includes('FISICA') || userTip.includes('FÍSICA'))) return true
+  if (espKey === 'ed_fisica' && (userTip.includes('FISICA') || userTip.includes('FÍSICA') || userTip.includes('FISICO') || userTip.includes('FÍSICO') || userTip.includes('EDUCADOR'))) return true
   if (espKey.startsWith('psicologia') && userTip.includes('PSICOLOG')) return true
   if (espKey === 'psicopedagogia' && userTip.includes('PSICOPEDAGOG')) return true
   if (espKey === 'prof_braille' && (userTip.includes('BRAILLE') || userTip.includes('DEF VISUAL') || userTip.includes('DEF. VISUAL') || userTip.includes('VISUAL'))) return true
@@ -269,7 +269,7 @@ function getEspecialidadeInfo(dsEspecialidade: string | null | undefined): { ico
   if (up.includes('PSICOLOG'))      return { icon: <TeamOutlined />,           color: '#eb2f96', label: 'Psicologia' }
   if (up.includes('PSICOPEDAGOG'))  return { icon: <BookOutlined />,           color: '#faad14', label: 'Psicopedagogia' }
   if (up.includes('BRAILLE') || up.includes('DEF VISUAL') || up.includes('DEF. VISUAL') || up.includes('VISUAL'))       return { icon: <ReadOutlined />,           color: '#08979c', label: 'Professor de Braille' }
-  if (up.includes('FISICA') || up.includes('FÍSICA')) return { icon: <UserOutlined />, color: '#fa8c16', label: 'Prof. Educação Física' }
+  if (up.includes('FISICA') || up.includes('FÍSICA') || up.includes('FISICO') || up.includes('FÍSICO') || up.includes('EDUCADOR')) return { icon: <UserOutlined />, color: '#fa8c16', label: 'Prof. Educação Física' }
   return { icon: <UserOutlined />, color: '#8c8c8c', label: dsEspecialidade }
 }
 
