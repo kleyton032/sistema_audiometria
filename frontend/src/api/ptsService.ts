@@ -227,3 +227,33 @@ export async function getPTSHistoricoPaciente(cdPaciente: string): Promise<PtsHi
   const { data } = await api.get<PtsHistoricoSummaryOut>(`/pts/${cdPaciente}/historico`)
   return data
 }
+
+export interface PTSObjetivoAnteriorItem {
+  objetivo: string | null
+  descricao: string | null
+  status: string | null
+  motivo: string | null
+}
+
+export interface PTSObjetivosAnterioresOut {
+  id_pts: number | null
+  ds_vigencia: string | null
+  objetivos: Record<string, {
+    anterior: PTSObjetivoAnteriorItem[]
+    atual: PTSObjetivoAnteriorItem[]
+    outros_atual?: string | null
+  }>
+}
+
+export async function getPTSObjetivosAnteriores(
+  cdPaciente: string | number,
+  vigenciaAtual: string,
+): Promise<PTSObjetivosAnterioresOut> {
+  const { data } = await api.get<PTSObjetivosAnterioresOut>('/pts/objetivos-anteriores', {
+    params: {
+      cd_paciente: String(cdPaciente),
+      vigencia_atual: vigenciaAtual,
+    },
+  })
+  return data
+}

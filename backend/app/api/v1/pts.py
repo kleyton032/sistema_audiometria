@@ -747,6 +747,56 @@ def listar_outros_pts_vigencia(
 
 
 @router.get(
+    "/objetivos-anteriores",
+    summary="Carrega os objetivos 'atual' do PTS finalizado anterior do usuário para pré-preencher 'objetivos anteriores' na renovação",
+)
+def objetivos_anteriores(
+    cd_paciente: str = Query(..., description="Código do paciente"),
+    vigencia_atual: str = Query(..., description="Vigência atual no formato YYYY-MM"),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    session = get_db_session(user, db)
+    try:
+        from sqlalchemy import desc
+        from app.db.repositories.pts import get_pts_by_id, pts_to_dict
+
+        # Busca o PTS mais recente do próprio usuário, finalizado e ativo, com
+        # vigência anterior à vigência atual (renovação de período).
+        pts_anterior = (
+            session.query(PTS)
+            .filter(
+                PTS.cd_paciente == cd_paciente,
+                PTS.id_usuario == user.id_usuario,
+                PTS.fl_ativo == 1,
+                PTS.fl_finalizado == 1,
+                PTS.ds_vigencia < vigencia_atual,
+            )
+            .order_by(desc(PTS.ds_vigencia), desc(PTS.dt_criacao))
+            .first()
+        )
+
+        if not pts_anterior:
+            return {"id_pts": None, "ds_vigencia": None, "objetivos": {}}
+
+        pts_full = get_pts_by_id(session, pts_anterior.id_pts)
+        if not pts_full:
+            return {"id_pts": None, "ds_vigencia": None, "objetivos": {}}
+
+        d = pts_to_dict(pts_full)
+        return {
+            "id_pts": d["id_pts"],
+            "ds_vigencia": d["ds_vigencia"],
+            "objetivos": d["objetivos"],
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar objetivos anteriores: {str(e)}")
+    finally:
+        if user.nm_login == 'testesoul':
+            session.close()
+
+
+@router.get(
     "/{cd_paciente}/conduta-interdisciplinar",
     summary="Verifica se há preenchimento do documento de conduta interdisciplinar (cd_documento=770) nos últimos 3 meses",
 )

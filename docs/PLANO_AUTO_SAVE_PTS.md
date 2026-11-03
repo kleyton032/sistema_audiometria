@@ -190,9 +190,7 @@ useEffect(() => {
     }
   }
 }, [])
-```
 
----
 
 ## 8. Quando limpar o rascunho
 

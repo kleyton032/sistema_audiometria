@@ -31,6 +31,7 @@ import ObjetivosEspecialidades, {
   getMinhasEspecialidades,
   type ObjetivosState,
   type ObjetivoErro,
+  type ObjetivoItem,
 } from './ObjetivosEspecialidades'
 import type { ColumnsType } from 'antd/es/table'
 import PTSPrintView from './PTSPrintView'
@@ -44,7 +45,7 @@ import {
   EXTERNAL_TERAPY_OPTIONS,
   type Area,
 } from './data/listas'
-import { getMe, getPTSDiagnosticosPrincipais, getPTSDiagnosticosArea, getPTSDiagnosticosTerapeuticos, getPTSEspecialidades, getPTSItensMultidisciplinar, getPTSTerapiasIndicadas, getPTSInstrumentosAvaliacao, finalizarPTS, cancelarPTS, savePTS, updatePTS, getPTSById, getCondutaInterdisciplinarStatus } from '@/api'
+import { getMe, getPTSDiagnosticosPrincipais, getPTSDiagnosticosArea, getPTSDiagnosticosTerapeuticos, getPTSEspecialidades, getPTSItensMultidisciplinar, getPTSTerapiasIndicadas, getPTSInstrumentosAvaliacao, finalizarPTS, cancelarPTS, savePTS, updatePTS, getPTSById, getCondutaInterdisciplinarStatus, getPTSObjetivosAnteriores } from '@/api'
 import type { CondutaInterdisciplinarStatus } from '@/api/ptsService'
 import type { User } from '@/types'
 import { useAuth } from '@/contexts'
@@ -63,6 +64,16 @@ function formatEspecialidadeConselho(user: any): string {
   if (!codigoConselho) return especialidade
   const nomeConselho = p?.ds_conselho || 'Conselho'
   return `${especialidade} / ${nomeConselho}: ${codigoConselho}`
+}
+
+// ── vigência atual (mesma regra do backend calcular_vigencia) ────────────────
+function calcularVigenciaAtual(): string {
+  const now = new Date()
+  const month = now.getMonth() + 1
+  const year = now.getFullYear()
+  if (month >= 5 && month <= 10) return `${year}-05`
+  if (month >= 11) return `${year}-11`
+  return `${year - 1}-11`
 }
 
 // ── tipo linha diagnóstico médico principal ─────────────────────────────────
@@ -368,6 +379,53 @@ export default function PTSPage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // ── pré-preenche "Objetivos Anteriores" a partir do PTS finalizado anterior ──
+  useEffect(() => {
+    // Apenas para um PTS novo (renovação); se já existe id_pts, os dados vêm do próprio PTS.
+    if (paciente.id_pts) return
+    if (!paciente.cd_paciente) return
+
+    let cancelado = false
+    getPTSObjetivosAnteriores(paciente.cd_paciente, calcularVigenciaAtual())
+      .then((resp) => {
+        if (cancelado || !resp?.objetivos) return
+        setObjetivos((prev) => {
+          const proximo = { ...prev }
+          Object.entries(resp.objetivos).forEach(([espKey, dados]) => {
+            // Ignora especialidades que não existem no formulário atual
+            if (!proximo[espKey]) return
+            const atual = dados.atual ?? []
+            const outrosAtual = dados.outros_atual
+            const anteriores: [ObjetivoItem, ObjetivoItem, ObjetivoItem] = [
+              {
+                objetivo: atual[0]?.objetivo ?? undefined,
+                descricao: atual[0]?.descricao ?? undefined,
+                status: undefined,
+                motivo: undefined,
+              },
+              {
+                objetivo: atual[1]?.objetivo ?? undefined,
+                descricao: atual[1]?.descricao ?? undefined,
+                status: undefined,
+                motivo: undefined,
+              },
+              {
+                objetivo: (outrosAtual || atual[2]?.objetivo) ?? undefined,
+                descricao: atual[2]?.descricao ?? undefined,
+                status: undefined,
+                motivo: undefined,
+              },
+            ]
+            proximo[espKey] = { ...proximo[espKey], anterior: anteriores }
+          })
+          return proximo
+        })
+      })
+      .catch((err) => console.error('Erro ao carregar objetivos anteriores:', err))
+
+    return () => { cancelado = true }
+  }, [paciente.id_pts, paciente.cd_paciente])
 
   useEffect(() => {
     getMe().then(setUsuarioMe).catch(() => null)
