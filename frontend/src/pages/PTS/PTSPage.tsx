@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   Card,
@@ -22,7 +22,7 @@ import {
   Modal,
   Drawer,
 } from 'antd'
-import { SaveOutlined, FileTextOutlined, PlusOutlined, DeleteOutlined, CheckCircleOutlined, CloseCircleOutlined, ArrowLeftOutlined, PrinterOutlined, HistoryOutlined } from '@ant-design/icons'
+import { SaveOutlined, FileTextOutlined, PlusOutlined, DeleteOutlined, CheckCircleOutlined, CloseCircleOutlined, ArrowLeftOutlined, PrinterOutlined, HistoryOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import 'dayjs/locale/pt-br'
 import ObjetivosEspecialidades, {
@@ -48,7 +48,8 @@ import {
 import { getMe, getPTSDiagnosticosPrincipais, getPTSDiagnosticosArea, getPTSDiagnosticosTerapeuticos, getPTSEspecialidades, getPTSItensMultidisciplinar, getPTSTerapiasIndicadas, getPTSInstrumentosAvaliacao, finalizarPTS, cancelarPTS, savePTS, updatePTS, getPTSById, getCondutaInterdisciplinarStatus, getPTSObjetivosAnteriores } from '@/api'
 import type { CondutaInterdisciplinarStatus } from '@/api/ptsService'
 import type { User } from '@/types'
-import { useAuth } from '@/contexts'
+import { useAuth, useLayoutControls } from '@/contexts'
+import { UserProfileDropdown } from '@/components/Header/UserProfileDropdown'
 
 const { Title, Text } = Typography
 dayjs.locale('pt-br')
@@ -75,6 +76,53 @@ function calcularVigenciaAtual(): string {
   if (month >= 11) return `${year}-11`
   return `${year - 1}-11`
 }
+
+// ── rótulos das especialidades (chaves do estado de objetivos) ───────────────
+const ESPECIALIDADE_LABELS: Record<string, string> = {
+  fisioterapia: 'Fisioterapia',
+  fisio_aquatica: 'Fisioterapia Aquática',
+  fonoaudiologia: 'Fonoaudiologia',
+  terapia_ocupacional: 'Terapia Ocupacional',
+  ed_fisica: 'Prof. Educação Física',
+  psicologia: 'Psicologia',
+  psicologia_musical: 'Psicologia Sonoro Musical',
+  psicopedagogia: 'Psicopedagogia',
+  prof_braille: 'Professor de Braille',
+}
+
+// ── índice de seções do PTS (para sumário lateral e navegação) ───────────────
+interface SecaoPTS {
+  id: string
+  numero: string
+  titulo: string
+  grupo: string
+}
+
+const SECOES_PTS: SecaoPTS[] = [
+  { id: 'sec-diag-principal', numero: '01', titulo: 'CID-10 principal', grupo: 'Diagnóstico' },
+  { id: 'sec-diag-area', numero: '02', titulo: 'Diagnóstico por área', grupo: 'Diagnóstico' },
+  { id: 'sec-area-def', numero: '03', titulo: 'Grau de deficiência', grupo: 'Diagnóstico' },
+  { id: 'sec-queixa', numero: '04', titulo: 'Queixas e histórico', grupo: 'Diagnóstico' },
+  { id: 'sec-diag-terapeutico', numero: '05', titulo: 'Diagnóstico terapêutico', grupo: 'Diagnóstico' },
+  { id: 'sec-def-associada', numero: '06', titulo: 'Deficiências associadas', grupo: 'Diagnóstico' },
+  { id: 'sec-condicoes', numero: '07', titulo: 'Condições gerais', grupo: 'Condições e OPME' },
+  { id: 'sec-opme', numero: '08', titulo: 'Órteses e próteses', grupo: 'Condições e OPME' },
+  { id: 'sec-cer-terapias', numero: '09', titulo: 'Terapias no CER IV', grupo: 'Terapias' },
+  { id: 'sec-ext-terapias', numero: '10', titulo: 'Terapias externas', grupo: 'Terapias' },
+  { id: 'sec-conduta-medica', numero: '11', titulo: 'Avaliação médica', grupo: 'Condutas' },
+  { id: 'sec-conduta-multi', numero: '12', titulo: 'Atendimento multidisciplinar', grupo: 'Condutas' },
+  { id: 'sec-objetivos', numero: '13', titulo: 'Metas por especialidade', grupo: 'Plano de metas' },
+  { id: 'sec-obs', numero: '14', titulo: 'Observações', grupo: 'Conduta e intervenção' },
+  { id: 'sec-conduta-inter', numero: '15', titulo: 'Conduta interdisciplinar', grupo: 'Conduta e intervenção' },
+  { id: 'sec-intervencao', numero: '16', titulo: 'Intervenção', grupo: 'Conduta e intervenção' },
+  { id: 'sec-prazo', numero: '17', titulo: 'Prazo estimado', grupo: 'Prazo e programas' },
+  { id: 'sec-instrumentos', numero: '18', titulo: 'Instrumentos e escalas', grupo: 'Prazo e programas' },
+  { id: 'sec-prog-especifico', numero: '19', titulo: 'Programas', grupo: 'Prazo e programas' },
+  { id: 'sec-terapias-indicadas', numero: '20', titulo: 'Prescrição de terapias', grupo: 'Prescrição e vigência' },
+  { id: 'sec-vigencia', numero: '21', titulo: 'Vigência e responsável', grupo: 'Prescrição e vigência' },
+]
+
+const GRUPOS_PTS = ['Diagnóstico', 'Condições e OPME', 'Terapias', 'Condutas', 'Plano de metas', 'Conduta e intervenção', 'Prazo e programas', 'Prescrição e vigência']
 
 // ── tipo linha diagnóstico médico principal ─────────────────────────────────
 interface DiagPrincipalRow {
@@ -184,9 +232,15 @@ interface PacienteState {
 
 export default function PTSPage() {
   const { message, notification, modal } = App.useApp()
-  const { isConsulta } = useAuth()
+  const { isConsulta, usuario: authUsuario, logout } = useAuth()
+  const { collapsed, toggleSidebar, openProfile } = useLayoutControls()
   const location  = useLocation()
   const navigate   = useNavigate()
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+  }
   const paciente  = (location.state ?? {}) as Partial<PacienteState>
 
   // ── Redireciona usuários CONSULTA para o dashboard ──────────────────────
@@ -259,6 +313,9 @@ export default function PTSPage() {
   // Observadores para "Não se aplica" que desabilitam outras opções
   const condNaoSeAplica = Form.useWatch('cond_nao_se_aplica', form)
   const opmeNaoSeAplica = Form.useWatch('opme_nao_se_aplica', form)
+
+  // Observador de todos os valores do formulário (para progresso e pendências reativas)
+  const formValues = Form.useWatch([], form) as PTSFormValues | undefined
 
   // Memo para valores iniciais estáveis
   const initialValues = React.useMemo(() => ({
@@ -775,11 +832,107 @@ export default function PTSPage() {
     }, 600)
   }
 
+  // ── helpers de navegação e progresso ───────────────────────────────────────
+  const minhasEsps = useMemo(() => getMinhasEspecialidades(usuarioMe), [usuarioMe])
+
+  const scrollToSecao = useCallback((id: string) => {
+    const el = document.getElementById(id)
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    // Move o foco para o título da seção após a rolagem (navegação por teclado/leitor de tela)
+    setTimeout(() => {
+      const alvo = document.getElementById(id)
+      if (alvo) {
+        alvo.setAttribute('tabindex', '-1')
+        alvo.focus({ preventScroll: true })
+      }
+    }, 350)
+  }, [])
+
+  const secoesPreenchidas = useMemo(() => {
+    const ids = new Set<string>()
+    const v = formValues ?? ({} as PTSFormValues)
+    const temTexto = (x?: string) => !!x && x.trim().length > 0
+
+    if (diagPrincipais.some((r) => r.diagnostico)) ids.add('sec-diag-principal')
+    if (AREAS.some((a) => diagnosticosArea[a])) ids.add('sec-diag-area')
+    if (AREAS.some((a) => grauArea[a])) ids.add('sec-area-def')
+    if (temTexto(v.queixa_principal)) ids.add('sec-queixa')
+    if (diagTerapeuticos.some((r) => r.diagnostico)) ids.add('sec-diag-terapeutico')
+    if (v.def_associada_visual || v.def_associada_intelectual || v.def_associada_fisica || v.def_associada_auditiva) ids.add('sec-def-associada')
+    if (
+      v.cond_nao_se_aplica || v.cond_nao_escuta || v.cond_nao_fala || v.cond_nao_enxerga ||
+      v.cond_agitacao || v.cond_agressividade || v.cond_nao_anda || v.cond_nao_fica_sozinho ||
+      v.cond_sem_ctrl_cervical || v.cond_sem_ctrl_tronco || temTexto(v.cond_outra)
+    ) ids.add('sec-condicoes')
+    if (
+      v.opme_nao_se_aplica || v.opme_cadeira || v.opme_bengala || v.opme_muleta || v.opme_andador ||
+      v.opme_protese || v.opme_com_alta || v.opme_com_baixa || v.opme_orteses || temTexto(v.opme_outros)
+    ) ids.add('sec-opme')
+    if (temTexto(v.cer_terapias_texto)) ids.add('sec-cer-terapias')
+    if (extTerapias.some((r) => r.diagnostico) || v.ext_nao_realiza) ids.add('sec-ext-terapias')
+    if (conductaRows.some((r) => r.diagnostico)) ids.add('sec-conduta-medica')
+    if (multidisciplinarRows.some((r) => r.diagnostico)) ids.add('sec-conduta-multi')
+    const temObjetivo = Object.entries(objetivos).some(([k, d]) => {
+      if (objetivosNaoSeAplica[k]) return false
+      return d.anterior.some((o) => o.objetivo) || d.atual.some((o) => o.objetivo) || !!d.outros_atual
+    })
+    if (temObjetivo) ids.add('sec-objetivos')
+    if (temTexto(v.observacoes_gerais)) ids.add('sec-obs')
+    if (temTexto(v.conduta_interdisciplinar)) ids.add('sec-conduta-inter')
+    if (temTexto(v.intervencao_descricao)) ids.add('sec-intervencao')
+    if (temTexto(v.intervencao_prazo)) ids.add('sec-prazo')
+    if (instrumentoRows.some((r) => r.diagnostico)) ids.add('sec-instrumentos')
+    if (
+      v.prog_nao_se_aplica || v.prog_glaucoma || v.prog_catarata || v.prog_alem_olhar || v.prog_zika ||
+      v.prog_apoio_familiar || v.prog_tea || v.prog_intervencao_precoce || v.prog_rop ||
+      v.prog_pronas_tea || v.prog_pronas_doencas_raras
+    ) ids.add('sec-prog-especifico')
+    if (terapias.some((t) => t.cd_terapia)) ids.add('sec-terapias-indicadas')
+    ids.add('sec-vigencia') // preenchida automaticamente
+
+    return ids
+  }, [
+    formValues, diagPrincipais, diagnosticosArea, grauArea, diagTerapeuticos,
+    extTerapias, conductaRows, multidisciplinarRows, objetivos, objetivosNaoSeAplica,
+    instrumentoRows, terapias,
+  ])
+
+  const pendencias = useMemo(() => {
+    const itens: { id: string; label: string }[] = []
+    const v = formValues ?? ({} as PTSFormValues)
+
+    if (!v.queixa_principal?.trim()) {
+      itens.push({ id: 'sec-queixa', label: '04. Queixas principais' })
+    }
+
+    minhasEsps.forEach((espKey) => {
+      if (objetivosNaoSeAplica[espKey]) return
+      const d = objetivos[espKey]
+      if (!d) return
+      const tem = d.anterior.some((o) => o.objetivo) || d.atual.some((o) => o.objetivo) || !!d.outros_atual
+      if (!tem) {
+        const label = ESPECIALIDADE_LABELS[espKey] || espKey
+        itens.push({ id: 'sec-objetivos', label: `13. ${label} sem objetivo` })
+      }
+    })
+
+    return itens
+  }, [formValues, objetivos, objetivosNaoSeAplica, minhasEsps])
+
+  const progressoPct = Math.round((secoesPreenchidas.size / SECOES_PTS.length) * 100)
+
+  const GrupoTitulo = ({ children }: { children: React.ReactNode }) => (
+    <h2 style={{ fontSize: 22, fontWeight: 700, margin: '28px 0 12px', color: '#14212b', letterSpacing: '-0.01em' }}>
+      {children}
+    </h2>
+  )
+
   return (
     <>
     <div className="no-print">
     <Spin spinning={carregandoDados} tip="Carregando dados do PTS...">
-    <Space direction="vertical" style={{ width: '100%' }} size="large">
+    <div style={{ minHeight: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column', background: '#f3f5f7' }}>
       <Modal
         open={modalResultado.visivel}
         footer={
@@ -842,44 +995,45 @@ export default function PTSPage() {
           </Form.Item>
         </Form>
       </Modal>
-      {/* Cabeçalho */}
-      <Card
-        variant="borderless"
-        style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
-        styles={{ body: { padding: '20px 24px' } }}
+      {/* Cabeçalho (landmark <header>) */}
+      <header
+        role="banner"
+        aria-label="Identificação do documento"
+        style={{
+          background: 'linear-gradient(90deg, #5568d3 0%, #764ba2 100%)',
+          color: '#fff',
+          padding: '8px 24px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 12,
+        }}
       >
-        <Space style={{ width: '100%', justifyContent: 'space-between' }} align="start">
-          <Space>
-            <FileTextOutlined style={{ fontSize: 28, color: '#fff' }} />
-            <div>
-              <Title level={1} style={{ color: '#fff', margin: 0 }}>
-                PTS — Projeto Terapêutico Singular
-              </Title>
-              <Text style={{ color: 'rgba(255,255,255,0.85)' }}>
-                Preenchimento do Projeto Terapêutico Singular do paciente
-              </Text>
-            </div>
-          </Space>
-          <Space>
-            {paciente.cd_paciente && (
-              <Button
-                icon={<HistoryOutlined />}
-                onClick={() => setHistoryDrawerVisible(true)}
-                style={{ background: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.4)', color: '#fff' }}
-              >
-                Histórico Longitudinal
-              </Button>
-            )}
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={() => navigate('/pts/pacientes', { state: { fromPTS: true } })}
-              style={{ background: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.4)', color: '#fff' }}
-            >
-              Voltar para lista
-            </Button>
-          </Space>
-        </Space>
-      </Card>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <Button
+            type="text"
+            aria-label={collapsed ? 'Expandir menu lateral' : 'Recolher menu lateral'}
+            aria-expanded={!collapsed}
+            onClick={toggleSidebar}
+            icon={collapsed ? <MenuUnfoldOutlined aria-hidden="true" /> : <MenuFoldOutlined aria-hidden="true" />}
+            style={{ color: '#fff', fontSize: 16, width: 40, height: 40 }}
+          />
+          <FileTextOutlined style={{ fontSize: 24, color: '#fff' }} aria-hidden="true" />
+          <span style={{ fontSize: 16, fontWeight: 700 }}>CDM · Documentação Multidisciplinar</span>
+          <span aria-hidden="true" style={{ fontSize: 16 }}>›</span>
+          <Title level={1} style={{ color: '#fff', margin: 0, fontSize: 16, fontWeight: 700 }}>
+            Projeto Terapêutico Singular
+          </Title>
+        </div>
+        <div style={{ background: 'rgba(255,255,255,0.25)', borderRadius: '50%', padding: 3 }}>
+          <UserProfileDropdown
+            usuario={authUsuario}
+            onOpenProfile={openProfile}
+            onLogout={handleLogout}
+          />
+        </div>
+      </header>
 
       <Drawer
         title="Histórico Longitudinal de PTS"
@@ -891,35 +1045,138 @@ export default function PTSPage() {
         {paciente.cd_paciente && <PtsHistoryTimeline cdPaciente={String(paciente.cd_paciente)} />}
       </Drawer>
 
-      {/* Card do paciente (quando vem da lista) */}
-      {paciente.nm_paciente && (
-        <Card
-          role="region"
-          aria-label={`Paciente: ${paciente.nm_paciente}`}
-          variant="borderless"
-          style={{ background: '#f0f5ff', borderLeft: '4px solid #667eea' }}
-          styles={{ body: { padding: '12px 20px' } }}
-        >
-          <Space size="large">
-            <Space direction="vertical" size={0}>
-              <Text type="secondary" style={{ fontSize: 12 }}>Paciente</Text>
-              <Text strong style={{ fontSize: 16 }}>{paciente.nm_paciente}</Text>
-            </Space>
-            {paciente.cd_paciente && (
-              <Space direction="vertical" size={0}>
-                <Text type="secondary" style={{ fontSize: 12 }}>Cód. Paciente</Text>
-                <Text strong>{paciente.cd_paciente}</Text>
-              </Space>
-            )}
-            {paciente.cd_atendimento && (
-              <Space direction="vertical" size={0}>
-                <Text type="secondary" style={{ fontSize: 12 }}>Cód. Atendimento</Text>
-                <Text strong>{paciente.cd_atendimento}</Text>
-              </Space>
-            )}
+      {/* Sub-cabeçalho do paciente + ações (barra branca, largura total) */}
+      <section
+        aria-label="Dados do paciente e ações"
+        style={{
+          background: '#fff',
+          borderBottom: '1px solid #d5dce3',
+          padding: '12px 32px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 12,
+        }}
+      >
+        <Space size="large" wrap>
+          <Space direction="vertical" size={0}>
+            <Text type="secondary" style={{ fontSize: 12 }}>Paciente</Text>
+            <Text strong style={{ fontSize: 16 }}>{paciente.nm_paciente || '—'}</Text>
           </Space>
-        </Card>
-      )}
+          <Space direction="vertical" size={0}>
+            <Text type="secondary" style={{ fontSize: 12 }}>Cód. Paciente</Text>
+            <Text strong>{paciente.cd_paciente ?? '—'}</Text>
+          </Space>
+          <Space direction="vertical" size={0}>
+            <Text type="secondary" style={{ fontSize: 12 }}>Cód. Atendimento</Text>
+            <Text strong>{paciente.cd_atendimento ?? '—'}</Text>
+          </Space>
+        </Space>
+        <Space>
+          {paciente.cd_paciente && (
+            <Button icon={<HistoryOutlined />} onClick={() => setHistoryDrawerVisible(true)}>
+              Histórico Longitudinal
+            </Button>
+          )}
+          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/pts/pacientes', { state: { fromPTS: true } })}>
+            Voltar para lista
+          </Button>
+        </Space>
+      </section>
+
+      <div style={{ display: 'flex', flex: 1, alignItems: 'flex-start', gap: 24, padding: 24, maxWidth: 1600, width: '100%', margin: '0 auto' }}>
+        {/* Índice lateral (landmark <nav>) */}
+        <nav
+          aria-label="Índice do PTS"
+          style={{ width: 280, flexShrink: 0, position: 'sticky', top: 24, display: 'flex', flexDirection: 'column', gap: 16 }}
+        >
+          <Card size="small" style={{ background: '#fff', boxShadow: '0 1px 2px rgba(16,24,40,0.06)' }}>
+            <Text strong style={{ display: 'block', marginBottom: 8 }}>Progresso do PTS</Text>
+            <div
+              role="progressbar"
+              aria-valuenow={progressoPct}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Progresso de preenchimento do PTS"
+              style={{ height: 10, background: '#e5e8ed', borderRadius: 5, overflow: 'hidden', marginBottom: 8 }}
+            >
+              <div style={{ height: '100%', width: `${progressoPct}%`, background: 'linear-gradient(90deg,#5568d3,#764ba2)', borderRadius: 5, transition: 'width .3s' }} />
+            </div>
+            <Text type="secondary" style={{ fontSize: 13 }}>
+              {secoesPreenchidas.size} de {SECOES_PTS.length} seções preenchidas
+            </Text>
+          </Card>
+
+          <Card size="small" style={{ background: '#fff', boxShadow: '0 1px 2px rgba(16,24,40,0.06)' }} styles={{ body: { padding: 8 } }}>
+            {GRUPOS_PTS.map((grupo) => (
+              <div key={grupo} style={{ marginBottom: 8 }}>
+                <Text style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.03em', padding: '4px 8px 2px' }}>
+                  {grupo}
+                </Text>
+                {SECOES_PTS.filter((s) => s.grupo === grupo).map((secao) => {
+                  const preenchida = secoesPreenchidas.has(secao.id)
+                  return (
+                    <button
+                      key={secao.id}
+                      type="button"
+                      onClick={() => scrollToSecao(secao.id)}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        textAlign: 'left',
+                        border: 'none',
+                        background: 'transparent',
+                        cursor: 'pointer',
+                        padding: '7px 8px',
+                        borderRadius: 6,
+                        fontSize: 14,
+                        color: '#14212b',
+                        ...(secao.id === 'sec-objetivos'
+                          ? { background: '#eceffb', borderLeft: '3px solid #5568d3', fontWeight: 700 }
+                          : {}),
+                      }}
+                    >
+                      <span aria-hidden="true" style={{ opacity: 0.55, fontSize: 12, marginRight: 6 }}>{secao.numero}</span>
+                      {secao.titulo}
+                      {preenchida && (
+                        <span aria-hidden="true" style={{ marginLeft: 6, color: '#1b6b3a' }}>✓</span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            ))}
+          </Card>
+
+          {pendencias.length > 0 && (
+            <Card
+              size="small"
+              role="status"
+              aria-label={`${pendencias.length} ${pendencias.length === 1 ? 'pendência obrigatória' : 'pendências obrigatórias'}`}
+              style={{ background: '#fbe9e7', borderColor: '#b3261e' }}
+            >
+              <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                <Text strong style={{ color: '#b3261e' }}>
+                  {pendencias.length} {pendencias.length === 1 ? 'pendência obrigatória' : 'pendências obrigatórias'}
+                </Text>
+                {pendencias.map((p) => (
+                  <button
+                    key={p.label}
+                    type="button"
+                    onClick={() => scrollToSecao(p.id)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0, color: '#14212b', textDecoration: 'underline', fontSize: 14 }}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </Space>
+            </Card>
+          )}
+        </nav>
+
+        {/* Conteúdo principal (landmark <main>) */}
+        <main style={{ flex: 1, minWidth: 0 }}>
 
       <Form 
         form={form} 
@@ -928,6 +1185,8 @@ export default function PTSPage() {
         initialValues={initialValues}
         disabled={ptsFinalizado}
       >
+
+        <GrupoTitulo>Diagnóstico</GrupoTitulo>
 
         {/* ── SEÇÃO 1: Diagnóstico Médico Principal ── */}
         <Card
@@ -1149,6 +1408,8 @@ export default function PTSPage() {
           </fieldset>
         </Card>
 
+        <GrupoTitulo>Condições e OPME</GrupoTitulo>
+
         {/* ── SEÇÃO 7: Condições do Paciente ── */}
         <Card
           role="region"
@@ -1217,6 +1478,8 @@ export default function PTSPage() {
             <Input placeholder="Descreva outros OPME..." disabled={ptsFinalizado || opmeNaoSeAplica} />
           </Form.Item>
         </Card>
+
+        <GrupoTitulo>Terapias</GrupoTitulo>
 
         {/* ── SEÇÃO 9: Faz outras terapias no CER IV ── */}
         <Card
@@ -1307,6 +1570,8 @@ export default function PTSPage() {
             </Form.Item>
           </div>
         </Card>
+
+        <GrupoTitulo>Condutas</GrupoTitulo>
 
         {/* ── SEÇÕES 11 e 12: Avaliação Médica + Atendimento Multidisciplinar ── */}
         <Row gutter={16} style={{ marginBottom: 16 }}>
@@ -1453,6 +1718,8 @@ export default function PTSPage() {
           </Col>
         </Row>
 
+        <GrupoTitulo>Plano de metas</GrupoTitulo>
+
         {/* ── SEÇÃO 13: Objetivos por Especialidade ── */}
         <Card
           role="region"
@@ -1483,6 +1750,8 @@ export default function PTSPage() {
             onNaoSeAplicaChange={setObjetivosNaoSeAplica}
           />
         </Card>
+
+        <GrupoTitulo>Conduta e intervenção</GrupoTitulo>
 
         {/* ── SEÇÃO 14: Observações Gerais ── */}
         <Card
@@ -1535,6 +1804,8 @@ export default function PTSPage() {
             <Input.TextArea rows={4} placeholder="Descreva a intervenção..." />
           </Form.Item>
         </Card>
+
+        <GrupoTitulo>Prazo, instrumentos e programas</GrupoTitulo>
 
         {/* ── SEÇÃO 17: Prazo Estimado ── */}
         <Card
@@ -1684,6 +1955,8 @@ export default function PTSPage() {
             </Col>
           </Row>
         </Card>
+
+        <GrupoTitulo>Prescrição e vigência</GrupoTitulo>
 
         {/* ── SEÇÃO 19: Terapia Indicada ── */}
         <Card
@@ -1876,66 +2149,83 @@ export default function PTSPage() {
           </Text>
         </Card>
 
-        {/* ── ações ── */}
-        <Row justify="end">
-          <Col>
-            <Space>
-              <Button onClick={() => form.resetFields()} disabled={ptsFinalizado}>Limpar</Button>
-              <Button
-                danger
-                icon={<CloseCircleOutlined />}
-                loading={cancelandoPTS}
-                disabled={idPtsSalvo === null || (idUsuarioAutor !== null && usuarioMe?.id_usuario !== idUsuarioAutor)}
-                onClick={() => {
-                  formCancel.resetFields()
-                  setModalCancelamento(true)
-                }}
-                title={
-                  idPtsSalvo === null 
-                    ? 'Salve o PTS antes de cancelar' 
-                    : (idUsuarioAutor !== null && usuarioMe?.id_usuario !== idUsuarioAutor)
-                      ? 'Apenas o autor deste PTS pode cancelá-lo'
-                      : 'Cancela o PTS e remove itens da fila de espera'
-                }
-              >
-                Cancelar PTS
-              </Button>
-              <Button
-                icon={<PrinterOutlined />}
-                onClick={handleImprimir}
-                disabled={!ptsFinalizado || salvandoPTS || finalizandoPTS}
-                title={!ptsFinalizado ? 'Finalize o PTS para habilitar a impressão' : (salvandoPTS || finalizandoPTS ? 'Aguarde...' : undefined)}
-              >
-                Imprimir
-              </Button>
-              <Button
-                type="primary"
-                htmlType="submit"
-                icon={<SaveOutlined />}
-                loading={salvandoPTS}
-                disabled={ptsFinalizado}
-                title={ptsFinalizado ? 'PTS já finalizado — não é possível editar' : undefined}
-              >
-                Salvar PTS
-              </Button>
-              <Button
-                type="primary"
-                danger
-                icon={<CheckCircleOutlined />}
-                loading={finalizandoPTS}
-                onClick={handleFinalizar}
-                disabled={ptsFinalizado}
-                title={ptsFinalizado ? 'PTS já finalizado' : 'Salva o PTS e insere as terapias na fila de espera'}
-              >
-                Finalizar PTS
-              </Button>
-            </Space>
-          </Col>
-        </Row>
-
+        {/* ── ações (rodapé fixo) ── */}
+        <footer
+          style={{
+            position: 'sticky',
+            bottom: 0,
+            background: '#fff',
+            borderTop: '2px solid #d5dce3',
+            padding: '12px 24px',
+            marginTop: 8,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 12,
+            zIndex: 10,
+          }}
+        >
+          <Text type="secondary" style={{ fontSize: 13 }}>
+            Rascunho salvo automaticamente às {dayjs().format('HH:mm')}
+          </Text>
+          <Space wrap>
+            <Button onClick={() => form.resetFields()} disabled={ptsFinalizado}>Limpar</Button>
+            <Button
+              danger
+              icon={<CloseCircleOutlined />}
+              loading={cancelandoPTS}
+              disabled={idPtsSalvo === null || (idUsuarioAutor !== null && usuarioMe?.id_usuario !== idUsuarioAutor)}
+              onClick={() => {
+                formCancel.resetFields()
+                setModalCancelamento(true)
+              }}
+              title={
+                idPtsSalvo === null
+                  ? 'Salve o PTS antes de cancelar'
+                  : (idUsuarioAutor !== null && usuarioMe?.id_usuario !== idUsuarioAutor)
+                    ? 'Apenas o autor deste PTS pode cancelá-lo'
+                    : 'Cancela o PTS e remove itens da fila de espera'
+              }
+            >
+              Cancelar PTS
+            </Button>
+            <Button
+              icon={<PrinterOutlined />}
+              onClick={handleImprimir}
+              disabled={!ptsFinalizado || salvandoPTS || finalizandoPTS}
+              title={!ptsFinalizado ? 'Finalize o PTS para habilitar a impressão' : (salvandoPTS || finalizandoPTS ? 'Aguarde...' : undefined)}
+            >
+              Imprimir
+            </Button>
+            <Button
+              type="primary"
+              htmlType="submit"
+              icon={<SaveOutlined />}
+              loading={salvandoPTS}
+              disabled={ptsFinalizado}
+              title={ptsFinalizado ? 'PTS já finalizado — não é possível editar' : undefined}
+            >
+              Salvar PTS
+            </Button>
+            <Button
+              type="primary"
+              danger
+              icon={<CheckCircleOutlined />}
+              loading={finalizandoPTS}
+              onClick={handleFinalizar}
+              disabled={ptsFinalizado}
+              title={ptsFinalizado ? 'PTS já finalizado' : 'Salva o PTS e insere as terapias na fila de espera'}
+            >
+              Finalizar PTS
+            </Button>
+          </Space>
+        </footer>
 
       </Form>
-    </Space>
+        </main>
+      </div>
+    </div>
     </Spin>
     </div>
 

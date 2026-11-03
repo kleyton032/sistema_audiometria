@@ -1,4 +1,5 @@
 
+import { useState } from 'react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { Avatar, Typography } from 'antd'
 import { UserOutlined, LogoutOutlined, ProfileOutlined } from '@ant-design/icons'
@@ -14,10 +15,12 @@ interface UserProfileDropdownProps {
 }
 
 export function UserProfileDropdown({ usuario, onOpenProfile, onLogout }: UserProfileDropdownProps) {
+  const [open, setOpen] = useState(false)
+
   if (!usuario) return null
 
   return (
-    <DropdownMenu.Root>
+    <DropdownMenu.Root open={open} onOpenChange={setOpen}>
       <DropdownMenu.Trigger asChild>
         <button className="HeaderAvatarButton" aria-label="Menu do Usuário">
           <Avatar size={36} icon={<UserOutlined />} style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }} />
@@ -44,10 +47,9 @@ export function UserProfileDropdown({ usuario, onOpenProfile, onLogout }: UserPr
           {/* Opções */}
           <DropdownMenu.Item 
             className="DropdownMenuItem" 
-            onSelect={(e) => {
-              // Defer the opening to allow Radix Dropdown to close and release focus cleanly
-              // Avoids focus trap clashes with the Ant Design Drawer in older Chromium browsers
-              e.preventDefault()
+            onSelect={() => {
+              // Fecha o menu antes de abrir o Drawer para não ficar sobreposto
+              setOpen(false)
               setTimeout(onOpenProfile, 50)
             }}
           >
@@ -58,8 +60,8 @@ export function UserProfileDropdown({ usuario, onOpenProfile, onLogout }: UserPr
           
           <DropdownMenu.Item 
             className="DropdownMenuItem danger" 
-            onSelect={(e) => {
-              e.preventDefault()
+            onSelect={() => {
+              setOpen(false)
               setTimeout(onLogout, 50)
             }}
           >

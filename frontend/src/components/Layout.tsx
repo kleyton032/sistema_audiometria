@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { Layout as AntLayout, theme, Alert, Space, Typography } from 'antd'
 import { useNavigate, useLocation, Outlet } from 'react-router-dom'
-import { useAuth } from '@/contexts'
+import { useAuth, LayoutControlsContext } from '@/contexts'
 import { Sidebar } from './Sidebar/Sidebar'
 import { MenuRole } from '../config/menuConfig'
 import { AppHeader } from './Header/AppHeader'
@@ -104,8 +104,13 @@ export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false)
   const [profileVisible, setProfileVisible] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
   const { logout, usuario, isAdmin, isSupervisor, isCoordenador, isOperador, isConsulta } = useAuth()
   const { token: themeToken } = theme.useToken()
+
+  // A tela do PTS é full-bleed (barra gradiente + índice lateral), então o
+  // Content não deve aplicar card/margem/padding ao redor dela.
+  const isPtsFullBleed = location.pathname === '/pts'
 
   const isFonoaudiologo = usuario?.nm_tip_presta === NM_TIP_FONOAUDIOLOGO
 
@@ -122,7 +127,17 @@ export default function AppLayout() {
     navigate('/login')
   }
 
+  const layoutControls = useMemo(
+    () => ({
+      collapsed,
+      toggleSidebar: () => setCollapsed((c) => !c),
+      openProfile: () => setProfileVisible(true),
+    }),
+    [collapsed],
+  )
+
   return (
+    <LayoutControlsContext.Provider value={layoutControls}>
     <AntLayout style={{ minHeight: '100vh' }}>
       {/* Skip link para acessibilidade */}
       <a 
@@ -151,25 +166,37 @@ export default function AppLayout() {
 
 
       <AntLayout>
-        <AppHeader 
-          collapsed={collapsed}
-          onToggleSidebar={() => setCollapsed(!collapsed)}
-          usuario={usuario}
-          onOpenProfile={() => setProfileVisible(true)}
-          onLogout={handleLogout}
-        />
+        {!isPtsFullBleed && (
+          <AppHeader 
+            collapsed={collapsed}
+            onToggleSidebar={() => setCollapsed(!collapsed)}
+            usuario={usuario}
+            onOpenProfile={() => setProfileVisible(true)}
+            onLogout={handleLogout}
+          />
+        )}
         <RouteAnnouncer />
         <Content
           id="main-content"
           role="main"
           aria-label="Conteúdo principal da aplicação"
-          style={{
-            margin: 24,
-            padding: 24,
-            background: themeToken.colorBgContainer,
-            borderRadius: themeToken.borderRadiusLG,
-            minHeight: 360,
-          }}
+          style={
+            isPtsFullBleed
+              ? {
+                  margin: 0,
+                  padding: 0,
+                  background: '#f3f5f7',
+                  borderRadius: 0,
+                  minHeight: 'calc(100vh - 64px)',
+                }
+              : {
+                  margin: 24,
+                  padding: 24,
+                  background: themeToken.colorBgContainer,
+                  borderRadius: themeToken.borderRadiusLG,
+                  minHeight: 360,
+                }
+          }
         >
           {/* Indicador de Modo Somente Consulta (global) */}
           {isConsulta && (
@@ -213,5 +240,6 @@ export default function AppLayout() {
         }
       `}</style>
     </AntLayout>
+    </LayoutControlsContext.Provider>
   )
 }

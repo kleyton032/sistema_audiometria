@@ -4,8 +4,11 @@
   box-sizing: border-box;
 }
 
-body {
+html,
+body,
+#root {
   font-family:
+    'Atkinson Hyperlegible',
     -apple-system,
     BlinkMacSystemFont,
     'Segoe UI',
@@ -15,6 +18,41 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Garante que os componentes antd também usem a fonte Atkinson Hyperlegible */
+.ant-app,
+.ant-btn,
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-input-number,
+.ant-select,
+.ant-select-item,
+.ant-typography,
+.ant-form,
+.ant-form-item,
+.ant-card,
+.ant-card-head,
+.ant-table,
+.ant-checkbox-wrapper,
+.ant-radio-wrapper,
+.ant-tag,
+.ant-alert,
+.ant-collapse,
+.ant-collapse-header,
+.ant-segmented,
+.ant-segmented-item,
+.ant-drawer,
+.ant-modal {
+  font-family:
+    'Atkinson Hyperlegible',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    Arial,
+    sans-serif;
 }
 
 /* Estilos para impressão / futura geração de PDF */
@@ -59,6 +97,7 @@ body {
  /* Fallback for inset in older browsers (Chromium < 87) */
 .ant-modal-wrap,
 .ant-modal-mask,
+.ant-drawer,
 .ant-drawer-mask,
 .ant-drawer-wrap {
   top: 0 !important;
