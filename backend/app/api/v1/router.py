@@ -1,6 +1,6 @@
 # app/api/v1/router.py
 from fastapi import APIRouter
-from app.api.v1 import auth, users, agenda, exames, pts, home, admin
+from app.api.v1 import auth, users, agenda, exames, pts, home, admin, psicologia
 
 api_router = APIRouter()
 
@@ -24,4 +24,7 @@ api_router.include_router(pts.router)
 
 # Módulo 6 — Painel Administrativo (apenas ADMIN)
 api_router.include_router(admin.router)
+
+# Módulo 7 — Psicologia (PAFE — exclusivo para psicólogos)
+api_router.include_router(psicologia.router)
 
