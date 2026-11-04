@@ -9,6 +9,7 @@ from app.db.models import (
     PsiItem,
     PsiAvaliacao,
     PsiResposta,
+    PsiResultado,
     PsiEvento,
 )
 
@@ -82,7 +83,10 @@ def create_avaliacao(
 def get_avaliacao(db: Session, id_avaliacao: int) -> Optional[PsiAvaliacao]:
     return (
         db.query(PsiAvaliacao)
-        .options(joinedload(PsiAvaliacao.respostas))
+        .options(
+            joinedload(PsiAvaliacao.respostas),
+            joinedload(PsiAvaliacao.resultados),
+        )
         .filter(PsiAvaliacao.id_avaliacao == id_avaliacao)
         .first()
     )
@@ -163,6 +167,82 @@ def salvar_rascunho(
     avaliacao.dt_atualizacao = datetime.now()
 
     registrar_evento(db, avaliacao.id_avaliacao, avaliacao.id_usuario, "ALTERACAO")
+    db.commit()
+    db.refresh(avaliacao)
+    return avaliacao
+
+
+def finalizar_avaliacao(
+    db: Session,
+    avaliacao: PsiAvaliacao,
+    *,
+    respostas: list,
+    ds_observacoes: Optional[str],
+    ds_evolucao: Optional[str],
+    ds_conduta: Optional[str],
+    nr_revisao: int,
+) -> PsiAvaliacao:
+    """
+    Salva as respostas finais, consolida os subtotais por domínio na tabela de
+    resultados e transiciona a avaliação para FINALIZADO (fluxo irreversível).
+    """
+    if avaliacao.ds_situacao != "RASCUNHO":
+        raise ValueError("Apenas avaliações em rascunho podem ser finalizadas.")
+
+    if avaliacao.nr_revisao != nr_revisao:
+        raise ConflitoRevisao(
+            "A avaliação foi alterada em outra sessão. Recarregue os dados antes de finalizar."
+        )
+
+    itens = get_itens_do_protocolo(db, avaliacao.id_protocolo)
+    por_item = {r["id_item"]: r for r in respostas}
+
+    faltantes = [i.id_item for i in itens if i.id_item not in por_item]
+    if faltantes:
+        raise ValueError(
+            f"Existem {len(faltantes)} item(ns) sem pontuação. "
+            "Pontue todos os itens antes de finalizar."
+        )
+
+    # Substitui as respostas do rascunho pelas respostas finais.
+    db.query(PsiResposta).filter(PsiResposta.id_avaliacao == avaliacao.id_avaliacao).delete()
+    for r in respostas:
+        db.add(
+            PsiResposta(
+                id_avaliacao=avaliacao.id_avaliacao,
+                id_item=r["id_item"],
+                nr_valor=r["nr_valor"],
+                ds_observacao=r.get("ds_observacao"),
+            )
+        )
+
+    # Consolida os subtotais por domínio (máximo = 2 pontos por item).
+    db.query(PsiResultado).filter(PsiResultado.id_avaliacao == avaliacao.id_avaliacao).delete()
+    subtotais: dict[str, tuple[int, int]] = {}
+    for i in itens:
+        valor = por_item[i.id_item]["nr_valor"]
+        subtotal, maximo = subtotais.get(i.ds_dominio, (0, 0))
+        subtotais[i.ds_dominio] = (subtotal + valor, maximo + 2)
+
+    for dominio, (subtotal, maximo) in subtotais.items():
+        db.add(
+            PsiResultado(
+                id_avaliacao=avaliacao.id_avaliacao,
+                ds_dominio=dominio,
+                nr_subtotal=subtotal,
+                nr_maximo=maximo,
+            )
+        )
+
+    avaliacao.ds_observacoes = ds_observacoes
+    avaliacao.ds_evolucao = ds_evolucao
+    avaliacao.ds_conduta = ds_conduta
+    avaliacao.ds_situacao = "FINALIZADO"
+    avaliacao.dt_finalizacao = datetime.now()
+    avaliacao.nr_revisao = avaliacao.nr_revisao + 1
+    avaliacao.dt_atualizacao = datetime.now()
+
+    registrar_evento(db, avaliacao.id_avaliacao, avaliacao.id_usuario, "FINALIZACAO")
     db.commit()
     db.refresh(avaliacao)
     return avaliacao

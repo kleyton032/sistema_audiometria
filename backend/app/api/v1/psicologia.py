@@ -15,6 +15,7 @@ from app.schemas.psicologia import (
     PsiAvaliacaoUpdate,
     PsiAvaliacaoOut,
     PsiRespostaOut,
+    PsiResultadoOut,
     PsiAvaliacaoListOut,
 )
 
@@ -77,6 +78,14 @@ def _avaliacao_to_out(db: Session, avaliacao) -> PsiAvaliacaoOut:
         nr_revisao=avaliacao.nr_revisao,
         dt_criacao=avaliacao.dt_criacao,
         respostas=respostas,
+        resultados=[
+            PsiResultadoOut(
+                ds_dominio=r.ds_dominio,
+                nr_subtotal=r.nr_subtotal,
+                nr_maximo=r.nr_maximo,
+            )
+            for r in sorted(avaliacao.resultados, key=lambda r: r.ds_dominio)
+        ],
     )
 
 
@@ -212,6 +221,49 @@ def salvar_rascunho(
 
     try:
         avaliacao = repo.salvar_rascunho(
+            db,
+            avaliacao,
+            respostas=[r.model_dump() for r in payload.respostas],
+            ds_observacoes=payload.ds_observacoes,
+            ds_evolucao=payload.ds_evolucao,
+            ds_conduta=payload.ds_conduta,
+            nr_revisao=payload.nr_revisao,
+        )
+    except ConflitoRevisao as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+
+    return _avaliacao_to_out(db, avaliacao)
+
+
+@router.post("/avaliacoes/{id_avaliacao}/finalizar", response_model=PsiAvaliacaoOut)
+def finalizar_avaliacao(
+    id_avaliacao: int,
+    payload: PsiAvaliacaoUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_escrita()),
+):
+    from app.dependencies import pode_acessar_psicologia
+
+    if not pode_acessar_psicologia(user):
+        raise HTTPException(
+            status_code=403,
+            detail="Acesso restrito. Este módulo é exclusivo para psicólogos.",
+        )
+
+    avaliacao = _obter_avaliacao_autorizada(db, id_avaliacao, user)
+
+    itens_validos = {i.id_item for i in repo.get_itens_do_protocolo(db, avaliacao.id_protocolo)}
+    for r in payload.respostas:
+        if r.id_item not in itens_validos:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Item {r.id_item} não pertence ao protocolo da avaliação.",
+            )
+
+    try:
+        avaliacao = repo.finalizar_avaliacao(
             db,
             avaliacao,
             respostas=[r.model_dump() for r in payload.respostas],

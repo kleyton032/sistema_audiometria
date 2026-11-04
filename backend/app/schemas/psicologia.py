@@ -72,6 +72,14 @@ class PsiRespostaOut(BaseModel):
     ds_observacao: Optional[str] = None
 
 
+class PsiResultadoOut(BaseModel):
+    ds_dominio:  str
+    nr_subtotal: int
+    nr_maximo:   int
+
+    model_config = {"from_attributes": True}
+
+
 class PsiAvaliacaoOut(BaseModel):
     id_avaliacao:   int
     cd_paciente:    str
@@ -88,6 +96,7 @@ class PsiAvaliacaoOut(BaseModel):
     nr_revisao:     int
     dt_criacao:     Optional[datetime] = None
     respostas:      List[PsiRespostaOut] = []
+    resultados:     List[PsiResultadoOut] = []
 
 
 class PsiAvaliacaoListOut(BaseModel):
