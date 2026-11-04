@@ -8,10 +8,11 @@ import {
   HomeOutlined,
   SettingOutlined,
   HistoryOutlined,
+  BulbOutlined,
 } from '@ant-design/icons'
 
 // Perfis e atributos do usuário mapeados do contexto de autenticação
-export type MenuRole = 'ADMIN' | 'SUPERVISOR' | 'COORDENADOR' | 'FONOAUDIOLOGO' | 'OPERADOR'
+export type MenuRole = 'ADMIN' | 'SUPERVISOR' | 'COORDENADOR' | 'FONOAUDIOLOGO' | 'OPERADOR' | 'PSICOLOGO'
 
 export interface MenuConfigItem {
   key: string
@@ -76,6 +77,21 @@ export const menuTree: MenuConfigItem[] = [
         label: 'Consulta de Histórico',
         icon: <HistoryOutlined />,
         path: '/pts/historico',
+      },
+    ],
+  },
+  {
+    key: 'grupo-psicologia',
+    label: 'Psicologia',
+    icon: <BulbOutlined />,
+    roles: ['PSICOLOGO'],
+    children: [
+      {
+        key: '/psicologia/pacientes',
+        label: 'Atendimentos',
+        icon: <TeamOutlined />,
+        path: '/psicologia/pacientes',
+        roles: ['PSICOLOGO'],
       },
     ],
   },

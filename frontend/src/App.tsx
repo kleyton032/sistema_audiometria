@@ -12,6 +12,7 @@ import { ImitanciometriaPage } from '@/pages/Imitanciometria'
 import { PacientesPage } from '@/pages/Pacientes'
 import { ConsultaPage } from '@/pages/Consulta'
 import { PTSPage, PtsPacientesPage, PtsDashboardPage, PtsHistoricoPage } from '@/pages/PTS'
+import { PsicologiaPacientesPage, AvaliacaoExecutivaPage } from '@/pages/Psicologia'
 import { AdminPage } from '@/pages/Admin'
 import { useAuth } from '@/contexts'
 
@@ -19,6 +20,12 @@ import { useAuth } from '@/contexts'
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { isAdmin } = useAuth()
   return isAdmin ? <>{children}</> : <Navigate to="/home" replace />
+}
+
+/** Rota exclusiva para psicólogos (capacidade calculada no backend). */
+function PsicologiaRoute({ children }: { children: React.ReactNode }) {
+  const { isPsicologo } = useAuth()
+  return isPsicologo ? <>{children}</> : <Navigate to="/home" replace />
 }
 
 function ErrorFallback({ error, resetErrorBoundary }: any) {
@@ -76,6 +83,24 @@ export default function App() {
                   <Route path="/pts/dashboard" element={<PtsDashboardPage />} />
                   <Route path="/pts/historico" element={<PtsHistoricoPage />} />
                   <Route path="/pts" element={<PTSPage />} />
+
+                  {/* Módulo Psicologia — exclusivo para psicólogos */}
+                  <Route
+                    path="/psicologia/pacientes"
+                    element={
+                      <PsicologiaRoute>
+                        <PsicologiaPacientesPage />
+                      </PsicologiaRoute>
+                    }
+                  />
+                  <Route
+                    path="/psicologia/avaliacoes/:id"
+                    element={
+                      <PsicologiaRoute>
+                        <AvaliacaoExecutivaPage />
+                      </PsicologiaRoute>
+                    }
+                  />
 
                   {/* Painel Administrativo — exclusivo para ADMIN */}
                   <Route

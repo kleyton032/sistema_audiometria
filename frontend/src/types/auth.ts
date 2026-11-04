@@ -18,6 +18,9 @@ export interface User {
   ds_conselho:        string | null
   ds_codigo_conselho: string | null
   nm_tip_presta:      string | null
+  cd_tip_presta:      number | null
+  // capacidades calculadas pelo backend
+  pode_acessar_psicologia: boolean
   // dados do cadastro local (SILA)
   nr_conselho:        string | null
   ds_especialidade:   string | null
