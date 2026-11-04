@@ -12,7 +12,7 @@ from app.db.repositories.user import (
     create_user,
     sync_existing_user_from_mv,
 )
-from app.dependencies import get_db
+from app.dependencies import get_db, pode_acessar_psicologia
 
 router = APIRouter(prefix="/auth", tags=["Autenticação"])
 
@@ -167,5 +167,7 @@ def register_mv_user(
         ds_conselho        = p.ds_conselho        if p else None,
         ds_codigo_conselho = p.ds_codigo_conselho if p else None,
         nm_tip_presta      = p.nm_tip_presta      if p else None,
+        cd_tip_presta      = p.cd_tip_presta      if p else None,
+        pode_acessar_psicologia = pode_acessar_psicologia(user),
     )
 

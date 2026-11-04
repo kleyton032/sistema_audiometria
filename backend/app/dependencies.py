@@ -108,6 +108,43 @@ def require_escrita():
     return _check
 
 
+# Código do tipo de prestador no MV para Psicólogo.
+CD_TIP_PRESTA_PSICOLOGO = 10
+
+
+def pode_acessar_psicologia(user: User) -> bool:
+    """
+    Indica se o usuário autenticado tem capacidade de acesso ao módulo de
+    Psicologia. A capacidade é derivada do código canônico do tipo de
+    prestador (10 = psicólogo) sincronizado do MV — e não do nome (texto) nem
+    do perfil administrativo do usuário.
+
+    ADMIN, SUPERVISOR, COORDENADOR ou CONSULTA SEM o código 10 NÃO recebem
+    acesso clínico automático ao módulo.
+    """
+    prestador = getattr(user, "prestador", None)
+    if not prestador:
+        return False
+    return prestador.cd_tip_presta == CD_TIP_PRESTA_PSICOLOGO
+
+
+def require_psicologia():
+    """
+    Dependency factory: bloqueia a requisição se o usuário autenticado não for
+    psicólogo (cd_tip_presta = 10 no MV). Deve ser aplicada a TODOS os
+    endpoints do módulo de Psicologia, inclusive listagens, detalhes,
+    histórico e PDF.
+    """
+    def _check(user: User = Depends(get_current_user)) -> User:
+        if not pode_acessar_psicologia(user):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Acesso restrito. Este módulo é exclusivo para psicólogos.",
+            )
+        return user
+    return _check
+
+
 def _log_audit_escrita_bloqueada(user: User, request: Request):
     """
     Registra tentativa de escrita bloqueada por perfil CONSULTA na tabela de auditoria.

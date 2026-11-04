@@ -14,6 +14,7 @@ class PrestadorMVInfo(BaseModel):
     ds_conselho:        Optional[str] = None   # CREFONO, CREFITO, CRM...
     ds_codigo_conselho: Optional[str] = None   # número do registro
     nm_tip_presta:      Optional[str] = None   # Fonoaudiólogo, Fisioterapeuta...
+    cd_tip_presta:      Optional[int] = None   # código do tipo de prestador (ex.: 10 = psicólogo)
 
 
 class CheckMVResponse(BaseModel):
@@ -53,6 +54,9 @@ class UserResponse(BaseModel):
     ds_conselho:        Optional[str]   = None
     ds_codigo_conselho: Optional[str]   = None
     nm_tip_presta:      Optional[str]   = None
+    cd_tip_presta:      Optional[int]   = None
+    # capacidades calculadas pelo backend
+    pode_acessar_psicologia: bool = False
     # dados do cadastro local (SILA)
     nr_conselho:        Optional[str]   = None
     ds_especialidade:   Optional[str]   = None

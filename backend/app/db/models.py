@@ -59,6 +59,7 @@ class UsuarioPrestador(Base):
     ds_conselho        = Column("DS_CONSELHO",        String(50))   # CREFONO, CREFITO, CRM...
     ds_codigo_conselho = Column("DS_CODIGO_CONSELHO", String(30))   # número do registro
     nm_tip_presta      = Column("NM_TIP_PRESTA",      String(100))  # Fonoaudiólogo, Fisioterapeuta...
+    cd_tip_presta      = Column("CD_TIP_PRESTA",      Integer)      # código do tipo de prestador no MV (ex.: 10 = psicólogo)
     dt_sincronizacao   = Column("DT_SINCRONIZACAO",   DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     usuario = relationship("User", back_populates="prestador")
@@ -461,3 +462,125 @@ class PTSTerapia(Base):
     nr_qtde_sessoes = Column("NR_QTDE_SESSOES", Integer)
     
     pts = relationship("PTS", back_populates="terapias_indicadas")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Módulo Psicologia — Protocolo de Avaliação de Funções Executivas (PAFE)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class PsiProtocolo(Base):
+    """Versão versionada e imutável de um protocolo/instrumento psicológico."""
+    __tablename__ = "FAV_TB_PSI_PROTOCOLO"
+
+    id_protocolo   = Column("ID_PROTOCOLO",   Integer, Sequence("SEQ_PSI_PROTOCOLO"), primary_key=True)
+    ds_codigo      = Column("DS_CODIGO",      String(50),  nullable=False)
+    nr_versao      = Column("NR_VERSAO",      String(20),  nullable=False)
+    ds_titulo      = Column("DS_TITULO",      String(200), nullable=False)
+    nr_idade_min   = Column("NR_IDADE_MIN",   Integer)
+    nr_idade_max   = Column("NR_IDADE_MAX",   Integer)
+    ds_faixa_etaria = Column("DS_FAIXA_ETARIA", String(50))
+    ds_escala      = Column("DS_ESCALA",      String(4000))
+    dt_vigencia    = Column("DT_VIGENCIA",    DateTime(timezone=True))
+    ds_situacao    = Column("DS_SITUACAO",    String(20), default="ATIVO", nullable=False)
+
+    itens = relationship("PsiItem", back_populates="protocolo")
+
+    def __repr__(self):
+        return f"<PsiProtocolo {self.ds_codigo} v{self.nr_versao}>"
+
+
+class PsiItem(Base):
+    """Item versionado de um protocolo (componente e critério integral)."""
+    __tablename__ = "FAV_TB_PSI_ITEM"
+
+    id_item       = Column("ID_ITEM",       Integer, Sequence("SEQ_PSI_ITEM"), primary_key=True)
+    id_protocolo  = Column("ID_PROTOCOLO",  Integer, ForeignKey("FAV_TB_PSI_PROTOCOLO.ID_PROTOCOLO"), nullable=False)
+    ds_codigo     = Column("DS_CODIGO",     String(20),  nullable=False)
+    ds_dominio    = Column("DS_DOMINIO",    String(100), nullable=False)
+    nr_ordem      = Column("NR_ORDEM",      Integer, nullable=False)
+    ds_componente = Column("DS_COMPONENTE", String(4000))
+    ds_criterio   = Column("DS_CRITERIO",   Text)
+
+    protocolo = relationship("PsiProtocolo", back_populates="itens")
+
+    def __repr__(self):
+        return f"<PsiItem {self.ds_codigo}>"
+
+
+class PsiAvaliacao(Base):
+    """Aplicação do protocolo. Uma reavaliação gera um novo registro."""
+    __tablename__ = "FAV_TB_PSI_AVALIACAO"
+
+    id_avaliacao            = Column("ID_AVALIACAO",             Integer, Sequence("SEQ_PSI_AVALIACAO"), primary_key=True)
+    cd_paciente             = Column("CD_PACIENTE",              String(20), nullable=False, index=True)
+    cd_atendimento          = Column("CD_ATENDIMENTO",           String(20), nullable=True)
+    id_usuario              = Column("ID_USUARIO",               Integer, ForeignKey("FAV_TB_SILA_USUARIOS.ID_USUARIO"), nullable=False, index=True)
+    cd_prestador            = Column("CD_PRESTADOR",             Integer, nullable=True)
+    dt_clinica              = Column("DT_CLINICA",               DateTime(timezone=True), nullable=False)
+    nr_idade_aplicacao      = Column("NR_IDADE_APLICACAO",       Integer, nullable=True)
+    id_protocolo            = Column("ID_PROTOCOLO",             Integer, ForeignKey("FAV_TB_PSI_PROTOCOLO.ID_PROTOCOLO"), nullable=False)
+    ds_situacao             = Column("DS_SITUACAO",              String(20), default="RASCUNHO", nullable=False)
+    ds_observacoes          = Column("DS_OBSERVACOES",           Text)
+    ds_evolucao             = Column("DS_EVOLUCAO",              Text)
+    ds_conduta              = Column("DS_CONDUTA",               Text)
+    id_pts                  = Column("ID_PTS",                   Integer, nullable=True)  # vínculo opcional
+    nr_revisao              = Column("NR_REVISAO",               Integer, default=0, nullable=False)
+    id_avaliacao_retificada = Column("ID_AVALIACAO_RETIFICADA",  Integer, nullable=True)
+    dt_finalizacao          = Column("DT_FINALIZACAO",           DateTime(timezone=True))
+    dt_cancelamento         = Column("DT_CANCELAMENTO",          DateTime(timezone=True))
+    ds_motivo_cancelamento  = Column("DS_MOTIVO_CANCELAMENTO",   String(200))
+    dt_criacao              = Column("DT_CRIACAO",               DateTime(timezone=True), server_default=func.now(), nullable=False)
+    dt_atualizacao          = Column("DT_ATUALIZACAO",           DateTime(timezone=True), onupdate=func.now())
+
+    respostas  = relationship("PsiResposta",  back_populates="avaliacao")
+    resultados = relationship("PsiResultado", back_populates="avaliacao")
+
+    def __repr__(self):
+        return f"<PsiAvaliacao {self.id_avaliacao} {self.ds_situacao}>"
+
+
+class PsiResposta(Base):
+    """Uma resposta por avaliação/item (valor 0, 1 ou 2)."""
+    __tablename__ = "FAV_TB_PSI_RESPOSTA"
+
+    id_resposta   = Column("ID_RESPOSTA",   Integer, Sequence("SEQ_PSI_RESPOSTA"), primary_key=True)
+    id_avaliacao  = Column("ID_AVALIACAO",  Integer, ForeignKey("FAV_TB_PSI_AVALIACAO.ID_AVALIACAO", ondelete="CASCADE"), nullable=False, index=True)
+    id_item       = Column("ID_ITEM",       Integer, ForeignKey("FAV_TB_PSI_ITEM.ID_ITEM"), nullable=False)
+    nr_valor      = Column("NR_VALOR",      Integer, nullable=False)
+    ds_observacao = Column("DS_OBSERVACAO", Text)
+
+    avaliacao = relationship("PsiAvaliacao", back_populates="respostas")
+
+    def __repr__(self):
+        return f"<PsiResposta item={self.id_item} valor={self.nr_valor}>"
+
+
+class PsiResultado(Base):
+    """Subtotais por domínio e total global, consolidados na finalização."""
+    __tablename__ = "FAV_TB_PSI_RESULTADO"
+
+    id_resultado = Column("ID_RESULTADO", Integer, Sequence("SEQ_PSI_RESULTADO"), primary_key=True)
+    id_avaliacao = Column("ID_AVALIACAO", Integer, ForeignKey("FAV_TB_PSI_AVALIACAO.ID_AVALIACAO", ondelete="CASCADE"), nullable=False, index=True)
+    ds_dominio   = Column("DS_DOMINIO",   String(100), nullable=False)
+    nr_subtotal  = Column("NR_SUBTOTAL",  Integer, nullable=False)
+    nr_maximo    = Column("NR_MAXIMO",    Integer, nullable=False)
+
+    avaliacao = relationship("PsiAvaliacao", back_populates="resultados")
+
+    def __repr__(self):
+        return f"<PsiResultado {self.ds_dominio} {self.nr_subtotal}/{self.nr_maximo}>"
+
+
+class PsiEvento(Base):
+    """Trilha de eventos: criação, alteração, finalização, cancelamento, retificação."""
+    __tablename__ = "FAV_TB_PSI_EVENTO"
+
+    id_evento    = Column("ID_EVENTO",    Integer, Sequence("SEQ_PSI_EVENTO"), primary_key=True)
+    id_avaliacao = Column("ID_AVALIACAO", Integer, ForeignKey("FAV_TB_PSI_AVALIACAO.ID_AVALIACAO", ondelete="CASCADE"), nullable=False, index=True)
+    id_usuario   = Column("ID_USUARIO",   Integer, ForeignKey("FAV_TB_SILA_USUARIOS.ID_USUARIO"), nullable=False)
+    ds_acao      = Column("DS_ACAO",      String(50), nullable=False)
+    dt_evento    = Column("DT_EVENTO",    DateTime(timezone=True), server_default=func.now(), nullable=False)
+    ds_motivo    = Column("DS_MOTIVO",    String(4000))
+
+    def __repr__(self):
+        return f"<PsiEvento {self.ds_acao}>"

@@ -29,7 +29,8 @@ def buscar_prestador_mv(db: Session, cd_usuario: str) -> PrestadorMVInfo | None:
             p.nm_prestador,
             c.ds_conselho,
             p.ds_codigo_conselho,
-            tp.nm_tip_presta
+            tp.nm_tip_presta,
+            p.cd_tip_presta
         FROM
             dbasgu.usuarios u
             INNER JOIN prestador       p  ON u.cd_prestador  = p.cd_prestador
@@ -47,6 +48,7 @@ def buscar_prestador_mv(db: Session, cd_usuario: str) -> PrestadorMVInfo | None:
         ds_conselho        = row.ds_conselho,
         ds_codigo_conselho = row.ds_codigo_conselho,
         nm_tip_presta      = row.nm_tip_presta,
+        cd_tip_presta      = row.cd_tip_presta,
     )
 
 
@@ -81,13 +83,15 @@ def sync_user_prestador(db: Session, user: User, prestador: PrestadorMVInfo) -> 
             user.prestador.nm_prestador != prestador.nm_prestador or
             user.prestador.ds_conselho != prestador.ds_conselho or
             user.prestador.ds_codigo_conselho != prestador.ds_codigo_conselho or
-            user.prestador.nm_tip_presta != prestador.nm_tip_presta):
+            user.prestador.nm_tip_presta != prestador.nm_tip_presta or
+            user.prestador.cd_tip_presta != prestador.cd_tip_presta):
             
             user.prestador.cd_prestador = prestador.cd_prestador
             user.prestador.nm_prestador = prestador.nm_prestador
             user.prestador.ds_conselho = prestador.ds_conselho
             user.prestador.ds_codigo_conselho = prestador.ds_codigo_conselho
             user.prestador.nm_tip_presta = prestador.nm_tip_presta
+            user.prestador.cd_tip_presta = prestador.cd_tip_presta
             
             from datetime import datetime
             user.prestador.dt_sincronizacao = datetime.now()
@@ -101,6 +105,7 @@ def sync_user_prestador(db: Session, user: User, prestador: PrestadorMVInfo) -> 
                 ds_conselho=prestador.ds_conselho,
                 ds_codigo_conselho=prestador.ds_codigo_conselho,
                 nm_tip_presta=prestador.nm_tip_presta,
+                cd_tip_presta=prestador.cd_tip_presta,
             )
         )
         has_changes = True
@@ -155,6 +160,7 @@ def create_user(db: Session, payload: UserCreate, prestador: PrestadorMVInfo | N
             ds_conselho        = prestador.ds_conselho,
             ds_codigo_conselho = prestador.ds_codigo_conselho,
             nm_tip_presta      = prestador.nm_tip_presta,
+            cd_tip_presta      = prestador.cd_tip_presta,
         )
         db.add(new_prestador)
 
