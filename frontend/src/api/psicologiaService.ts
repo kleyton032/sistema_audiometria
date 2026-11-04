@@ -32,6 +32,11 @@ export async function salvarPsiRascunho(idAvaliacao: number, payload: PsiAvaliac
   return data
 }
 
+export async function finalizarPsiAvaliacao(idAvaliacao: number, payload: PsiAvaliacaoUpdate): Promise<PsiAvaliacao> {
+  const { data } = await api.post<PsiAvaliacao>(`/psicologia/avaliacoes/${idAvaliacao}/finalizar`, payload)
+  return data
+}
+
 export interface PsiStatusBatchItem {
   avaliacao: {
     id_avaliacao: number

@@ -32,6 +32,12 @@ export interface PsiResposta {
   ds_observacao: string | null
 }
 
+export interface PsiResultado {
+  ds_dominio: string
+  nr_subtotal: number
+  nr_maximo: number
+}
+
 export type PsiSituacao = 'RASCUNHO' | 'FINALIZADO' | 'CANCELADO'
 
 export interface PsiAvaliacao {
@@ -50,6 +56,7 @@ export interface PsiAvaliacao {
   nr_revisao: number
   dt_criacao: string | null
   respostas: PsiResposta[]
+  resultados: PsiResultado[]
 }
 
 export interface PsiAvaliacaoLista {
