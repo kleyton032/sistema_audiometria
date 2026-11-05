@@ -30,6 +30,16 @@ def get_protocolo_ativo(db: Session) -> Optional[PsiProtocolo]:
     )
 
 
+def list_protocolos_ativos(db: Session) -> list[PsiProtocolo]:
+    return (
+        db.query(PsiProtocolo)
+        .options(joinedload(PsiProtocolo.itens))
+        .filter(PsiProtocolo.ds_situacao == "ATIVO")
+        .order_by(PsiProtocolo.id_protocolo.asc())
+        .all()
+    )
+
+
 def get_protocolo_por_id(db: Session, id_protocolo: int) -> Optional[PsiProtocolo]:
     return (
         db.query(PsiProtocolo)
@@ -109,10 +119,11 @@ def get_avaliacoes_status_batch(
 ) -> dict:
     """
     Retorna a avaliação mais recente do psicólogo autenticado para cada paciente
-    informado. Usado pela tela de agenda para decidir entre Iniciar/Continuar/Ver.
+    e protocolo. Usado pela tela de agenda para decidir entre Iniciar/Continuar/Ver.
     """
     rows = (
-        db.query(PsiAvaliacao)
+        db.query(PsiAvaliacao, PsiProtocolo.ds_codigo)
+        .join(PsiProtocolo, PsiProtocolo.id_protocolo == PsiAvaliacao.id_protocolo)
         .filter(
             PsiAvaliacao.cd_paciente.in_(cd_pacientes),
             PsiAvaliacao.id_usuario == id_usuario,
@@ -120,12 +131,13 @@ def get_avaliacoes_status_batch(
         .order_by(PsiAvaliacao.dt_criacao.desc(), PsiAvaliacao.id_avaliacao.desc())
         .all()
     )
-    resultado = {cd: {"avaliacao": None} for cd in cd_pacientes}
-    for r in rows:
-        if resultado[r.cd_paciente]["avaliacao"] is None:
-            resultado[r.cd_paciente]["avaliacao"] = {
-                "id_avaliacao": r.id_avaliacao,
-                "ds_situacao": r.ds_situacao,
+    resultado = {cd: {"avaliacoes": {}} for cd in cd_pacientes}
+    for avaliacao, codigo in rows:
+        slot = resultado[avaliacao.cd_paciente]["avaliacoes"]
+        if codigo not in slot:
+            slot[codigo] = {
+                "id_avaliacao": avaliacao.id_avaliacao,
+                "ds_situacao": avaliacao.ds_situacao,
             }
     return resultado
 

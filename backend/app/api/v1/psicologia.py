@@ -115,6 +115,26 @@ def protocolo_ativo(
     return _protocolo_to_out(protocolo)
 
 
+@router.get("/protocolos", response_model=list[PsiProtocoloOut])
+def protocolos_ativos(
+    db: Session = Depends(get_db),
+    user: User = Depends(require_psicologia()),
+):
+    return [_protocolo_to_out(p) for p in repo.list_protocolos_ativos(db)]
+
+
+@router.get("/protocolo/{id_protocolo}", response_model=PsiProtocoloOut)
+def obter_protocolo(
+    id_protocolo: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_psicologia()),
+):
+    protocolo = repo.get_protocolo_por_id(db, id_protocolo)
+    if not protocolo:
+        raise HTTPException(status_code=404, detail="Protocolo não encontrado.")
+    return _protocolo_to_out(protocolo)
+
+
 @router.get("/avaliacoes", response_model=PsiAvaliacaoListOut)
 def listar_avaliacoes(
     db: Session = Depends(get_db),
