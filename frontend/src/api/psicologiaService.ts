@@ -12,6 +12,16 @@ export async function getPsiProtocoloAtivo(): Promise<PsiProtocolo> {
   return data
 }
 
+export async function listarPsiProtocolos(): Promise<PsiProtocolo[]> {
+  const { data } = await api.get<PsiProtocolo[]>('/psicologia/protocolos')
+  return data
+}
+
+export async function getPsiProtocolo(idProtocolo: number): Promise<PsiProtocolo> {
+  const { data } = await api.get<PsiProtocolo>(`/psicologia/protocolo/${idProtocolo}`)
+  return data
+}
+
 export async function listarPsiAvaliacoes(): Promise<PsiAvaliacaoLista> {
   const { data } = await api.get<PsiAvaliacaoLista>('/psicologia/avaliacoes')
   return data
@@ -37,11 +47,13 @@ export async function finalizarPsiAvaliacao(idAvaliacao: number, payload: PsiAva
   return data
 }
 
+export interface PsiAvaliacaoStatus {
+  id_avaliacao: number
+  ds_situacao: string
+}
+
 export interface PsiStatusBatchItem {
-  avaliacao: {
-    id_avaliacao: number
-    ds_situacao: string
-  } | null
+  avaliacoes: { [dsCodigo: string]: PsiAvaliacaoStatus }
 }
 
 export async function getPsiAvaliacoesStatusBatch(

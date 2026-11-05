@@ -25,7 +25,7 @@ import dayjs, { type Dayjs } from 'dayjs'
 import type { ColumnsType } from 'antd/es/table'
 import { getAgendaDoPacientes, type AgendaItem } from '@/api/agendaService'
 import {
-  getPsiProtocoloAtivo,
+  listarPsiProtocolos,
   getPsiAvaliacoesStatusBatch,
   criarPsiAvaliacao,
   type PsiStatusBatchItem,
@@ -63,8 +63,8 @@ export default function PsicologiaPacientesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [psiStatus, setPsiStatus] = useState<Record<string, PsiStatusBatchItem>>({})
-  const [protocolo, setProtocolo] = useState<PsiProtocolo | null>(null)
-  const [criando, setCriando] = useState(false)
+  const [protocolos, setProtocolos] = useState<PsiProtocolo[]>([])
+  const [criandoCodigo, setCriandoCodigo] = useState<string | null>(null)
 
   const fetchAgenda = async (d: Dayjs) => {
     setLoading(true)
@@ -93,26 +93,21 @@ export default function PsicologiaPacientesPage() {
   }
 
   useEffect(() => {
-    getPsiProtocoloAtivo().then(setProtocolo).catch(() => setProtocolo(null))
+    listarPsiProtocolos().then(setProtocolos).catch(() => setProtocolos([]))
     fetchAgenda(dataRef)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const abrirAvaliacao = async (record: AgendaItem) => {
+  const abrirAvaliacao = async (record: AgendaItem, protocolo: PsiProtocolo) => {
     const status = record.cd_paciente != null ? psiStatus[String(record.cd_paciente)] : null
-    const aval = status?.avaliacao
+    const aval = status?.avaliacoes?.[protocolo.ds_codigo]
 
     if (aval) {
       navigate(`/psicologia/avaliacoes/${aval.id_avaliacao}`)
       return
     }
 
-    if (!protocolo) {
-      message.error('Protocolo PAFE indisponível. Tente novamente.')
-      return
-    }
-
-    setCriando(true)
+    setCriandoCodigo(protocolo.ds_codigo)
     try {
       const nova = await criarPsiAvaliacao({
         cd_paciente: String(record.cd_paciente),
@@ -124,7 +119,7 @@ export default function PsicologiaPacientesPage() {
     } catch (err: any) {
       message.error(err?.response?.data?.detail ?? 'Erro ao iniciar avaliação.')
     } finally {
-      setCriando(false)
+      setCriandoCodigo(null)
     }
   }
 
@@ -187,55 +182,73 @@ export default function PsicologiaPacientesPage() {
       render: (v) => situacaoTag(v),
     },
     {
-      title: 'Avaliação PAFE',
-      key: 'avaliacao',
+      title: 'Avaliações',
+      key: 'avaliacoes',
       width: 190,
       fixed: 'right',
       render: (_, record) => {
-        const status = record.cd_paciente != null ? psiStatus[String(record.cd_paciente)] : null
-        const aval = status?.avaliacao
         const semAtendimento = !record.cd_atendimento
         const nomePaciente = record.nm_paciente ?? 'paciente'
-
-        const rotulo = !aval
-          ? 'Iniciar Avaliação'
-          : aval.ds_situacao === 'RASCUNHO'
-            ? 'Continuar Avaliação'
-            : 'Ver Avaliação'
-
-        const icone = !aval
-          ? <PlusOutlined aria-hidden="true" />
-          : aval.ds_situacao === 'RASCUNHO'
-            ? <EditOutlined aria-hidden="true" />
-            : <EyeOutlined aria-hidden="true" />
+        const status = record.cd_paciente != null ? psiStatus[String(record.cd_paciente)] : null
 
         return (
           <Space direction="vertical" size={4} align="start">
-            <Tooltip title={semAtendimento ? 'Aguardando recepção (sem código de atendimento)' : undefined}>
-              <Button
-                size="small"
-                type={aval ? 'default' : 'primary'}
-                icon={icone}
-                loading={criando}
-                disabled={semAtendimento}
-                onClick={() => abrirAvaliacao(record)}
-                aria-label={
-                  semAtendimento
-                    ? `Avaliação PAFE indisponível para ${nomePaciente}: aguardando recepção`
-                    : `${rotulo} de ${nomePaciente}`
-                }
-              >
-                {rotulo}
-              </Button>
-            </Tooltip>
-            {aval && (
-              <Tag
-                color={aval.ds_situacao === 'RASCUNHO' ? 'orange' : aval.ds_situacao === 'FINALIZADO' ? 'green' : 'red'}
-                style={{ fontSize: 10, margin: 0 }}
-              >
-                {aval.ds_situacao}
-              </Tag>
-            )}
+            {protocolos.map((protocolo) => {
+              const aval = status?.avaliacoes?.[protocolo.ds_codigo]
+              const rotulo = !aval
+                ? 'Iniciar'
+                : aval.ds_situacao === 'RASCUNHO'
+                  ? 'Continuar'
+                  : 'Ver'
+
+              const icone = !aval
+                ? <PlusOutlined aria-hidden="true" />
+                : aval.ds_situacao === 'RASCUNHO'
+                  ? <EditOutlined aria-hidden="true" />
+                  : <EyeOutlined aria-hidden="true" />
+
+              return (
+                <Space key={protocolo.ds_codigo} direction="vertical" size={2} align="start">
+                  <Tooltip
+                    title={
+                      semAtendimento
+                        ? 'Aguardando recepção (sem código de atendimento)'
+                        : `${rotulo} ${protocolo.ds_codigo} de ${nomePaciente}`
+                    }
+                  >
+                    <Button
+                      size="small"
+                      type={aval ? 'default' : 'primary'}
+                      icon={icone}
+                      loading={criandoCodigo === protocolo.ds_codigo}
+                      disabled={semAtendimento}
+                      onClick={() => abrirAvaliacao(record, protocolo)}
+                      aria-label={
+                        semAtendimento
+                          ? `Avaliação ${protocolo.ds_codigo} indisponível para ${nomePaciente}: aguardando recepção`
+                          : `${rotulo} ${protocolo.ds_codigo} de ${nomePaciente}`
+                      }
+                    >
+                      {protocolo.ds_codigo}
+                    </Button>
+                  </Tooltip>
+                  {aval && (
+                    <Tag
+                      color={
+                        aval.ds_situacao === 'RASCUNHO'
+                          ? 'orange'
+                          : aval.ds_situacao === 'FINALIZADO'
+                            ? 'green'
+                            : 'red'
+                      }
+                      style={{ fontSize: 10, margin: 0 }}
+                    >
+                      {aval.ds_situacao}
+                    </Tag>
+                  )}
+                </Space>
+              )
+            })}
           </Space>
         )
       },
@@ -248,7 +261,7 @@ export default function PsicologiaPacientesPage() {
         <Space style={{ width: '100%', justifyContent: 'space-between' }} align="center" wrap>
           <div>
             <Title level={2} style={{ margin: 0 }}>Psicologia — Atendimentos</Title>
-            <Text type="secondary">Pacientes agendados/recepcionados para o protocolo PAFE</Text>
+            <Text type="secondary">Pacientes agendados/recepcionados para os protocolos PAFE e PASAC</Text>
           </div>
           <Space>
             <Text strong>Data:</Text>

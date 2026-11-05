@@ -26,7 +26,7 @@ import {
 import dayjs from 'dayjs'
 import {
   getPsiAvaliacao,
-  getPsiProtocoloAtivo,
+  getPsiProtocolo,
   salvarPsiRascunho,
   finalizarPsiAvaliacao,
 } from '@/api/psicologiaService'
@@ -34,7 +34,12 @@ import type { PsiAvaliacao, PsiProtocolo, PsiItem } from '@/types/psicologia'
 
 const { Title, Text } = Typography
 
-const ESCALA = [
+interface EscalaOpcao {
+  value: number
+  label: string
+}
+
+const ESCALA_PADRAO: EscalaOpcao[] = [
   { value: 0, label: 'Déficit evidente' },
   { value: 1, label: 'Executa com pistas ou instável' },
   { value: 2, label: 'Autônomo ou consolidado' },
@@ -58,10 +63,12 @@ interface ContagemDominio {
 }
 
 function EscalaSelector({
+  escala,
   value,
   onChange,
   disabled,
 }: {
+  escala: EscalaOpcao[]
   value: number | undefined
   onChange: (v: number | undefined) => void
   disabled?: boolean
@@ -72,7 +79,7 @@ function EscalaSelector({
       aria-label="Pontuação do item"
       style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}
     >
-      {ESCALA.map((e) => {
+      {escala.map((e) => {
         const selecionado = value === e.value
         return (
           <button
@@ -159,12 +166,14 @@ function CampoObservacao({
 function ItemAvaliacao({
   item,
   estado,
+  escala,
   readOnly,
   onValor,
   onObservacao,
 }: {
   item: PsiItem
   estado: RespostaEstado | undefined
+  escala: EscalaOpcao[]
   readOnly: boolean
   onValor: (idItem: number, valor: number | undefined) => void
   onObservacao: (idItem: number, observacao: string) => void
@@ -211,6 +220,7 @@ function ItemAvaliacao({
       )}
 
       <EscalaSelector
+        escala={escala}
         value={estado?.valor}
         onChange={(v) => onValor(item.id_item, v)}
         disabled={readOnly}
@@ -248,10 +258,8 @@ export default function AvaliacaoExecutivaPage() {
     ;(async () => {
       setLoading(true)
       try {
-        const [aval, prot] = await Promise.all([
-          getPsiAvaliacao(idAvaliacao),
-          getPsiProtocoloAtivo(),
-        ])
+        const aval = await getPsiAvaliacao(idAvaliacao)
+        const prot = await getPsiProtocolo(aval.id_protocolo)
         setAvaliacao(aval)
         setProtocolo(prot)
         const inicial: Record<number, RespostaEstado> = {}
@@ -302,6 +310,19 @@ export default function AvaliacaoExecutivaPage() {
 
     return { total, pontuados, porDominio }
   }, [protocolo, respostas])
+
+  const escala = useMemo<EscalaOpcao[]>(() => {
+    const raw = protocolo?.ds_escala
+    if (!raw) return ESCALA_PADRAO
+    const partes = raw.split(';').map((s) => s.trim()).filter(Boolean)
+    const opcoes = partes
+      .map((p) => {
+        const m = p.match(/^(\d)\s*=\s*(.+)$/)
+        return m ? { value: Number(m[1]), label: m[2].trim() } : null
+      })
+      .filter((o): o is EscalaOpcao => o !== null)
+    return opcoes.length === 3 ? opcoes : ESCALA_PADRAO
+  }, [protocolo?.ds_escala])
 
   const setValor = (idItem: number, valor: number | undefined) =>
     setRespostas((prev) => ({ ...prev, [idItem]: { ...prev[idItem], valor } }))
@@ -463,7 +484,7 @@ export default function AvaliacaoExecutivaPage() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <Text strong>Escala:</Text>
-            {ESCALA.map((e) => (
+            {escala.map((e) => (
               <Tag
                 key={e.value}
                 style={{ margin: 0, borderRadius: 16, padding: '4px 12px', fontSize: 13 }}
@@ -597,6 +618,7 @@ export default function AvaliacaoExecutivaPage() {
                       key={item.id_item}
                       item={item}
                       estado={respostas[item.id_item]}
+                      escala={escala}
                       readOnly={readOnly}
                       onValor={setValor}
                       onObservacao={setObservacao}
