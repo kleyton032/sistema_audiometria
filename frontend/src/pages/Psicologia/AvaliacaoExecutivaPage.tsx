@@ -63,7 +63,7 @@ function EscalaSelector({
   disabled,
 }: {
   value: number | undefined
-  onChange: (v: number) => void
+  onChange: (v: number | undefined) => void
   disabled?: boolean
 }) {
   return (
@@ -81,7 +81,7 @@ function EscalaSelector({
             role="radio"
             aria-checked={selecionado}
             disabled={disabled}
-            onClick={() => onChange(e.value)}
+            onClick={() => onChange(selecionado ? undefined : e.value)}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -166,7 +166,7 @@ function ItemAvaliacao({
   item: PsiItem
   estado: RespostaEstado | undefined
   readOnly: boolean
-  onValor: (idItem: number, valor: number) => void
+  onValor: (idItem: number, valor: number | undefined) => void
   onObservacao: (idItem: number, observacao: string) => void
 }) {
   const pontuado = estado?.valor !== undefined
@@ -303,7 +303,7 @@ export default function AvaliacaoExecutivaPage() {
     return { total, pontuados, porDominio }
   }, [protocolo, respostas])
 
-  const setValor = (idItem: number, valor: number) =>
+  const setValor = (idItem: number, valor: number | undefined) =>
     setRespostas((prev) => ({ ...prev, [idItem]: { ...prev[idItem], valor } }))
 
   const setObservacao = (idItem: number, observacao: string) =>
