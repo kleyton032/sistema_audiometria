@@ -16,7 +16,7 @@ sistema_audiometria/
     ├── PROXIMOS_PASSOS.md                ← Roteiro executável NOVO
     ├── queries_manutencao_acesso.sql     ← 40+ queries prontas NOVO
     │
-    └── init-scripts/
+    └── scripts-db/
         │
         ├── 01_schema_and_data.sql        (já existia)
         ├── 02_add_nr_per_freq.sql        (já existia)
@@ -129,7 +129,7 @@ sistema_audiometria/
 ---
 
 ### 3. 03_controle_acesso.sql
-**Localização:** `backend/init-scripts/`  
+**Localização:** `backend/scripts-db/migrations/`  
 **Tipo:** Script SQL Oracle  
 **Tamanho:** ~500 linhas  
 
@@ -157,7 +157,7 @@ sistema_audiometria/
 **Como executar:**
 ```sql
 -- No Oracle SQL Developer:
-@backend/init-scripts/03_controle_acesso.sql
+@backend/scripts-db/migrations/003_controle_acesso.sql
 
 -- Ou copy-paste no SQL Developer
 ```
@@ -351,7 +351,7 @@ queries_manutencao_acesso.sql
 → **RBAC_SUMARIO_EXECUTIVO.md**
 
 ### "Preciso executar o script SQL"
-→ **backend/init-scripts/03_controle_acesso.sql**
+→ **backend/scripts-db/migrations/003_controle_acesso.sql**
 
 ### "Preciso saber como atribuir perfis aos usuários"
 → **backend/PROCESSO_ATRIBUICAO_PERFIS.md**
@@ -377,8 +377,8 @@ queries_manutencao_acesso.sql
 
 ### Executar Script Completo
 ```bash
-cd backend/init-scripts
-sqlplus usuario/senha@database @03_controle_acesso.sql
+cd backend/scripts-db/migrations
+sqlplus usuario/senha@database @003_controle_acesso.sql
 ```
 
 ### Validar Criação

@@ -139,7 +139,7 @@
 
 ### Scripts SQL Prontos (2 scripts)
 
-#### 9. [04_analise_acesso_pts.sql](../backend/init-scripts/04_analise_acesso_pts.sql)
+#### 9. [005_analise_acesso_pts.sql](../backend/scripts-db/migrations/005_analise_acesso_pts.sql)
 - **Objetivo:** Analisar situação atual do sistema
 - **Conteúdo (10 QUERIES):**
   1. Listar perfis existentes
@@ -156,7 +156,7 @@
 - **Uso:** Execute uma por uma em ordem
 - **Status:** ✅ Criado e pronto
 
-#### 10. [05_templates_atualizacao_perfis.sql](../backend/init-scripts/05_templates_atualizacao_perfis.sql)
+#### 10. [007_templates_atualizacao_perfis.sql](../backend/scripts-db/migrations/007_templates_atualizacao_perfis.sql)
 - **Objetivo:** Templates prontos para atribuição de perfis
 - **Conteúdo (5 TEMPLATES + 3 EXTRAS):**
   - Template 1: Atribuir ADMIN (individual)
@@ -257,9 +257,9 @@ docs/
 ├── SUMARIO_ENTREGA.md                  (350 linhas) - Resumo visual
 └── HISTORICO_COMPLETO.md               (Este arquivo)
 
-backend/init-scripts/
-├── 04_analise_acesso_pts.sql           (300 linhas) - 10 queries
-└── 05_templates_atualizacao_perfis.sql (350 linhas) - 5 templates
+backend/scripts-db/migrations/
+├── 005_analise_acesso_pts.sql           (300 linhas) - 10 queries
+└── 007_templates_atualizacao_perfis.sql (350 linhas) - 5 templates
 ```
 
 ### Documentação Total
@@ -277,7 +277,7 @@ backend/init-scripts/
 
 ### Verificação de Estrutura
 - [x] Documentação está em locais corretos
-- [x] Scripts SQL estão em backend/init-scripts
+- [x] Scripts SQL estão em backend/scripts-db
 - [x] Índice de navegação está completo
 - [x] Todos os links internos funcionam
 - [x] Exemplos SQL são sintaticamente válidos

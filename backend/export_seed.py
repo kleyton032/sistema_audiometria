@@ -27,9 +27,9 @@ def export_seed_data():
         "DBASGU.USUARIOS", # Assuming testesoul is here or similar
     ]
 
-    os.makedirs("init-scripts", exist_ok=True)
+    os.makedirs(os.path.join("scripts-db", "migrations"), exist_ok=True)
     
-    with open("init-scripts/01_schema_and_data.sql", "w", encoding="utf-8") as f:
+    with open(os.path.join("scripts-db", "migrations", "001_schema_and_data.sql"), "w", encoding="utf-8") as f:
         # Create Tables DDL (Simplified, just what PTS needs)
         f.write("-- DDL para tabelas base (Simplificado para testes)\\n")
         f.write("CREATE TABLE TB_FAV_DIAGNOSTICO_CERIV (id_especialidade NUMBER, ds_diagnostico VARCHAR2(255));\\n")
@@ -105,7 +105,7 @@ def export_seed_data():
                     print(f"Erro ao exportar {table}: {e}")
 
         f.write("COMMIT;\\n")
-        print("Exportação concluída! O script init-scripts/01_schema_and_data.sql foi gerado.")
+        print("Exportação concluída! O script scripts-db/migrations/001_schema_and_data.sql foi gerado.")
 
 if __name__ == "__main__":
     export_seed_data()

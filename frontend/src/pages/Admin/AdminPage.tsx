@@ -589,7 +589,7 @@ function ProfilesTab() {
         <Alert
           type="info"
           message="Tabela de permissões vazia ou não encontrada."
-          description="Execute o script backend/init-scripts/03_controle_acesso.sql para criar e popular as tabelas de controle de acesso."
+          description="Execute o script backend/scripts-db/migrations/003_controle_acesso.sql para criar e popular as tabelas de controle de acesso."
           showIcon
         />
       )}
@@ -748,7 +748,7 @@ function AuditTab() {
         <Alert
           type="info"
           message="Nenhum log de auditoria encontrado."
-          description="A tabela FAV_TB_LOG_AUDITORIA pode não existir ainda. Execute o script backend/init-scripts/10_tabelas_auditoria_logs.sql para criá-la."
+          description="A tabela FAV_TB_LOG_AUDITORIA pode não existir ainda. Execute o script backend/scripts-db/migrations/10_tabelas_auditoria_logs.sql para criá-la."
           showIcon
           style={{ marginBottom: 16 }}
         />
@@ -933,7 +933,7 @@ function SystemLogsTab() {
         <Alert
           type="info"
           message="Nenhum log do sistema encontrado."
-          description="A tabela FAV_TB_LOG_SISTEMA pode não existir ainda. Execute o script backend/init-scripts/10_tabelas_auditoria_logs.sql para criá-la."
+          description="A tabela FAV_TB_LOG_SISTEMA pode não existir ainda. Execute o script backend/scripts-db/migrations/10_tabelas_auditoria_logs.sql para criá-la."
           showIcon
           style={{ marginBottom: 16 }}
         />
