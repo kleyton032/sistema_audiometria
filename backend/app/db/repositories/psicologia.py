@@ -2,6 +2,7 @@
 from datetime import datetime
 from typing import Optional, Sequence
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from app.db.models import (
@@ -119,25 +120,41 @@ def get_avaliacoes_status_batch(
 ) -> dict:
     """
     Retorna a avaliação mais recente do psicólogo autenticado para cada paciente
-    e protocolo. Usado pela tela de agenda para decidir entre Iniciar/Continuar/Ver.
+    e protocolo, indicando se o rascunho possui ao menos uma resposta pontuada.
     """
     rows = (
-        db.query(PsiAvaliacao, PsiProtocolo.ds_codigo)
+        db.query(
+            PsiAvaliacao.id_avaliacao,
+            PsiAvaliacao.cd_paciente,
+            PsiAvaliacao.ds_situacao,
+            PsiAvaliacao.dt_criacao,
+            PsiProtocolo.ds_codigo,
+            func.count(PsiResposta.id_resposta).label("nr_respostas"),
+        )
         .join(PsiProtocolo, PsiProtocolo.id_protocolo == PsiAvaliacao.id_protocolo)
+        .outerjoin(PsiResposta, PsiResposta.id_avaliacao == PsiAvaliacao.id_avaliacao)
         .filter(
             PsiAvaliacao.cd_paciente.in_(cd_pacientes),
             PsiAvaliacao.id_usuario == id_usuario,
+        )
+        .group_by(
+            PsiAvaliacao.id_avaliacao,
+            PsiAvaliacao.cd_paciente,
+            PsiAvaliacao.ds_situacao,
+            PsiAvaliacao.dt_criacao,
+            PsiProtocolo.ds_codigo,
         )
         .order_by(PsiAvaliacao.dt_criacao.desc(), PsiAvaliacao.id_avaliacao.desc())
         .all()
     )
     resultado = {cd: {"avaliacoes": {}} for cd in cd_pacientes}
-    for avaliacao, codigo in rows:
-        slot = resultado[avaliacao.cd_paciente]["avaliacoes"]
-        if codigo not in slot:
-            slot[codigo] = {
-                "id_avaliacao": avaliacao.id_avaliacao,
-                "ds_situacao": avaliacao.ds_situacao,
+    for row in rows:
+        slot = resultado[row.cd_paciente]["avaliacoes"]
+        if row.ds_codigo not in slot:
+            slot[row.ds_codigo] = {
+                "id_avaliacao": row.id_avaliacao,
+                "ds_situacao": row.ds_situacao,
+                "tem_respostas": row.nr_respostas > 0,
             }
     return resultado
 
