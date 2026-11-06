@@ -50,6 +50,7 @@ export async function finalizarPsiAvaliacao(idAvaliacao: number, payload: PsiAva
 export interface PsiAvaliacaoStatus {
   id_avaliacao: number
   ds_situacao: string
+  tem_respostas: boolean
 }
 
 export interface PsiStatusBatchItem {
