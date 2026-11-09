@@ -33,7 +33,7 @@ import type { PsiProtocolo } from '@/types/psicologia'
 type FiltroSituacao = 'todos' | 'aguardando' | 'atendido' | 'nao_recepcionado'
 type OrdenacaoCampo = 'cd_atendimento' | 'hr_agenda'
 
-const GRID = '110px 90px 1fr 220px 190px 330px'
+const GRID = '110px 90px 1fr 200px 170px minmax(320px, 480px)'
 const PAGE_SIZE = 6
 
 function PillSituacao({ record }: { record: AgendaItem }) {
@@ -308,7 +308,7 @@ export default function PsicologiaPacientesPage() {
             Psicologia — Atendimentos
           </span>
           <span style={{ fontSize: 16, color: '#44525e' }}>
-            Pacientes agendados ou recepcionados para os protocolos PAFE e PASAC.
+            Pacientes agendados ou recepcionados para os protocolos PAFE, PASAC e PAHB.
           </span>
         </div>
 

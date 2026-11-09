@@ -1,5 +1,5 @@
 // ============================
-// Types — Psicologia (PAFE)
+// Types — Psicologia (PAFE, PASAC, PAHB)
 // ============================
 
 export interface PsiItem {

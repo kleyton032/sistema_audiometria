@@ -659,14 +659,33 @@ export default function AvaliacaoExecutivaPage() {
                   dominio,
                   pontuados: `${c?.pontuados ?? 0} de ${c?.total ?? 0}`,
                   pontos:
-                    c && c.pontuados > 0 ? `${c.subtotal} pontos` : 'Sem pontuação',
+                    c && c.pontuados > 0
+                      ? `${c.subtotal} / ${c.maximo} pts`
+                      : `0 / ${c?.maximo ?? 0} pts`,
                 }
               })}
               columns={[
-                { title: 'Domínio', dataIndex: 'dominio' },
+                { title: 'Área / Domínio', dataIndex: 'dominio' },
                 { title: 'Itens pontuados', dataIndex: 'pontuados', width: 180 },
-                { title: 'Pontos parciais', dataIndex: 'pontos', width: 180 },
+                { title: 'Pontuação', dataIndex: 'pontos', width: 180 },
               ]}
+              summary={() => {
+                const totalObtido = Object.values(contagem.porDominio).reduce((acc, c) => acc + c.subtotal, 0)
+                const totalMaximo = Object.values(contagem.porDominio).reduce((acc, c) => acc + c.maximo, 0)
+                return (
+                  <Table.Summary fixed>
+                    <Table.Summary.Row style={{ background: '#f5f7fa', fontWeight: 700 }}>
+                      <Table.Summary.Cell index={0}>SCORE GLOBAL</Table.Summary.Cell>
+                      <Table.Summary.Cell index={1}>
+                        {contagem.pontuados} de {contagem.total} itens
+                      </Table.Summary.Cell>
+                      <Table.Summary.Cell index={2}>
+                        {totalObtido} / {totalMaximo} pts
+                      </Table.Summary.Cell>
+                    </Table.Summary.Row>
+                  </Table.Summary>
+                )
+              }}
               pagination={false}
               size="small"
             />
