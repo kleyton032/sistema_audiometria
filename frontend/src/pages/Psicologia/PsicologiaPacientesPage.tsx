@@ -33,21 +33,25 @@ import type { PsiProtocolo } from '@/types/psicologia'
 type FiltroSituacao = 'todos' | 'aguardando' | 'atendido' | 'nao_recepcionado'
 type OrdenacaoCampo = 'cd_atendimento' | 'hr_agenda'
 
-const GRID = '110px 90px 1fr 200px 170px minmax(320px, 480px)'
+const GRID =
+  'minmax(86px, 0.65fr) minmax(66px, 0.5fr) minmax(170px, 1.8fr) minmax(120px, 1.15fr) minmax(115px, 0.85fr) minmax(290px, 2.2fr)'
 const PAGE_SIZE = 6
 
 function PillSituacao({ record }: { record: AgendaItem }) {
   const base: CSSProperties = {
-    display: 'flex',
+    display: 'inline-flex',
     alignItems: 'center',
+    justifySelf: 'start',
+    alignSelf: 'center',
     gap: 6,
-    minHeight: 32,
-    padding: '0 12px',
+    minHeight: 30,
+    padding: '2px 10px',
     borderRadius: 9999,
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: 700,
     color: '#14212b',
     width: 'fit-content',
+    whiteSpace: 'nowrap',
   }
 
   if (!record.cd_atendimento) {
@@ -60,13 +64,13 @@ function PillSituacao({ record }: { record: AgendaItem }) {
 
   const tp = (record.tp_situacao ?? '').toUpperCase()
   const map: Record<string, { label: string; bg: string; border?: string; icon?: ReactNode }> = {
-    E: { label: 'Atendido', bg: '#e4f3e9', icon: <CheckCircleOutlined style={{ color: '#1b6b3a' }} /> },
-    A: { label: 'Aguardando', bg: '#f3f5f7', border: '1px solid #6e7c89', icon: <ClockCircleOutlined /> },
-    M: { label: 'Marcado', bg: '#eaf2fb', border: '1px solid #6e7c89', icon: <ClockCircleOutlined style={{ color: '#5568d3' }} /> },
+    E: { label: 'Atendido', bg: '#e4f3e9', icon: <CheckCircleOutlined style={{ fontSize: 14, color: '#1b6b3a' }} /> },
+    A: { label: 'Aguardando', bg: '#f3f5f7', border: '1px solid #6e7c89', icon: <ClockCircleOutlined style={{ fontSize: 14 }} /> },
+    M: { label: 'Marcado', bg: '#eaf2fb', border: '1px solid #6e7c89', icon: <ClockCircleOutlined style={{ fontSize: 14, color: '#5568d3' }} /> },
     L: { label: 'Livre', bg: '#f3f5f7', border: '1px solid #6e7c89' },
-    F: { label: 'Falta', bg: '#fbe9e7', icon: <CloseCircleOutlined style={{ color: '#b3261e' }} /> },
-    C: { label: 'Cancelado', bg: '#fbe9e7', icon: <CloseCircleOutlined style={{ color: '#b3261e' }} /> },
-    R: { label: 'Em Atendimento', bg: '#eaf2fb', icon: <ClockCircleOutlined style={{ color: '#764ba2' }} /> },
+    F: { label: 'Falta', bg: '#fbe9e7', icon: <CloseCircleOutlined style={{ fontSize: 14, color: '#b3261e' }} /> },
+    C: { label: 'Cancelado', bg: '#fbe9e7', icon: <CloseCircleOutlined style={{ fontSize: 14, color: '#b3261e' }} /> },
+    R: { label: 'Em Atendimento', bg: '#eaf2fb', icon: <ClockCircleOutlined style={{ fontSize: 14, color: '#764ba2' }} /> },
   }
   const info = map[tp] ?? { label: tp || '—', bg: '#f3f5f7', border: '1px solid #6e7c89' }
 
@@ -156,7 +160,8 @@ export default function PsicologiaPacientesPage() {
       const atendeBusca =
         !termo ||
         (item.nm_paciente ?? '').toLowerCase().includes(termo) ||
-        String(item.cd_atendimento ?? '').includes(termo)
+        String(item.cd_atendimento ?? '').includes(termo) ||
+        String(item.cd_paciente ?? '').includes(termo)
 
       if (!atendeBusca) return false
       if (filtro === 'aguardando') return (item.tp_situacao ?? '').toUpperCase() === 'A'
@@ -210,7 +215,7 @@ export default function PsicologiaPacientesPage() {
   const setaOrdenacao = (campo: OrdenacaoCampo) => (
     <SwapOutlined
       rotate={ordenacao && ordenacao.campo === campo && ordenacao.dir === -1 ? 180 : 0}
-      style={{ fontSize: 16, color: '#5568d3' }}
+      style={{ fontSize: 14, color: '#5568d3' }}
     />
   )
 
@@ -246,13 +251,13 @@ export default function PsicologiaPacientesPage() {
             disabled={semAtendimento || carregando}
             onClick={() => abrirAvaliacao(record, protocolo)}
             style={{
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
-              gap: 8,
-              minHeight: 44,
-              padding: '0 16px',
+              gap: 6,
+              minHeight: 38,
+              padding: '0 12px',
               borderRadius: 6,
-              fontSize: 16,
+              fontSize: 14,
               fontWeight: 700,
               cursor: semAtendimento ? 'not-allowed' : 'pointer',
               background: semAtendimento ? '#f3f5f7' : ehIniciar ? '#5568d3' : '#ffffff',
@@ -260,9 +265,10 @@ export default function PsicologiaPacientesPage() {
               border: semAtendimento ? '1px dashed #6e7c89' : ehIniciar ? 'none' : '1px solid #6e7c89',
               opacity: carregando ? 0.6 : 1,
               fontFamily: 'inherit',
+              whiteSpace: 'nowrap',
             }}
           >
-            <span style={{ display: 'flex', fontSize: 18 }}>{icone}</span>
+            <span style={{ display: 'flex', fontSize: 15 }}>{icone}</span>
             <span>{carregando ? 'Abrindo…' : `${rotulo} ${protocolo.ds_codigo}`}</span>
           </button>
         </Tooltip>
@@ -271,12 +277,12 @@ export default function PsicologiaPacientesPage() {
   }
 
   const renderAvaliacoes = (record: AgendaItem) => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
         {protocolos.map((p) => botaoAvaliacao(record, p))}
       </div>
       {!record.cd_atendimento && (
-        <span style={{ fontSize: 14, color: '#44525e' }}>
+        <span style={{ fontSize: 12, color: '#44525e', lineHeight: 1.3 }}>
           Disponível após a recepção do paciente
         </span>
       )}
@@ -284,37 +290,62 @@ export default function PsicologiaPacientesPage() {
   )
 
   const celulaHeader: CSSProperties = {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 700,
     color: '#14212b',
+    whiteSpace: 'nowrap',
   }
 
   const celulaLinha: CSSProperties = {
     display: 'grid',
-    minHeight: 84,
+    minHeight: 74,
     alignItems: 'center',
     gridTemplateColumns: GRID,
-    gap: 16,
-    padding: '14px 24px',
+    gap: 12,
+    padding: '12px 16px',
     borderBottom: '1px solid #d5dce3',
   }
 
   return (
-    <div style={{ padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Cabeçalho: título + data de referência */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 16 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span style={{ fontSize: 32, fontWeight: 700, color: '#14212b', lineHeight: 1.2 }}>
-            Psicologia — Atendimentos
-          </span>
-          <span style={{ fontSize: 16, color: '#44525e' }}>
-            Pacientes agendados ou recepcionados para os protocolos PAFE, PASAC e PAHB.
-          </span>
-        </div>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 16,
+        color: '#14212b',
+        fontFamily: '"Atkinson Hyperlegible", Inter, sans-serif',
+      }}
+    >
+      {/* Cabeçalho da página */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <span style={{ fontSize: 28, fontWeight: 700, color: '#14212b', lineHeight: 1.2 }}>
+          Psicologia — Atendimentos
+        </span>
+        <span style={{ fontSize: 15, color: '#44525e', lineHeight: 1.5 }}>
+          Pacientes agendados ou recepcionados para os protocolos PAFE, PASAC e PAHB.
+        </span>
+      </div>
 
+      {/* Barra de controles: Data de referência + Busca + Botão Pesquisar */}
+      <div
+        role="region"
+        aria-label="Filtros de data e busca de pacientes"
+        style={{
+          display: 'flex',
+          alignItems: 'flex-end',
+          flexWrap: 'wrap',
+          gap: 16,
+          padding: 16,
+          backgroundColor: '#ffffff',
+          border: '1px solid #d5dce3',
+          borderRadius: 8,
+        }}
+      >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span style={{ fontSize: 16, fontWeight: 700, color: '#14212b' }}>Data de referência</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: '#14212b', lineHeight: 1.4 }}>
+            Data de referência
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <button
               type="button"
               aria-label="Dia anterior"
@@ -324,8 +355,8 @@ export default function PsicologiaPacientesPage() {
                 fetchAgenda(d)
               }}
               style={{
-                width: 44,
-                height: 44,
+                width: 40,
+                height: 40,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -338,12 +369,17 @@ export default function PsicologiaPacientesPage() {
             >
               <LeftOutlined />
             </button>
+
             <DatePicker
               value={dataRef}
               allowClear={false}
               format="DD/MM/YYYY"
-              size="large"
-              style={{ width: 180, borderRadius: 6 }}
+              style={{
+                width: 155,
+                height: 40,
+                borderRadius: 6,
+                borderColor: '#6e7c89',
+              }}
               onChange={(d) => {
                 if (d) {
                   setDataRef(d)
@@ -352,6 +388,7 @@ export default function PsicologiaPacientesPage() {
               }}
               aria-label="Data de referência da agenda"
             />
+
             <button
               type="button"
               aria-label="Próximo dia"
@@ -361,8 +398,8 @@ export default function PsicologiaPacientesPage() {
                 fetchAgenda(d)
               }}
               style={{
-                width: 44,
-                height: 44,
+                width: 40,
+                height: 40,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -375,6 +412,7 @@ export default function PsicologiaPacientesPage() {
             >
               <RightOutlined />
             </button>
+
             <button
               type="button"
               onClick={() => {
@@ -383,60 +421,92 @@ export default function PsicologiaPacientesPage() {
                 fetchAgenda(hoje)
               }}
               style={{
-                minHeight: 44,
-                padding: '0 16px',
+                height: 40,
+                padding: '0 14px',
                 display: 'flex',
                 alignItems: 'center',
                 background: '#fff',
                 border: '1px solid #6e7c89',
                 borderRadius: 6,
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: 700,
                 color: '#14212b',
                 cursor: 'pointer',
+                fontFamily: 'inherit',
               }}
             >
               Hoje
             </button>
           </div>
         </div>
-      </div>
 
-      {/* Busca + filtros + contagem */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            width: 460,
-            minHeight: 48,
-            padding: '0 14px',
-            background: '#fff',
-            border: '1px solid #6e7c89',
-            borderRadius: 6,
-          }}
-        >
-          <SearchOutlined style={{ fontSize: 20, color: '#44525e' }} />
-          <input
-            value={busca}
-            onChange={(e) => {
-              setBusca(e.target.value)
-              setPagina(0)
-            }}
-            placeholder="Buscar por nome ou nº do atendimento"
-            aria-label="Buscar por nome ou nº do atendimento"
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: '1 1 220px', minWidth: 200 }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: '#14212b', lineHeight: 1.4 }}>
+            Buscar paciente
+          </span>
+          <div
             style={{
-              flex: 1,
-              border: 'none',
-              outline: 'none',
-              fontSize: 16,
-              color: '#14212b',
-              background: 'transparent',
+              display: 'flex',
+              height: 40,
+              alignItems: 'center',
+              gap: 8,
+              padding: '0 12px',
+              background: '#fff',
+              border: '1px solid #6e7c89',
+              borderRadius: 6,
             }}
-          />
+          >
+            <SearchOutlined style={{ fontSize: 18, color: '#44525e' }} />
+            <input
+              value={busca}
+              onChange={(e) => {
+                setBusca(e.target.value)
+                setPagina(0)
+              }}
+              placeholder="Nome do paciente ou nº do atendimento"
+              aria-label="Buscar por nome ou nº do atendimento"
+              style={{
+                flex: 1,
+                minWidth: 0,
+                border: 'none',
+                outline: 'none',
+                fontSize: 14,
+                color: '#14212b',
+                background: 'transparent',
+                fontFamily: 'inherit',
+              }}
+            />
+          </div>
         </div>
 
+        <button
+          type="button"
+          onClick={() => fetchAgenda(dataRef)}
+          disabled={loading}
+          aria-label="Pesquisar pacientes pela data de referência selecionada"
+          style={{
+            height: 40,
+            padding: '0 20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#5568d3',
+            border: 'none',
+            borderRadius: 6,
+            color: '#ffffff',
+            fontSize: 14,
+            fontWeight: 700,
+            cursor: loading ? 'not-allowed' : 'pointer',
+            opacity: loading ? 0.7 : 1,
+            fontFamily: 'inherit',
+          }}
+        >
+          Pesquisar
+        </button>
+      </div>
+
+      {/* Filtros + contagem */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           {filtros.map((f) => {
             const ativo = filtro === f.key
@@ -452,16 +522,18 @@ export default function PsicologiaPacientesPage() {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 8,
-                  minHeight: 44,
-                  padding: '0 16px',
+                  gap: 6,
+                  minHeight: 38,
+                  padding: '0 14px',
                   borderRadius: 9999,
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: 700,
                   cursor: 'pointer',
                   background: ativo ? '#5568d3' : '#fff',
                   color: ativo ? '#fff' : '#14212b',
                   border: ativo ? 'none' : '1px solid #6e7c89',
+                  fontFamily: 'inherit',
+                  whiteSpace: 'nowrap',
                 }}
               >
                 {ativo && <CheckCircleOutlined />}
@@ -472,8 +544,8 @@ export default function PsicologiaPacientesPage() {
           })}
         </div>
 
-        <span style={{ fontSize: 16, color: '#44525e' }}>
-          {dadosProcessados.length} pacientes em {dataRef.format('DD/MM/YYYY')}
+        <span style={{ fontSize: 14, color: '#44525e', whiteSpace: 'nowrap' }}>
+          {dadosProcessados.length} paciente{dadosProcessados.length !== 1 ? 's' : ''} em {dataRef.format('DD/MM/YYYY')}
         </span>
       </div>
 
@@ -486,7 +558,7 @@ export default function PsicologiaPacientesPage() {
         />
       )}
 
-      {/* Tabela */}
+      {/* Tabela em Grid com adaptação responsiva */}
       <Spin spinning={loading}>
         <div
           style={{
@@ -498,110 +570,162 @@ export default function PsicologiaPacientesPage() {
             overflow: 'hidden',
           }}
         >
-          {/* Cabeçalho da tabela */}
-          <div
-            style={{
-              display: 'grid',
-              minHeight: 56,
-              alignItems: 'center',
-              gridTemplateColumns: GRID,
-              gap: 16,
-              padding: '0 24px',
-              background: '#eceffb',
-              borderBottom: '2px solid #d5dce3',
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => alternarOrdenacao('cd_atendimento')}
-              style={{ ...celulaHeader, display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
-            >
-              <span>Atendimento</span>
-              {setaOrdenacao('cd_atendimento')}
-            </button>
-            <button
-              type="button"
-              onClick={() => alternarOrdenacao('hr_agenda')}
-              style={{ ...celulaHeader, display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
-            >
-              <span>Horário</span>
-              {setaOrdenacao('hr_agenda')}
-            </button>
-            <span style={celulaHeader}>Paciente</span>
-            <span style={celulaHeader}>Procedimento</span>
-            <span style={celulaHeader}>Situação</span>
-            <span style={celulaHeader}>Avaliações</span>
-          </div>
-
-          {/* Linhas */}
-          {paginaItens.length === 0 ? (
-            <div style={{ padding: 40, textAlign: 'center', color: '#44525e' }}>
-              Nenhum paciente agendado para {dataRef.format('DD/MM/YYYY')}.
-            </div>
-          ) : (
-            paginaItens.map((r) => (
+          <div style={{ overflowX: 'auto', width: '100%' }}>
+            <div style={{ minWidth: 850 }}>
+              {/* Cabeçalho da tabela */}
               <div
-                key={`${r.cd_atendimento ?? 'atend'}_${r.cd_agenda_central ?? 'ag'}_${r.cd_paciente ?? 'pac'}_${r.hr_agenda ?? ''}`}
-                style={celulaLinha}
+                style={{
+                  display: 'grid',
+                  minHeight: 50,
+                  alignItems: 'center',
+                  gridTemplateColumns: GRID,
+                  gap: 12,
+                  padding: '0 16px',
+                  background: '#eceffb',
+                  borderBottom: '2px solid #d5dce3',
+                }}
               >
-                <span style={{ fontSize: 16, fontWeight: 700, color: '#14212b' }}>
-                  {r.cd_atendimento ?? 'Sem nº'}
-                </span>
-                <span style={{ fontSize: 16, fontWeight: 700, color: '#14212b' }}>{r.hr_agenda ?? '—'}</span>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: 17, fontWeight: 700, color: '#14212b' }}>{r.nm_paciente ?? '—'}</span>
-                  <span style={{ fontSize: 14, color: '#44525e' }}>Cód. {r.cd_paciente ?? '—'}</span>
-                </div>
-                <span style={{ fontSize: 16, color: '#14212b' }}>{r.ds_item_agendamento ?? '—'}</span>
-                <PillSituacao record={r} />
-                {renderAvaliacoes(r)}
+                <button
+                  type="button"
+                  onClick={() => alternarOrdenacao('cd_atendimento')}
+                  style={{
+                    ...celulaHeader,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: 0,
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  <span>Atendimento</span>
+                  {setaOrdenacao('cd_atendimento')}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => alternarOrdenacao('hr_agenda')}
+                  style={{
+                    ...celulaHeader,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: 0,
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  <span>Horário</span>
+                  {setaOrdenacao('hr_agenda')}
+                </button>
+
+                <span style={celulaHeader}>Paciente</span>
+                <span style={celulaHeader}>Procedimento</span>
+                <span style={celulaHeader}>Situação</span>
+                <span style={celulaHeader}>Avaliações</span>
               </div>
-            ))
-          )}
+
+              {/* Linhas */}
+              {paginaItens.length === 0 ? (
+                <div style={{ padding: 40, textAlign: 'center', color: '#44525e', fontSize: 15 }}>
+                  Nenhum paciente agendado para {dataRef.format('DD/MM/YYYY')}.
+                </div>
+              ) : (
+                paginaItens.map((r) => (
+                  <div
+                    key={`${r.cd_atendimento ?? 'atend'}_${r.cd_agenda_central ?? 'ag'}_${r.cd_paciente ?? 'pac'}_${r.hr_agenda ?? ''}`}
+                    style={celulaLinha}
+                  >
+                    <span style={{ fontSize: 15, fontWeight: 700, color: '#14212b' }}>
+                      {r.cd_atendimento ?? 'Sem nº'}
+                    </span>
+
+                    <span style={{ fontSize: 15, fontWeight: 700, color: '#14212b' }}>
+                      {r.hr_agenda ?? '—'}
+                    </span>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                      <span
+                        style={{
+                          fontSize: 15,
+                          fontWeight: 700,
+                          color: '#14212b',
+                          lineHeight: 1.35,
+                          wordBreak: 'break-word',
+                        }}
+                      >
+                        {r.nm_paciente ?? '—'}
+                      </span>
+                      <span style={{ fontSize: 13, color: '#44525e' }}>
+                        Cód. {r.cd_paciente ?? '—'}
+                      </span>
+                    </div>
+
+                    <span style={{ fontSize: 14, color: '#14212b', lineHeight: 1.35, minWidth: 0 }}>
+                      {r.ds_item_agendamento ?? '—'}
+                    </span>
+
+                    <PillSituacao record={r} />
+
+                    {renderAvaliacoes(r)}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
 
           {/* Rodapé */}
           <div
             style={{
               display: 'flex',
-              minHeight: 64,
+              minHeight: 56,
               justifyContent: 'space-between',
               alignItems: 'center',
-              padding: '0 24px',
+              padding: '8px 16px',
+              flexWrap: 'wrap',
+              gap: 12,
             }}
           >
-            <span style={{ fontSize: 16, color: '#44525e' }}>
+            <span style={{ fontSize: 14, color: '#44525e' }}>
               Mostrando {inicioIntervalo} a {fimIntervalo} de {dadosProcessados.length} pacientes
             </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
               <button
                 type="button"
                 disabled={paginaSegura === 0}
                 onClick={() => setPagina((p) => Math.max(0, p - 1))}
                 style={{
-                  minHeight: 44,
-                  padding: '0 16px',
+                  minHeight: 38,
+                  padding: '0 14px',
                   display: 'flex',
                   alignItems: 'center',
                   background: '#fff',
                   border: '1px solid #6e7c89',
                   borderRadius: 6,
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: 700,
                   color: '#14212b',
                   cursor: paginaSegura === 0 ? 'not-allowed' : 'pointer',
                   opacity: paginaSegura === 0 ? 0.5 : 1,
+                  fontFamily: 'inherit',
                 }}
               >
                 Anterior
               </button>
+
               {Array.from({ length: totalPaginas }, (_, i) => (
                 <button
                   key={i}
                   type="button"
                   onClick={() => setPagina(i)}
                   style={{
-                    width: 44,
-                    height: 44,
+                    width: 38,
+                    height: 38,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -609,31 +733,34 @@ export default function PsicologiaPacientesPage() {
                     color: i === paginaSegura ? '#fff' : '#14212b',
                     border: i === paginaSegura ? 'none' : '1px solid #6e7c89',
                     borderRadius: 6,
-                    fontSize: 16,
+                    fontSize: 14,
                     fontWeight: 700,
                     cursor: 'pointer',
+                    fontFamily: 'inherit',
                   }}
                 >
                   {i + 1}
                 </button>
               ))}
+
               <button
                 type="button"
                 disabled={paginaSegura >= totalPaginas - 1}
                 onClick={() => setPagina((p) => Math.min(totalPaginas - 1, p + 1))}
                 style={{
-                  minHeight: 44,
-                  padding: '0 16px',
+                  minHeight: 38,
+                  padding: '0 14px',
                   display: 'flex',
                   alignItems: 'center',
                   background: '#fff',
                   border: '1px solid #6e7c89',
                   borderRadius: 6,
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: 700,
                   color: '#14212b',
                   cursor: paginaSegura >= totalPaginas - 1 ? 'not-allowed' : 'pointer',
                   opacity: paginaSegura >= totalPaginas - 1 ? 0.5 : 1,
+                  fontFamily: 'inherit',
                 }}
               >
                 Próxima
@@ -644,9 +771,9 @@ export default function PsicologiaPacientesPage() {
       </Spin>
 
       {/* Banner informativo */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 14, background: '#eceffb', borderRadius: 6 }}>
-        <InfoCircleOutlined style={{ fontSize: 22, color: '#5568d3', flexShrink: 0 }} />
-        <span style={{ fontSize: 16, color: '#14212b' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 12, background: '#eceffb', borderRadius: 6 }}>
+        <InfoCircleOutlined style={{ fontSize: 20, color: '#5568d3', flexShrink: 0 }} />
+        <span style={{ fontSize: 14, color: '#14212b' }}>
           As avaliações só ficam disponíveis depois que o paciente é recepcionado.
         </span>
       </div>
