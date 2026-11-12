@@ -482,6 +482,7 @@ class PsiProtocolo(Base):
     ds_escala      = Column("DS_ESCALA",      String(4000))
     dt_vigencia    = Column("DT_VIGENCIA",    DateTime(timezone=True))
     ds_situacao    = Column("DS_SITUACAO",    String(20), default="ATIVO", nullable=False)
+    ds_modulo      = Column("DS_MODULO",      String(60), default="PSICOLOGIA", nullable=False)
 
     itens = relationship("PsiItem", back_populates="protocolo")
 

@@ -24,6 +24,7 @@ const ROUTE_NAMES: Record<string, string> = {
   '/pts/dashboard':  'Dashboard PTS',
   '/pts':            'Projeto Terapêutico Singular',
   '/psicologia':     'Psicologia',
+  '/psicopedagogia': 'Psicopedagogia',
   '/admin':          'Painel Administrativo',
 }
 
@@ -106,7 +107,7 @@ export default function AppLayout() {
   const [profileVisible, setProfileVisible] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
-  const { logout, usuario, isAdmin, isSupervisor, isCoordenador, isOperador, isConsulta, isPsicologo } = useAuth()
+  const { logout, usuario, isAdmin, isSupervisor, isCoordenador, isOperador, isConsulta, isPsicologo, isPsicopedagogo } = useAuth()
   const { token: themeToken } = theme.useToken()
 
   // A tela do PTS é full-bleed (barra gradiente + índice lateral), então o
@@ -122,6 +123,7 @@ export default function AppLayout() {
     FONOAUDIOLOGO: !!isFonoaudiologo,
     OPERADOR: !!isOperador,
     PSICOLOGO: !!isPsicologo,
+    PSICOPEDAGOGO: !!isPsicopedagogo,
   }
 
   const handleLogout = () => {

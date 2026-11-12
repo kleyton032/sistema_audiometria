@@ -5,7 +5,12 @@ from sqlalchemy.exc import IntegrityError
 
 from app.schemas.user import UserResponse
 from app.db.repositories.user import get_by_id
-from app.dependencies import get_db, get_current_user, pode_acessar_psicologia
+from app.dependencies import (
+    get_db,
+    get_current_user,
+    pode_acessar_psicologia,
+    pode_acessar_psicopedagogia,
+)
 from app.db.models import User
 
 router = APIRouter(prefix="/users", tags=["Usuários"])
@@ -29,6 +34,7 @@ def _user_to_response(user: User) -> UserResponse:
         nm_tip_presta      = p.nm_tip_presta      if p else None,
         cd_tip_presta      = p.cd_tip_presta      if p else None,
         pode_acessar_psicologia = pode_acessar_psicologia(user),
+        pode_acessar_psicopedagogia = pode_acessar_psicopedagogia(user),
         nr_conselho        = user.nr_conselho,
         ds_especialidade   = user.ds_especialidade,
     )

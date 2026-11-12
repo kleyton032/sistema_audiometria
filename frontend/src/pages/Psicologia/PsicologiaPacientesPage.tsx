@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   App,
@@ -26,12 +26,32 @@ import {
   listarPsiProtocolos,
   getPsiAvaliacoesStatusBatch,
   criarPsiAvaliacao,
+  type ModuloClinico,
   type PsiStatusBatchItem,
 } from '@/api/psicologiaService'
 import type { PsiProtocolo } from '@/types/psicologia'
+import { parseBrDate, DATE_PICKER_FORMATS } from '@/utils/dateUtils'
 
 type FiltroSituacao = 'todos' | 'aguardando' | 'atendido' | 'nao_recepcionado'
 type OrdenacaoCampo = 'cd_atendimento' | 'hr_agenda'
+
+const MODULO_CONFIG: Record<
+  ModuloClinico,
+  { titulo: string; subtitulo: string; dateInputId: string; dateHelpId: string }
+> = {
+  psicologia: {
+    titulo: 'Psicologia — Atendimentos',
+    subtitulo: 'Pacientes agendados ou recepcionados para os protocolos PAFE, PASAC e PAHB.',
+    dateInputId: 'psi-data-referencia',
+    dateHelpId: 'psi-data-ref-help',
+  },
+  psicopedagogia: {
+    titulo: 'Psicopedagogia — Atendimentos',
+    subtitulo: 'Pacientes agendados ou recepcionados para os protocolos PAPE e PAHB.',
+    dateInputId: 'psp-data-referencia',
+    dateHelpId: 'psp-data-ref-help',
+  },
+}
 
 const GRID =
   'minmax(86px, 0.65fr) minmax(66px, 0.5fr) minmax(170px, 1.8fr) minmax(120px, 1.15fr) minmax(115px, 0.85fr) minmax(290px, 2.2fr)'
@@ -82,11 +102,19 @@ function PillSituacao({ record }: { record: AgendaItem }) {
   )
 }
 
-export default function PsicologiaPacientesPage() {
-  const { message } = App.useApp()
+export default function PsicologiaPacientesPage({
+  modulo = 'psicologia',
+}: {
+  modulo?: ModuloClinico
+}) {
+  const cfg = MODULO_CONFIG[modulo]
+  const { message, notification } = App.useApp()
   const navigate = useNavigate()
 
   const [dataRef, setDataRef] = useState<Dayjs>(() => dayjs())
+  const dataRefCurrent = useRef<Dayjs>(dataRef)
+  dataRefCurrent.current = dataRef
+
   const [data, setData] = useState<AgendaItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -97,20 +125,28 @@ export default function PsicologiaPacientesPage() {
   const [filtro, setFiltro] = useState<FiltroSituacao>('todos')
   const [pagina, setPagina] = useState(0)
   const [ordenacao, setOrdenacao] = useState<{ campo: OrdenacaoCampo; dir: 1 | -1 } | null>(null)
+  const [searchAnnouncement, setSearchAnnouncement] = useState('')
 
   const fetchAgenda = async (d: Dayjs) => {
+    dataRefCurrent.current = d
     setLoading(true)
     setError(null)
     setPagina(0)
+    setSearchAnnouncement(`Carregando atendimentos para ${d.format('DD/MM/YYYY')}...`)
     try {
       const result = await getAgendaDoPacientes(d.format('YYYY-MM-DD'))
       setData(result.items)
+      setSearchAnnouncement(
+        result.total === 0
+          ? `Nenhum paciente encontrado para ${d.format('DD/MM/YYYY')}`
+          : `${result.total} paciente${result.total !== 1 ? 's' : ''} encontrado${result.total !== 1 ? 's' : ''} para ${d.format('DD/MM/YYYY')}`
+      )
 
       const ids = result.items
         .map((i) => i.cd_paciente)
         .filter((id): id is number => id != null)
       if (ids.length > 0) {
-        getPsiAvaliacoesStatusBatch(ids).then(setPsiStatus).catch(() => null)
+        getPsiAvaliacoesStatusBatch(ids, modulo).then(setPsiStatus).catch(() => null)
       } else {
         setPsiStatus({})
       }
@@ -118,23 +154,63 @@ export default function PsicologiaPacientesPage() {
       const msg = (err as any)?.response?.data?.detail ?? 'Erro ao buscar agenda do MV.'
       setError(typeof msg === 'string' ? msg : JSON.stringify(msg))
       setData([])
+      setSearchAnnouncement(`Erro ao carregar agenda para ${d.format('DD/MM/YYYY')}.`)
     } finally {
       setLoading(false)
     }
   }
 
+  const commitDataRef = (novaData: Dayjs) => {
+    if (!novaData || !novaData.isValid()) return
+    dataRefCurrent.current = novaData
+    setDataRef(novaData)
+    fetchAgenda(novaData)
+  }
+
+  const handleDataInputCommit = (raw: string) => {
+    const parsed = parseBrDate(raw)
+    if (parsed && parsed.isValid()) {
+      if (!parsed.isSame(dataRefCurrent.current, 'day')) {
+        commitDataRef(parsed)
+      }
+      return true
+    }
+    if (raw.trim().length > 0) {
+      notification.warning({
+        message: 'Data não reconhecida',
+        description: 'Utilize o formato dia/mês/ano (ex: 15/11/2026).',
+        duration: 3,
+      })
+    }
+    return false
+  }
+
+  const handlePesquisar = () => {
+    const dateInput = document.getElementById(cfg.dateInputId) as HTMLInputElement | null
+    if (dateInput && dateInput.value) {
+      const parsed = parseBrDate(dateInput.value)
+      if (parsed && parsed.isValid() && !parsed.isSame(dataRefCurrent.current, 'day')) {
+        commitDataRef(parsed)
+        return
+      }
+    }
+    fetchAgenda(dataRefCurrent.current)
+  }
+
   useEffect(() => {
-    listarPsiProtocolos().then(setProtocolos).catch(() => setProtocolos([]))
+    setPsiStatus({})
+    setProtocolos([])
+    listarPsiProtocolos(modulo).then(setProtocolos).catch(() => setProtocolos([]))
     fetchAgenda(dataRef)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [modulo])
 
   const abrirAvaliacao = async (record: AgendaItem, protocolo: PsiProtocolo) => {
     const status = record.cd_paciente != null ? psiStatus[String(record.cd_paciente)] : null
     const aval = status?.avaliacoes?.[protocolo.ds_codigo]
 
     if (aval) {
-      navigate(`/psicologia/avaliacoes/${aval.id_avaliacao}`)
+      navigate(`/${modulo}/avaliacoes/${aval.id_avaliacao}`)
       return
     }
 
@@ -145,8 +221,8 @@ export default function PsicologiaPacientesPage() {
         cd_atendimento: record.cd_atendimento != null ? String(record.cd_atendimento) : null,
         dt_clinica: dayjs().toISOString(),
         id_protocolo: protocolo.id_protocolo,
-      })
-      navigate(`/psicologia/avaliacoes/${nova.id_avaliacao}`)
+      }, modulo)
+      navigate(`/${modulo}/avaliacoes/${nova.id_avaliacao}`)
     } catch (err: any) {
       message.error(err?.response?.data?.detail ?? 'Erro ao iniciar avaliação.')
     } finally {
@@ -316,13 +392,33 @@ export default function PsicologiaPacientesPage() {
         fontFamily: '"Atkinson Hyperlegible", Inter, sans-serif',
       }}
     >
+      {/* Live region acessível para leitores de tela */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        style={{
+          position: 'absolute',
+          width: 1,
+          height: 1,
+          padding: 0,
+          margin: -1,
+          overflow: 'hidden',
+          clip: 'rect(0,0,0,0)',
+          whiteSpace: 'nowrap',
+          border: 0,
+        }}
+      >
+        {searchAnnouncement}
+      </div>
+
       {/* Cabeçalho da página */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <span style={{ fontSize: 28, fontWeight: 700, color: '#14212b', lineHeight: 1.2 }}>
-          Psicologia — Atendimentos
+          {cfg.titulo}
         </span>
         <span style={{ fontSize: 15, color: '#44525e', lineHeight: 1.5 }}>
-          Pacientes agendados ou recepcionados para os protocolos PAFE, PASAC e PAHB.
+          {cfg.subtitulo}
         </span>
       </div>
 
@@ -342,18 +438,33 @@ export default function PsicologiaPacientesPage() {
         }}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: '#14212b', lineHeight: 1.4 }}>
+          <label
+            htmlFor={cfg.dateInputId}
+            style={{ fontSize: 14, fontWeight: 700, color: '#14212b', lineHeight: 1.4, cursor: 'pointer' }}
+          >
             Data de referência
+          </label>
+          <span
+            id={cfg.dateHelpId}
+            style={{
+              position: 'absolute',
+              width: 1,
+              height: 1,
+              padding: 0,
+              margin: -1,
+              overflow: 'hidden',
+              clip: 'rect(0,0,0,0)',
+              whiteSpace: 'nowrap',
+              border: 0,
+            }}
+          >
+            Digite a data desejada no formato dia, mês e ano, como DD/MM/AAAA, ou utilize os botões para navegar entre os dias.
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <button
               type="button"
-              aria-label="Dia anterior"
-              onClick={() => {
-                const d = dataRef.subtract(1, 'day')
-                setDataRef(d)
-                fetchAgenda(d)
-              }}
+              aria-label={`Dia anterior: ${dataRef.subtract(1, 'day').format('DD/MM/YYYY')}`}
+              onClick={() => commitDataRef(dataRefCurrent.current.subtract(1, 'day'))}
               style={{
                 width: 40,
                 height: 40,
@@ -371,9 +482,11 @@ export default function PsicologiaPacientesPage() {
             </button>
 
             <DatePicker
+              id={cfg.dateInputId}
               value={dataRef}
               allowClear={false}
-              format="DD/MM/YYYY"
+              format={DATE_PICKER_FORMATS}
+              placeholder="DD/MM/AAAA"
               style={{
                 width: 155,
                 height: 40,
@@ -381,22 +494,36 @@ export default function PsicologiaPacientesPage() {
                 borderColor: '#6e7c89',
               }}
               onChange={(d) => {
-                if (d) {
-                  setDataRef(d)
-                  fetchAgenda(d)
+                if (d && d.isValid()) {
+                  commitDataRef(d)
                 }
               }}
-              aria-label="Data de referência da agenda"
+              onBlur={(e) => {
+                const raw = (e.target as HTMLInputElement)?.value?.trim()
+                if (raw) {
+                  handleDataInputCommit(raw)
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const target = e.target as HTMLInputElement
+                  const raw = target.value?.trim()
+                  if (raw) {
+                    const ok = handleDataInputCommit(raw)
+                    if (ok) {
+                      e.preventDefault()
+                    }
+                  }
+                }
+              }}
+              aria-label="Data de referência no formato dia, mês e ano"
+              aria-describedby={cfg.dateHelpId}
             />
 
             <button
               type="button"
-              aria-label="Próximo dia"
-              onClick={() => {
-                const d = dataRef.add(1, 'day')
-                setDataRef(d)
-                fetchAgenda(d)
-              }}
+              aria-label={`Próximo dia: ${dataRef.add(1, 'day').format('DD/MM/YYYY')}`}
+              onClick={() => commitDataRef(dataRefCurrent.current.add(1, 'day'))}
               style={{
                 width: 40,
                 height: 40,
@@ -415,11 +542,8 @@ export default function PsicologiaPacientesPage() {
 
             <button
               type="button"
-              onClick={() => {
-                const hoje = dayjs()
-                setDataRef(hoje)
-                fetchAgenda(hoje)
-              }}
+              aria-label={`Ir para a data de hoje: ${dayjs().format('DD/MM/YYYY')}`}
+              onClick={() => commitDataRef(dayjs())}
               style={{
                 height: 40,
                 padding: '0 14px',
@@ -481,7 +605,7 @@ export default function PsicologiaPacientesPage() {
 
         <button
           type="button"
-          onClick={() => fetchAgenda(dataRef)}
+          onClick={handlePesquisar}
           disabled={loading}
           aria-label="Pesquisar pacientes pela data de referência selecionada"
           style={{

@@ -57,6 +57,7 @@ class UserResponse(BaseModel):
     cd_tip_presta:      Optional[int]   = None
     # capacidades calculadas pelo backend
     pode_acessar_psicologia: bool = False
+    pode_acessar_psicopedagogia: bool = False
     # dados do cadastro local (SILA)
     nr_conselho:        Optional[str]   = None
     ds_especialidade:   Optional[str]   = None

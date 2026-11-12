@@ -7,43 +7,68 @@ import type {
   PsiAvaliacaoUpdate,
 } from '@/types/psicologia'
 
-export async function getPsiProtocoloAtivo(): Promise<PsiProtocolo> {
-  const { data } = await api.get<PsiProtocolo>('/psicologia/protocolo')
+export type ModuloClinico = 'psicologia' | 'psicopedagogia'
+
+export async function getPsiProtocoloAtivo(
+  modulo: ModuloClinico = 'psicologia',
+): Promise<PsiProtocolo> {
+  const { data } = await api.get<PsiProtocolo>(`/${modulo}/protocolo`)
   return data
 }
 
-export async function listarPsiProtocolos(): Promise<PsiProtocolo[]> {
-  const { data } = await api.get<PsiProtocolo[]>('/psicologia/protocolos')
+export async function listarPsiProtocolos(
+  modulo: ModuloClinico = 'psicologia',
+): Promise<PsiProtocolo[]> {
+  const { data } = await api.get<PsiProtocolo[]>(`/${modulo}/protocolos`)
   return data
 }
 
-export async function getPsiProtocolo(idProtocolo: number): Promise<PsiProtocolo> {
-  const { data } = await api.get<PsiProtocolo>(`/psicologia/protocolo/${idProtocolo}`)
+export async function getPsiProtocolo(
+  idProtocolo: number,
+  modulo: ModuloClinico = 'psicologia',
+): Promise<PsiProtocolo> {
+  const { data } = await api.get<PsiProtocolo>(`/${modulo}/protocolo/${idProtocolo}`)
   return data
 }
 
-export async function listarPsiAvaliacoes(): Promise<PsiAvaliacaoLista> {
-  const { data } = await api.get<PsiAvaliacaoLista>('/psicologia/avaliacoes')
+export async function listarPsiAvaliacoes(
+  modulo: ModuloClinico = 'psicologia',
+): Promise<PsiAvaliacaoLista> {
+  const { data } = await api.get<PsiAvaliacaoLista>(`/${modulo}/avaliacoes`)
   return data
 }
 
-export async function criarPsiAvaliacao(payload: PsiAvaliacaoCreate): Promise<PsiAvaliacao> {
-  const { data } = await api.post<PsiAvaliacao>('/psicologia/avaliacoes', payload)
+export async function criarPsiAvaliacao(
+  payload: PsiAvaliacaoCreate,
+  modulo: ModuloClinico = 'psicologia',
+): Promise<PsiAvaliacao> {
+  const { data } = await api.post<PsiAvaliacao>(`/${modulo}/avaliacoes`, payload)
   return data
 }
 
-export async function getPsiAvaliacao(idAvaliacao: number): Promise<PsiAvaliacao> {
-  const { data } = await api.get<PsiAvaliacao>(`/psicologia/avaliacoes/${idAvaliacao}`)
+export async function getPsiAvaliacao(
+  idAvaliacao: number,
+  modulo: ModuloClinico = 'psicologia',
+): Promise<PsiAvaliacao> {
+  const { data } = await api.get<PsiAvaliacao>(`/${modulo}/avaliacoes/${idAvaliacao}`)
   return data
 }
 
-export async function salvarPsiRascunho(idAvaliacao: number, payload: PsiAvaliacaoUpdate): Promise<PsiAvaliacao> {
-  const { data } = await api.put<PsiAvaliacao>(`/psicologia/avaliacoes/${idAvaliacao}`, payload)
+export async function salvarPsiRascunho(
+  idAvaliacao: number,
+  payload: PsiAvaliacaoUpdate,
+  modulo: ModuloClinico = 'psicologia',
+): Promise<PsiAvaliacao> {
+  const { data } = await api.put<PsiAvaliacao>(`/${modulo}/avaliacoes/${idAvaliacao}`, payload)
   return data
 }
 
-export async function finalizarPsiAvaliacao(idAvaliacao: number, payload: PsiAvaliacaoUpdate): Promise<PsiAvaliacao> {
-  const { data } = await api.post<PsiAvaliacao>(`/psicologia/avaliacoes/${idAvaliacao}/finalizar`, payload)
+export async function finalizarPsiAvaliacao(
+  idAvaliacao: number,
+  payload: PsiAvaliacaoUpdate,
+  modulo: ModuloClinico = 'psicologia',
+): Promise<PsiAvaliacao> {
+  const { data } = await api.post<PsiAvaliacao>(`/${modulo}/avaliacoes/${idAvaliacao}/finalizar`, payload)
   return data
 }
 
@@ -59,10 +84,11 @@ export interface PsiStatusBatchItem {
 
 export async function getPsiAvaliacoesStatusBatch(
   cdPacientes: (number | string)[],
+  modulo: ModuloClinico = 'psicologia',
 ): Promise<Record<string, PsiStatusBatchItem>> {
   if (cdPacientes.length === 0) return {}
   const { data } = await api.get<Record<string, PsiStatusBatchItem>>(
-    '/psicologia/avaliacoes/status-batch',
+    `/${modulo}/avaliacoes/status-batch`,
     { params: { cd_pacientes: cdPacientes.join(',') } },
   )
   return data

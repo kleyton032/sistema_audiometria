@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import {
   Alert,
   App,
@@ -32,6 +32,7 @@ import { getAgendaDoPacientes, type AgendaItem } from '@/api/agendaService'
 import { getPTSStatusBatch, type PtsStatusBatchItem } from '@/api/ptsService'
 import { PtsHistoryTimeline } from '../../components/PTS/PtsHistoryTimeline'
 import { useAuth } from '@/contexts'
+import { parseBrDate, DATE_PICKER_FORMATS } from '@/utils/dateUtils'
 
 dayjs.locale('pt-br')
 
@@ -246,6 +247,9 @@ export default function PtsPacientesPage() {
     }
     return dayjs()
   })
+  const dataRefCurrent = useRef<Dayjs>(dataRef)
+  dataRefCurrent.current = dataRef
+
   const [ptsStatus, setPtsStatus] = useState<Record<string, PtsStatusBatchItem>>({})
   const [busca, setBusca] = useState('')
   const [filtro, setFiltro] = useState<FiltroPts>('todos')
@@ -257,10 +261,11 @@ export default function PtsPacientesPage() {
   const [searchAnnouncement, setSearchAnnouncement] = useState('')
 
   const fetchAgenda = async (d: Dayjs) => {
+    dataRefCurrent.current = d
     setLoading(true)
     setError(null)
     setPagina(0)
-    setSearchAnnouncement('')
+    setSearchAnnouncement(`Carregando agenda para ${d.format('DD/MM/YYYY')}...`)
     try {
       sessionStorage.setItem('pts_pacientes_data_ref', d.toISOString())
       const result = await getAgendaDoPacientes(d.format('YYYY-MM-DD'))
@@ -283,9 +288,47 @@ export default function PtsPacientesPage() {
       setError(typeof msg === 'string' ? msg : JSON.stringify(msg))
       setData([])
       setPtsStatus({})
+      setSearchAnnouncement(`Erro ao carregar agenda para ${d.format('DD/MM/YYYY')}.`)
     } finally {
       setLoading(false)
     }
+  }
+
+  const commitDataRef = (novaData: Dayjs) => {
+    if (!novaData || !novaData.isValid()) return
+    dataRefCurrent.current = novaData
+    setDataRef(novaData)
+    fetchAgenda(novaData)
+  }
+
+  const handleDataInputCommit = (raw: string) => {
+    const parsed = parseBrDate(raw)
+    if (parsed && parsed.isValid()) {
+      if (!parsed.isSame(dataRefCurrent.current, 'day')) {
+        commitDataRef(parsed)
+      }
+      return true
+    }
+    if (raw.trim().length > 0) {
+      notification.warning({
+        message: 'Data não reconhecida',
+        description: 'Utilize o formato dia/mês/ano (ex: 15/11/2026).',
+        duration: 3,
+      })
+    }
+    return false
+  }
+
+  const handlePesquisar = () => {
+    const dateInput = document.getElementById('pts-data-referencia') as HTMLInputElement | null
+    if (dateInput && dateInput.value) {
+      const parsed = parseBrDate(dateInput.value)
+      if (parsed && parsed.isValid() && !parsed.isSame(dataRefCurrent.current, 'day')) {
+        commitDataRef(parsed)
+        return
+      }
+    }
+    fetchAgenda(dataRefCurrent.current)
   }
 
   useEffect(() => {
@@ -638,18 +681,33 @@ export default function PtsPacientesPage() {
         }}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: '#14212b', lineHeight: 1.4 }}>
+          <label
+            htmlFor="pts-data-referencia"
+            style={{ fontSize: 14, fontWeight: 700, color: '#14212b', lineHeight: 1.4, cursor: 'pointer' }}
+          >
             Data de referência
+          </label>
+          <span
+            id="pts-data-ref-help"
+            style={{
+              position: 'absolute',
+              width: 1,
+              height: 1,
+              padding: 0,
+              margin: -1,
+              overflow: 'hidden',
+              clip: 'rect(0,0,0,0)',
+              whiteSpace: 'nowrap',
+              border: 0,
+            }}
+          >
+            Digite a data desejada no formato dia, mês e ano, como DD/MM/AAAA, ou utilize os botões para navegar entre os dias.
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <button
               type="button"
-              aria-label="Dia anterior"
-              onClick={() => {
-                const d = dataRef.subtract(1, 'day')
-                setDataRef(d)
-                fetchAgenda(d)
-              }}
+              aria-label={`Dia anterior: ${dataRef.subtract(1, 'day').format('DD/MM/YYYY')}`}
+              onClick={() => commitDataRef(dataRefCurrent.current.subtract(1, 'day'))}
               style={{
                 width: 40,
                 height: 40,
@@ -667,9 +725,11 @@ export default function PtsPacientesPage() {
             </button>
 
             <DatePicker
+              id="pts-data-referencia"
               value={dataRef}
               allowClear={false}
-              format="DD/MM/YYYY"
+              format={DATE_PICKER_FORMATS}
+              placeholder="DD/MM/AAAA"
               style={{
                 width: 155,
                 height: 40,
@@ -677,22 +737,36 @@ export default function PtsPacientesPage() {
                 borderColor: '#6e7c89',
               }}
               onChange={(d) => {
-                if (d) {
-                  setDataRef(d)
-                  fetchAgenda(d)
+                if (d && d.isValid()) {
+                  commitDataRef(d)
                 }
               }}
-              aria-label="Data de referência da agenda"
+              onBlur={(e) => {
+                const raw = (e.target as HTMLInputElement)?.value?.trim()
+                if (raw) {
+                  handleDataInputCommit(raw)
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const target = e.target as HTMLInputElement
+                  const raw = target.value?.trim()
+                  if (raw) {
+                    const ok = handleDataInputCommit(raw)
+                    if (ok) {
+                      e.preventDefault()
+                    }
+                  }
+                }
+              }}
+              aria-label="Data de referência no formato dia, mês e ano"
+              aria-describedby="pts-data-ref-help"
             />
 
             <button
               type="button"
-              aria-label="Próximo dia"
-              onClick={() => {
-                const d = dataRef.add(1, 'day')
-                setDataRef(d)
-                fetchAgenda(d)
-              }}
+              aria-label={`Próximo dia: ${dataRef.add(1, 'day').format('DD/MM/YYYY')}`}
+              onClick={() => commitDataRef(dataRefCurrent.current.add(1, 'day'))}
               style={{
                 width: 40,
                 height: 40,
@@ -711,11 +785,8 @@ export default function PtsPacientesPage() {
 
             <button
               type="button"
-              onClick={() => {
-                const hoje = dayjs()
-                setDataRef(hoje)
-                fetchAgenda(hoje)
-              }}
+              aria-label={`Ir para a data de hoje: ${dayjs().format('DD/MM/YYYY')}`}
+              onClick={() => commitDataRef(dayjs())}
               style={{
                 height: 40,
                 padding: '0 14px',
@@ -777,7 +848,7 @@ export default function PtsPacientesPage() {
 
         <button
           type="button"
-          onClick={() => fetchAgenda(dataRef)}
+          onClick={handlePesquisar}
           disabled={loading}
           aria-label="Pesquisar pacientes pela data de referência selecionada"
           style={{

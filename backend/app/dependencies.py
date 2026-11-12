@@ -108,41 +108,67 @@ def require_escrita():
     return _check
 
 
-# Código do tipo de prestador no MV para Psicólogo.
+# Códigos canônicos de tipo de prestador no MV.
 CD_TIP_PRESTA_PSICOLOGO = 10
+CD_TIP_PRESTA_PSICOPEDAGOGO = 16
+
+
+def _tem_tip_presta(user: User, cd_tip_presta: int) -> bool:
+    """Verifica se o prestador vinculado do usuário possui o cd_tip_presta informado."""
+    prestador = getattr(user, "prestador", None)
+    if not prestador:
+        return False
+    return prestador.cd_tip_presta == cd_tip_presta
+
+
+def _require_tip_presta(cd_tip_presta: int, msg_erro: str):
+    """Dependency factory compartilhada para restrição por tipo de prestador."""
+    def _check(user: User = Depends(get_current_user)) -> User:
+        if not _tem_tip_presta(user, cd_tip_presta):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=msg_erro,
+            )
+        return user
+    return _check
 
 
 def pode_acessar_psicologia(user: User) -> bool:
     """
     Indica se o usuário autenticado tem capacidade de acesso ao módulo de
-    Psicologia. A capacidade é derivada do código canônico do tipo de
-    prestador (10 = psicólogo) sincronizado do MV — e não do nome (texto) nem
-    do perfil administrativo do usuário.
-
-    ADMIN, SUPERVISOR, COORDENADOR ou CONSULTA SEM o código 10 NÃO recebem
-    acesso clínico automático ao módulo.
+    Psicologia (cd_tip_presta = 10 sincronizado do MV).
     """
-    prestador = getattr(user, "prestador", None)
-    if not prestador:
-        return False
-    return prestador.cd_tip_presta == CD_TIP_PRESTA_PSICOLOGO
+    return _tem_tip_presta(user, CD_TIP_PRESTA_PSICOLOGO)
 
 
 def require_psicologia():
     """
     Dependency factory: bloqueia a requisição se o usuário autenticado não for
-    psicólogo (cd_tip_presta = 10 no MV). Deve ser aplicada a TODOS os
-    endpoints do módulo de Psicologia, inclusive listagens, detalhes,
-    histórico e PDF.
+    psicólogo (cd_tip_presta = 10 no MV).
     """
-    def _check(user: User = Depends(get_current_user)) -> User:
-        if not pode_acessar_psicologia(user):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Acesso restrito. Este módulo é exclusivo para psicólogos.",
-            )
-        return user
-    return _check
+    return _require_tip_presta(
+        CD_TIP_PRESTA_PSICOLOGO,
+        "Acesso restrito. Este módulo é exclusivo para psicólogos.",
+    )
+
+
+def pode_acessar_psicopedagogia(user: User) -> bool:
+    """
+    Indica se o usuário autenticado tem capacidade de acesso ao módulo de
+    Psicopedagogia (cd_tip_presta = 16 sincronizado do MV).
+    """
+    return _tem_tip_presta(user, CD_TIP_PRESTA_PSICOPEDAGOGO)
+
+
+def require_psicopedagogia():
+    """
+    Dependency factory: bloqueia a requisição se o usuário autenticado não for
+    psicopedagogo (cd_tip_presta = 16 no MV).
+    """
+    return _require_tip_presta(
+        CD_TIP_PRESTA_PSICOPEDAGOGO,
+        "Acesso restrito. Este módulo é exclusivo para psicopedagogos.",
+    )
 
 
 def _log_audit_escrita_bloqueada(user: User, request: Request):

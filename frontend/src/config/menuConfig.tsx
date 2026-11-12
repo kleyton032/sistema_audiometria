@@ -9,10 +9,18 @@ import {
   SettingOutlined,
   HistoryOutlined,
   BulbOutlined,
+  BookOutlined,
 } from '@ant-design/icons'
 
 // Perfis e atributos do usuário mapeados do contexto de autenticação
-export type MenuRole = 'ADMIN' | 'SUPERVISOR' | 'COORDENADOR' | 'FONOAUDIOLOGO' | 'OPERADOR' | 'PSICOLOGO'
+export type MenuRole =
+  | 'ADMIN'
+  | 'SUPERVISOR'
+  | 'COORDENADOR'
+  | 'FONOAUDIOLOGO'
+  | 'OPERADOR'
+  | 'PSICOLOGO'
+  | 'PSICOPEDAGOGO'
 
 export interface MenuConfigItem {
   key: string
@@ -92,6 +100,21 @@ export const menuTree: MenuConfigItem[] = [
         icon: <TeamOutlined />,
         path: '/psicologia/pacientes',
         roles: ['PSICOLOGO'],
+      },
+    ],
+  },
+  {
+    key: 'grupo-psicopedagogia',
+    label: 'Psicopedagogia',
+    icon: <BookOutlined />,
+    roles: ['PSICOPEDAGOGO'],
+    children: [
+      {
+        key: '/psicopedagogia/pacientes',
+        label: 'Atendimentos',
+        icon: <TeamOutlined />,
+        path: '/psicopedagogia/pacientes',
+        roles: ['PSICOPEDAGOGO'],
       },
     ],
   },

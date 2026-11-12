@@ -22,10 +22,17 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return isAdmin ? <>{children}</> : <Navigate to="/home" replace />
 }
 
-/** Rota exclusiva para psicólogos (capacidade calculada no backend). */
-function PsicologiaRoute({ children }: { children: React.ReactNode }) {
-  const { isPsicologo } = useAuth()
-  return isPsicologo ? <>{children}</> : <Navigate to="/home" replace />
+/** Rota exclusiva para módulos clínicos especializados (capacidade calculada no backend). */
+function ModuloClinicoRoute({
+  modulo,
+  children,
+}: {
+  modulo: 'psicologia' | 'psicopedagogia'
+  children: React.ReactNode
+}) {
+  const { isPsicologo, isPsicopedagogo } = useAuth()
+  const permitido = modulo === 'psicologia' ? isPsicologo : isPsicopedagogo
+  return permitido ? <>{children}</> : <Navigate to="/home" replace />
 }
 
 function ErrorFallback({ error, resetErrorBoundary }: any) {
@@ -88,17 +95,35 @@ export default function App() {
                   <Route
                     path="/psicologia/pacientes"
                     element={
-                      <PsicologiaRoute>
-                        <PsicologiaPacientesPage />
-                      </PsicologiaRoute>
+                      <ModuloClinicoRoute modulo="psicologia">
+                        <PsicologiaPacientesPage modulo="psicologia" />
+                      </ModuloClinicoRoute>
                     }
                   />
                   <Route
                     path="/psicologia/avaliacoes/:id"
                     element={
-                      <PsicologiaRoute>
-                        <AvaliacaoExecutivaPage />
-                      </PsicologiaRoute>
+                      <ModuloClinicoRoute modulo="psicologia">
+                        <AvaliacaoExecutivaPage modulo="psicologia" />
+                      </ModuloClinicoRoute>
+                    }
+                  />
+
+                  {/* Módulo Psicopedagogia — exclusivo para psicopedagogos */}
+                  <Route
+                    path="/psicopedagogia/pacientes"
+                    element={
+                      <ModuloClinicoRoute modulo="psicopedagogia">
+                        <PsicologiaPacientesPage modulo="psicopedagogia" />
+                      </ModuloClinicoRoute>
+                    }
+                  />
+                  <Route
+                    path="/psicopedagogia/avaliacoes/:id"
+                    element={
+                      <ModuloClinicoRoute modulo="psicopedagogia">
+                        <AvaliacaoExecutivaPage modulo="psicopedagogia" />
+                      </ModuloClinicoRoute>
                     }
                   />
 

@@ -35,6 +35,8 @@ interface AuthContextType {
   isConsulta:      boolean
   /** true se o usuário tem capacidade de acesso ao módulo de Psicologia (cd_tip_presta = 10) */
   isPsicologo:     boolean
+  /** true se o usuário tem capacidade de acesso ao módulo de Psicopedagogia (cd_tip_presta = 16) */
+  isPsicopedagogo: boolean
   /** true se o usuário NÃO possui prestador vinculado ao MV (perfil CONSULTA automático) */
   hasPrestador:    boolean
   /** true para ADMIN e SUPERVISOR (visão global) */
@@ -147,6 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isOperador:      usuario?.ds_perfil === 'OPERADOR',
         isConsulta:      usuario?.ds_perfil === 'CONSULTA',
         isPsicologo:     usuario?.pode_acessar_psicologia === true,
+        isPsicopedagogo: usuario?.pode_acessar_psicopedagogia === true,
         hasPrestador:    usuario?.cd_prestador != null,
         isGestor:        usuario?.ds_perfil === 'ADMIN' || usuario?.ds_perfil === 'SUPERVISOR',
         isSessionExpired,

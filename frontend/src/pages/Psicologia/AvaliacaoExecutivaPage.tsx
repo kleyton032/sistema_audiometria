@@ -29,6 +29,7 @@ import {
   getPsiProtocolo,
   salvarPsiRascunho,
   finalizarPsiAvaliacao,
+  type ModuloClinico,
 } from '@/api/psicologiaService'
 import type { PsiAvaliacao, PsiProtocolo, PsiItem } from '@/types/psicologia'
 
@@ -237,7 +238,11 @@ function ItemAvaliacao({
   )
 }
 
-export default function AvaliacaoExecutivaPage() {
+export default function AvaliacaoExecutivaPage({
+  modulo = 'psicologia',
+}: {
+  modulo?: ModuloClinico
+}) {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { message } = App.useApp()
@@ -258,8 +263,8 @@ export default function AvaliacaoExecutivaPage() {
     ;(async () => {
       setLoading(true)
       try {
-        const aval = await getPsiAvaliacao(idAvaliacao)
-        const prot = await getPsiProtocolo(aval.id_protocolo)
+        const aval = await getPsiAvaliacao(idAvaliacao, modulo)
+        const prot = await getPsiProtocolo(aval.id_protocolo, modulo)
         setAvaliacao(aval)
         setProtocolo(prot)
         const inicial: Record<number, RespostaEstado> = {}
@@ -277,7 +282,7 @@ export default function AvaliacaoExecutivaPage() {
       }
     })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idAvaliacao])
+  }, [idAvaliacao, modulo])
 
   const dominios = useMemo<DominioAgrupado[]>(() => {
     if (!protocolo) return []
@@ -352,7 +357,7 @@ export default function AvaliacaoExecutivaPage() {
     if (!avaliacao || !payload) return
     setSalvando(true)
     try {
-      const atualizada = await salvarPsiRascunho(avaliacao.id_avaliacao, payload)
+      const atualizada = await salvarPsiRascunho(avaliacao.id_avaliacao, payload, modulo)
       setAvaliacao(atualizada)
       setUltimoSalvo(new Date())
       message.success('Rascunho salvo com sucesso.')
@@ -375,7 +380,7 @@ export default function AvaliacaoExecutivaPage() {
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
-          const atualizada = await finalizarPsiAvaliacao(avaliacao.id_avaliacao, payload)
+          const atualizada = await finalizarPsiAvaliacao(avaliacao.id_avaliacao, payload, modulo)
           setAvaliacao(atualizada)
           message.success('Avaliação finalizada com sucesso.')
         } catch (error: any) {
@@ -425,7 +430,7 @@ export default function AvaliacaoExecutivaPage() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/psicologia/pacientes')}>
+          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(`/${modulo}/pacientes`)}>
             Voltar
           </Button>
           <div>

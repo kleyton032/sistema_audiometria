@@ -21,24 +21,40 @@ class ConflitoRevisao(Exception):
 
 # ── Catálogo / protocolo ─────────────────────────────────────────────────────
 
-def get_protocolo_ativo(db: Session) -> Optional[PsiProtocolo]:
-    return (
+def protocolo_pertence_ao_modulo(protocolo: PsiProtocolo, modulo: str) -> bool:
+    """Verifica se o protocolo está habilitado para o módulo clínico informado."""
+    alvo = modulo.strip().upper()
+    modulos = {
+        m.strip().upper()
+        for m in (getattr(protocolo, "ds_modulo", None) or "PSICOLOGIA").split(",")
+        if m.strip()
+    }
+    return alvo in modulos
+
+
+def get_protocolo_ativo(db: Session, modulo: str = "PSICOLOGIA") -> Optional[PsiProtocolo]:
+    ativos = (
         db.query(PsiProtocolo)
         .options(joinedload(PsiProtocolo.itens))
         .filter(PsiProtocolo.ds_situacao == "ATIVO")
         .order_by(PsiProtocolo.dt_vigencia.desc(), PsiProtocolo.id_protocolo.desc())
-        .first()
+        .all()
     )
+    for p in ativos:
+        if protocolo_pertence_ao_modulo(p, modulo):
+            return p
+    return None
 
 
-def list_protocolos_ativos(db: Session) -> list[PsiProtocolo]:
-    return (
+def list_protocolos_ativos(db: Session, modulo: str = "PSICOLOGIA") -> list[PsiProtocolo]:
+    ativos = (
         db.query(PsiProtocolo)
         .options(joinedload(PsiProtocolo.itens))
         .filter(PsiProtocolo.ds_situacao == "ATIVO")
         .order_by(PsiProtocolo.id_protocolo.asc())
         .all()
     )
+    return [p for p in ativos if protocolo_pertence_ao_modulo(p, modulo)]
 
 
 def get_protocolo_por_id(db: Session, id_protocolo: int) -> Optional[PsiProtocolo]:

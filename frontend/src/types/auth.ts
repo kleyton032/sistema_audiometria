@@ -20,7 +20,8 @@ export interface User {
   nm_tip_presta:      string | null
   cd_tip_presta:      number | null
   // capacidades calculadas pelo backend
-  pode_acessar_psicologia: boolean
+  pode_acessar_psicologia:     boolean
+  pode_acessar_psicopedagogia: boolean
   // dados do cadastro local (SILA)
   nr_conselho:        string | null
   ds_especialidade:   string | null

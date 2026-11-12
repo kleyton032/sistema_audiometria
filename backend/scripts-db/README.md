@@ -37,5 +37,6 @@ Conjunto de scripts SQL do projeto, organizados por finalidade.
 17. `017_update_pafe_itens.sql`
 18. `018_psicologia_pasac.sql`
 19. `019_psicologia_pahb.sql`
+20. `020_psicopedagogia_pape_pahb.sql`
 
 > Observação: o script `10_tabelas_auditoria_logs.sql` citado no painel Admin ainda não foi adicionado a este repositório.
