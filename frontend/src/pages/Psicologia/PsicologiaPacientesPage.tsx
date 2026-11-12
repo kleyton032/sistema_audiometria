@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   App,
@@ -21,6 +21,7 @@ import {
   SwapOutlined,
 } from '@ant-design/icons'
 import dayjs, { type Dayjs } from 'dayjs'
+import { useAuth } from '@/contexts'
 import { getAgendaDoPacientes, type AgendaItem } from '@/api/agendaService'
 import {
   listarPsiProtocolos,
@@ -109,6 +110,7 @@ export default function PsicologiaPacientesPage({
 }) {
   const cfg = MODULO_CONFIG[modulo]
   const { message, notification } = App.useApp()
+  const { token } = useAuth()
   const navigate = useNavigate()
 
   const [dataRef, setDataRef] = useState<Dayjs>(() => dayjs())
@@ -120,6 +122,9 @@ export default function PsicologiaPacientesPage({
   const [error, setError] = useState<string | null>(null)
   const [psiStatus, setPsiStatus] = useState<Record<string, PsiStatusBatchItem>>({})
   const [protocolos, setProtocolos] = useState<PsiProtocolo[]>([])
+  const protocolosRef = useRef<PsiProtocolo[]>(protocolos)
+  protocolosRef.current = protocolos
+
   const [criandoCodigo, setCriandoCodigo] = useState<string | null>(null)
   const [busca, setBusca] = useState('')
   const [filtro, setFiltro] = useState<FiltroSituacao>('todos')
@@ -127,12 +132,32 @@ export default function PsicologiaPacientesPage({
   const [ordenacao, setOrdenacao] = useState<{ campo: OrdenacaoCampo; dir: 1 | -1 } | null>(null)
   const [searchAnnouncement, setSearchAnnouncement] = useState('')
 
-  const fetchAgenda = async (d: Dayjs) => {
+  const carregarProtocolos = useCallback(async () => {
+    try {
+      const lista = await listarPsiProtocolos(modulo)
+      setProtocolos(lista)
+      protocolosRef.current = lista
+      return lista
+    } catch (err) {
+      console.error(`[${modulo}] Erro ao carregar protocolos:`, err)
+      setProtocolos([])
+      protocolosRef.current = []
+      return []
+    }
+  }, [modulo])
+
+  const fetchAgenda = useCallback(async (d: Dayjs) => {
     dataRefCurrent.current = d
     setLoading(true)
     setError(null)
     setPagina(0)
     setSearchAnnouncement(`Carregando atendimentos para ${d.format('DD/MM/YYYY')}...`)
+
+    // Se os protocolos ainda não foram carregados ou falharam anteriormente, tenta recarregá-los
+    if (protocolosRef.current.length === 0) {
+      carregarProtocolos().catch(() => null)
+    }
+
     try {
       const result = await getAgendaDoPacientes(d.format('YYYY-MM-DD'))
       setData(result.items)
@@ -158,7 +183,7 @@ export default function PsicologiaPacientesPage({
     } finally {
       setLoading(false)
     }
-  }
+  }, [modulo, carregarProtocolos])
 
   const commitDataRef = (novaData: Dayjs) => {
     if (!novaData || !novaData.isValid()) return
@@ -186,6 +211,9 @@ export default function PsicologiaPacientesPage({
   }
 
   const handlePesquisar = () => {
+    if (protocolosRef.current.length === 0) {
+      carregarProtocolos().catch(() => null)
+    }
     const dateInput = document.getElementById(cfg.dateInputId) as HTMLInputElement | null
     if (dateInput && dateInput.value) {
       const parsed = parseBrDate(dateInput.value)
@@ -200,10 +228,29 @@ export default function PsicologiaPacientesPage({
   useEffect(() => {
     setPsiStatus({})
     setProtocolos([])
-    listarPsiProtocolos(modulo).then(setProtocolos).catch(() => setProtocolos([]))
+    protocolosRef.current = []
+    carregarProtocolos()
     fetchAgenda(dataRef)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modulo])
+  }, [modulo, carregarProtocolos])
+
+  // Recarrega automaticamente ao renovar a sessão ou alterar o token
+  useEffect(() => {
+    const handleSessionRenewed = () => {
+      carregarProtocolos()
+      fetchAgenda(dataRefCurrent.current)
+    }
+    window.addEventListener('auth-session-renewed', handleSessionRenewed)
+    return () => {
+      window.removeEventListener('auth-session-renewed', handleSessionRenewed)
+    }
+  }, [carregarProtocolos, fetchAgenda])
+
+  useEffect(() => {
+    if (token) {
+      carregarProtocolos()
+    }
+  }, [token, carregarProtocolos])
 
   const abrirAvaliacao = async (record: AgendaItem, protocolo: PsiProtocolo) => {
     const status = record.cd_paciente != null ? psiStatus[String(record.cd_paciente)] : null
@@ -355,7 +402,28 @@ export default function PsicologiaPacientesPage({
   const renderAvaliacoes = (record: AgendaItem) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-        {protocolos.map((p) => botaoAvaliacao(record, p))}
+        {protocolos.length > 0 ? (
+          protocolos.map((p) => botaoAvaliacao(record, p))
+        ) : loading ? (
+          <span style={{ fontSize: 13, color: '#6e7c89' }}>Carregando opções…</span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => carregarProtocolos()}
+            style={{
+              fontSize: 12,
+              color: '#5568d3',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0,
+              textDecoration: 'underline',
+              fontFamily: 'inherit',
+            }}
+          >
+            Carregar protocolos
+          </button>
+        )}
       </div>
       {!record.cd_atendimento && (
         <span style={{ fontSize: 12, color: '#44525e', lineHeight: 1.3 }}>

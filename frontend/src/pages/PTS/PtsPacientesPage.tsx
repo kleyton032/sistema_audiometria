@@ -336,6 +336,17 @@ export default function PtsPacientesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  useEffect(() => {
+    const handleSessionRenewed = () => {
+      fetchAgenda(dataRefCurrent.current)
+    }
+    window.addEventListener('auth-session-renewed', handleSessionRenewed)
+    return () => {
+      window.removeEventListener('auth-session-renewed', handleSessionRenewed)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   function abrirPTS(record: AgendaItem) {
     if (isConsulta) {
       notification.info({

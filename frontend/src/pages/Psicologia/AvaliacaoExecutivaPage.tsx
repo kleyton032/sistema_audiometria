@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Button,
@@ -258,31 +258,42 @@ export default function AvaliacaoExecutivaPage({
   const idAvaliacao = Number(id)
   const readOnly = avaliacao?.ds_situacao !== 'RASCUNHO'
 
-  useEffect(() => {
+  const carregarDados = useCallback(async () => {
     if (!idAvaliacao) return
-    ;(async () => {
-      setLoading(true)
-      try {
-        const aval = await getPsiAvaliacao(idAvaliacao, modulo)
-        const prot = await getPsiProtocolo(aval.id_protocolo, modulo)
-        setAvaliacao(aval)
-        setProtocolo(prot)
-        const inicial: Record<number, RespostaEstado> = {}
-        prot.itens.forEach((item) => {
-          inicial[item.id_item] = { valor: undefined, observacao: '' }
-        })
-        aval.respostas.forEach((r) => {
-          inicial[r.id_item] = { valor: r.nr_valor, observacao: r.ds_observacao ?? '' }
-        })
-        setRespostas(inicial)
-      } catch (error: any) {
-        message.error(error?.response?.data?.detail ?? 'Erro ao carregar avaliação.')
-      } finally {
-        setLoading(false)
+    setLoading(true)
+    try {
+      const aval = await getPsiAvaliacao(idAvaliacao, modulo)
+      const prot = await getPsiProtocolo(aval.id_protocolo, modulo)
+      setAvaliacao(aval)
+      setProtocolo(prot)
+      const inicial: Record<number, RespostaEstado> = {}
+      prot.itens.forEach((item) => {
+        inicial[item.id_item] = { valor: undefined, observacao: '' }
+      })
+      aval.respostas.forEach((r) => {
+        inicial[r.id_item] = { valor: r.nr_valor, observacao: r.ds_observacao ?? '' }
+      })
+      setRespostas(inicial)
+    } catch (error: any) {
+      message.error(error?.response?.data?.detail ?? 'Erro ao carregar avaliação.')
+    } finally {
+      setLoading(false)
+    }
+  }, [idAvaliacao, modulo, message])
+
+  useEffect(() => {
+    carregarDados()
+  }, [carregarDados])
+
+  useEffect(() => {
+    const handleSessionRenewed = () => {
+      if (!avaliacao) {
+        carregarDados()
       }
-    })()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idAvaliacao, modulo])
+    }
+    window.addEventListener('auth-session-renewed', handleSessionRenewed)
+    return () => window.removeEventListener('auth-session-renewed', handleSessionRenewed)
+  }, [avaliacao, carregarDados])
 
   const dominios = useMemo<DominioAgrupado[]>(() => {
     if (!protocolo) return []

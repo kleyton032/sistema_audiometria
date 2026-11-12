@@ -23,6 +23,7 @@ export const ReLoginModal: React.FC = () => {
       message.success('Sessão renovada com sucesso!')
       clearSessionExpired()
       form.resetFields()
+      window.dispatchEvent(new CustomEvent('auth-session-renewed'))
     } catch (error) {
       console.error('Erro ao renovar sessão:', error)
       message.error('Senha incorreta ou erro ao renovar a sessão.')

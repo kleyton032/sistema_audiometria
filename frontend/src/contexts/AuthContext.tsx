@@ -125,6 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(data.access_token)
     setNmLogin(decodeJwtLogin(data.access_token))
     await fetchMe(data.access_token)
+    window.dispatchEvent(new CustomEvent('auth-session-renewed'))
   }, [fetchMe])
 
   const logout = useCallback(() => {
