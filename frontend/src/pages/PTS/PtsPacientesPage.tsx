@@ -19,6 +19,7 @@ import {
   EditOutlined,
   FileTextOutlined,
   HistoryOutlined,
+  InfoCircleOutlined,
   LeftOutlined,
   MinusCircleOutlined,
   RightOutlined,
@@ -29,7 +30,7 @@ import dayjs, { type Dayjs } from 'dayjs'
 import 'dayjs/locale/pt-br'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { getAgendaDoPacientes, type AgendaItem } from '@/api/agendaService'
-import { getPTSStatusBatch, type PtsStatusBatchItem } from '@/api/ptsService'
+import { getPTSStatusBatch, type PtsStatusBatchItem, type OutroPtsStatus } from '@/api/ptsService'
 import { PtsHistoryTimeline } from '../../components/PTS/PtsHistoryTimeline'
 import { useAuth } from '@/contexts'
 import { parseBrDate, DATE_PICKER_FORMATS } from '@/utils/dateUtils'
@@ -259,6 +260,10 @@ export default function PtsPacientesPage() {
   const [historyDrawerVisible, setHistoryDrawerVisible] = useState(false)
   const [historyCdPaciente, setHistoryCdPaciente] = useState<string | null>(null)
   const [searchAnnouncement, setSearchAnnouncement] = useState('')
+  const [modalPtsAndamento, setModalPtsAndamento] = useState<{
+    record: AgendaItem
+    outrosPts: OutroPtsStatus[]
+  } | null>(null)
 
   const fetchAgenda = async (d: Dayjs) => {
     dataRefCurrent.current = d
@@ -375,12 +380,9 @@ export default function PtsPacientesPage() {
     }
 
     if (!meuPts && outrosPts.length > 0) {
-      Modal.confirm({
-        title: 'Paciente em acompanhamento multidisciplinar',
-        content: `Este paciente já possui PTS iniciado por outros profissionais nesta vigência (${outrosPts.map((o) => o.ds_especialidade).join(', ')}). Deseja iniciar a sua avaliação também?`,
-        okText: 'Sim, iniciar',
-        cancelText: 'Cancelar',
-        onOk: navegar,
+      setModalPtsAndamento({
+        record,
+        outrosPts,
       })
       return
     }
@@ -1172,6 +1174,206 @@ export default function PtsPacientesPage() {
       >
         {historyCdPaciente && <PtsHistoryTimeline cdPaciente={historyCdPaciente} />}
       </Drawer>
+
+      {/* ── Modal Redesenhado: Paciente já tem PTS em andamento ── */}
+      <Modal
+        open={!!modalPtsAndamento}
+        onCancel={() => setModalPtsAndamento(null)}
+        footer={null}
+        centered
+        width={560}
+        styles={{
+          content: {
+            padding: 32,
+            borderRadius: 12,
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            fontFamily: '"Atkinson Hyperlegible", Inter, sans-serif',
+            color: '#14212b',
+          },
+        }}
+        destroyOnClose
+        aria-labelledby="modal-pts-andamento-title"
+        aria-describedby="modal-pts-andamento-desc"
+      >
+        {modalPtsAndamento && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {/* Topo com Ícone e Títulos */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  width: 48,
+                  height: 48,
+                  flexShrink: 0,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: '#eceffb',
+                  borderRadius: 9999,
+                  color: '#5568d3',
+                }}
+              >
+                <InfoCircleOutlined style={{ fontSize: 26, color: '#5568d3' }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <h2
+                  id="modal-pts-andamento-title"
+                  style={{
+                    margin: 0,
+                    color: '#14212b',
+                    fontSize: 24,
+                    fontWeight: 700,
+                    lineHeight: 1.25,
+                  }}
+                >
+                  Este paciente já tem PTS em andamento
+                </h2>
+                <span
+                  style={{
+                    color: '#44525e',
+                    fontSize: 16,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {modalPtsAndamento.record.nm_paciente} · Vigência {dataRef.format('MM/YYYY')}
+                </span>
+              </div>
+            </div>
+
+            {/* Texto Descritivo */}
+            <p
+              id="modal-pts-andamento-desc"
+              style={{
+                margin: 0,
+                color: '#14212b',
+                fontSize: 18,
+                lineHeight: 1.5,
+              }}
+            >
+              Outros profissionais já iniciaram o PTS deste paciente nesta vigência. Você pode iniciar a sua avaliação também.
+            </p>
+
+            {/* Card com Detalhes de Quem Iniciou */}
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+                padding: 16,
+                backgroundColor: '#f3f5f7',
+                border: '1px solid #d5dce3',
+                borderRadius: 6,
+              }}
+            >
+              <span
+                style={{
+                  color: '#44525e',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  lineHeight: 1.5,
+                  letterSpacing: '0.35px',
+                  textTransform: 'uppercase',
+                }}
+              >
+                PTS iniciado por
+              </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {modalPtsAndamento.outrosPts.map((o, idx) => (
+                  <div key={idx} style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span
+                      style={{
+                        color: '#14212b',
+                        fontSize: 18,
+                        fontWeight: 700,
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      {o.ds_especialidade || 'Especialidade não informada'}
+                    </span>
+                    {o.nm_profissional && (
+                      <span style={{ fontSize: 14, color: '#44525e' }}>
+                        Profissional: {o.nm_profissional}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Botões de Ação */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                alignItems: 'center',
+                gap: 12,
+                paddingTop: 8,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setModalPtsAndamento(null)}
+                style={{
+                  minHeight: 48,
+                  padding: '0 24px',
+                  border: '2px solid #5568d3',
+                  borderRadius: 6,
+                  backgroundColor: '#ffffff',
+                  color: '#5568d3',
+                  fontSize: 16,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'background-color 0.15s',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = '#eceffb'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = '#ffffff'
+                }}
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const rec = modalPtsAndamento.record
+                  setModalPtsAndamento(null)
+                  navigate('/pts', {
+                    state: {
+                      nm_paciente: rec.nm_paciente,
+                      cd_paciente: rec.cd_paciente,
+                      cd_atendimento: rec.cd_atendimento,
+                      id_pts: null,
+                      fl_finalizado: 0,
+                    },
+                  })
+                }}
+                style={{
+                  minHeight: 48,
+                  padding: '0 24px',
+                  backgroundColor: '#5568d3',
+                  border: 'none',
+                  borderRadius: 6,
+                  color: '#ffffff',
+                  fontSize: 16,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'opacity 0.15s',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.opacity = '0.9'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.opacity = '1'
+                }}
+              >
+                Sim, iniciar minha avaliação
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }
