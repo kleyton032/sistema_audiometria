@@ -1,23 +1,17 @@
-/**
- * HomePage — reconstruída com React Aria Components para garantir
- * acessibilidade completa com leitores de tela (NVDA, JAWS, VoiceOver).
- *
- * Princípios aplicados:
- *  - Hierarquia de headings semântica (h1 → h2)
- *  - Landmarks: <section aria-labelledby>, <nav aria-label>
- *  - Região ao vivo (aria-live="polite") para o estado de carregamento
- *  - Botões via React Aria Button — suporte nativo a teclado e anúncio
- *  - Emojis decorativos com aria-hidden="true"
- *  - Estatísticas com <dl>/<dt>/<dd> — lidos como "termo: valor" pelo NVDA
- *  - Alvos de clique mínimos 44×44 px (WCAG 2.5.8)
- *  - Indicadores de foco visíveis e contrastados (outline 3 px)
- */
-import { useEffect, useState } from 'react'
-import { Button } from 'react-aria-components'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Spin } from 'antd'
+import {
+  TeamOutlined,
+  SearchOutlined,
+  FileTextOutlined,
+  ArrowRightOutlined,
+  ExclamationCircleOutlined,
+  CheckCircleOutlined,
+  SoundOutlined,
+} from '@ant-design/icons'
 import { getHomeStats, type HomeStats } from '../../api/homeService'
 import { useAuth } from '@/contexts'
-import styles from './HomePage.module.css'
 
 export default function HomePage() {
   const navigate = useNavigate()
@@ -34,216 +28,525 @@ export default function HomePage() {
       .finally(() => setLoading(false))
   }, [])
 
-  const totalPendencias =
-    stats.pendencias.pts_rascunho + stats.pendencias.exames_pendentes
+  const primeiroNome = usuario?.nm_usuario?.split(' ')[0] ?? 'Colega'
+  const totalPendencias = stats.pendencias.pts_rascunho + stats.pendencias.exames_pendentes
 
-  const primeiroNome = usuario?.nm_usuario?.split(' ')[0] ?? ''
+  const containerStyle: CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 28,
+    color: '#14212b',
+    fontFamily: '"Atkinson Hyperlegible", Inter, sans-serif',
+  }
+
+  const visuallyHidden: CSSProperties = {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    padding: 0,
+    margin: -1,
+    overflow: 'hidden',
+    clip: 'rect(0, 0, 0, 0)',
+    whiteSpace: 'nowrap',
+    border: 0,
+  }
 
   return (
-    <>
-      {/*
-        Região ao vivo oculta visualmente.
-        O NVDA anuncia a mudança quando loading passa de true → false.
-      */}
-      <div
-        role="status"
-        aria-live="polite"
-        aria-atomic="true"
-        className={styles.visuallyHidden}
-      >
-        {loading ? 'Carregando dados da página inicial…' : 'Dados carregados.'}
+    <div style={containerStyle}>
+      {/* Live region acessível para leitores de tela */}
+      <div role="status" aria-live="polite" aria-atomic="true" style={visuallyHidden}>
+        {loading ? 'Carregando dados da página inicial…' : 'Dados da página inicial carregados.'}
       </div>
 
       {/* ── Cabeçalho de boas-vindas ──────────────────────────────── */}
-      <header className={styles.header}>
-        <h1 className={styles.greeting}>
-          Olá, {primeiroNome} <span aria-hidden="true">👋</span>
+      <header style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <h1
+          style={{
+            margin: 0,
+            fontSize: 32,
+            fontWeight: 700,
+            lineHeight: 1.2,
+            color: '#14212b',
+          }}
+        >
+          Olá, {primeiroNome}
         </h1>
-        <p className={styles.subtitle}>
-          Aqui está o resumo do seu dia e produtividade do mês.
+        <p
+          style={{
+            margin: 0,
+            fontSize: 16,
+            lineHeight: 1.5,
+            color: '#44525e',
+          }}
+        >
+          Veja o resumo do seu dia e a sua produtividade neste mês.
         </p>
       </header>
 
       {/* ── Spinner acessível enquanto carrega ────────────────────── */}
-      {loading && (
+      {loading ? (
         <div
-          className={styles.loadingWrapper}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '64px 24px',
+            gap: 16,
+          }}
           aria-hidden="true"
         >
-          <div className={styles.spinner} />
+          <Spin size="large" />
+          <span style={{ fontSize: 16, color: '#44525e' }}>Carregando dados…</span>
         </div>
-      )}
-
-      {!loading && (
+      ) : (
         <>
           {/* ── Grid: Pendências + Ações Rápidas ────────────────────── */}
-          <div className={styles.twoColGrid}>
-
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 380px), 1fr))',
+              gap: 24,
+              alignItems: 'start',
+            }}
+          >
             {/* Pendências */}
             <section
               aria-labelledby="pendencias-heading"
-              className={styles.card}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 16,
+                padding: 24,
+                backgroundColor: '#ffffff',
+                border: '1px solid #d5dce3',
+                borderRadius: 8,
+              }}
             >
-              <h2 id="pendencias-heading" className={styles.cardTitle}>
-                <span aria-hidden="true">⚠️</span> Minhas Pendências
+              <h2
+                id="pendencias-heading"
+                style={{
+                  margin: 0,
+                  fontSize: 22,
+                  fontWeight: 700,
+                  lineHeight: 1.5,
+                  color: '#14212b',
+                }}
+              >
+                Minhas pendências
               </h2>
 
-              {/*
-                aria-live="polite" + aria-atomic="true": o NVDA relê o bloco
-                completo sempre que o conteúdo mudar (ex.: após salvar um PTS).
-              */}
-              <div aria-live="polite" aria-atomic="true">
+              <div aria-live="polite" aria-atomic="true" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {totalPendencias === 0 ? (
-                  <div className={styles.alertSuccess} role="status">
-                    <span className={styles.alertIcon} aria-hidden="true">
-                      ✅
-                    </span>
-                    <div>
-                      <strong>Tudo em dia!</strong>
-                      <p>
+                  <div
+                    role="status"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 16,
+                      padding: 20,
+                      backgroundColor: '#f3f5f7',
+                      borderLeft: '6px solid #1b6b3a',
+                      borderRadius: 8,
+                    }}
+                  >
+                    <div style={{ display: 'flex', width: 32, height: 32, flexShrink: 0, color: '#1b6b3a' }}>
+                      <CheckCircleOutlined style={{ fontSize: 28 }} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.5, color: '#14212b' }}>
+                        Tudo em dia!
+                      </span>
+                      <span style={{ fontSize: 16, lineHeight: 1.5, color: '#44525e' }}>
                         Você não possui pendências ou rascunhos no momento.
-                        Ótimo trabalho!
-                      </p>
+                      </span>
                     </div>
                   </div>
                 ) : (
-                  <ul
-                    className={styles.alertList}
-                    aria-label="Lista de pendências"
-                  >
+                  <>
                     {stats.pendencias.pts_rascunho > 0 && (
-                      <li>
-                        <div className={styles.alertWarning}>
-                          <div>
-                            <strong>
-                              {stats.pendencias.pts_rascunho} PTS em Rascunho
-                            </strong>
-                            <p>
-                              Existem Projetos Terapêuticos Singulares salvos
-                              mas ainda não finalizados.
-                            </p>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: 20,
+                          padding: 20,
+                          backgroundColor: '#f3f5f7',
+                          borderLeft: '6px solid #b3261e',
+                          borderRadius: 8,
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 0 }}>
+                          <div style={{ display: 'flex', width: 32, height: 32, flexShrink: 0, color: '#b3261e' }}>
+                            <ExclamationCircleOutlined style={{ fontSize: 30 }} />
                           </div>
-                          <Button
-                            className={styles.alertAction}
-                            onPress={() => navigate('/pts/pacientes')}
-                            aria-label={`Ver pacientes com ${stats.pendencias.pts_rascunho} PTS em rascunho`}
-                          >
-                            Ver Pacientes
-                          </Button>
+                          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                            <span
+                              style={{
+                                fontSize: 20,
+                                fontWeight: 700,
+                                lineHeight: 1.4,
+                                color: '#14212b',
+                              }}
+                            >
+                              {stats.pendencias.pts_rascunho} PTS em rascunho
+                            </span>
+                            <span style={{ fontSize: 16, lineHeight: 1.5, color: '#44525e' }}>
+                              Foram salvos, mas ainda não foram finalizados.
+                            </span>
+                          </div>
                         </div>
-                      </li>
+
+                        <button
+                          type="button"
+                          onClick={() => navigate('/pts/pacientes')}
+                          aria-label={`Ver pacientes com ${stats.pendencias.pts_rascunho} PTS em rascunho`}
+                          style={{
+                            display: 'inline-flex',
+                            minHeight: 48,
+                            flexShrink: 0,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            gap: 8,
+                            padding: '0 20px',
+                            backgroundColor: '#5568d3',
+                            borderRadius: 6,
+                            color: '#ffffff',
+                            fontSize: 16,
+                            fontWeight: 700,
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontFamily: 'inherit',
+                          }}
+                        >
+                          <span>Ver pacientes</span>
+                          <ArrowRightOutlined style={{ fontSize: 18 }} />
+                        </button>
+                      </div>
                     )}
 
                     {stats.pendencias.exames_pendentes > 0 && (
-                      <li>
-                        <div className={styles.alertWarning}>
-                          <div>
-                            <strong>
-                              {stats.pendencias.exames_pendentes} Exames
-                              aguardando Laudo
-                            </strong>
-                            <p>
-                              Existem exames criados que ainda não possuem
-                              laudo ou não foram finalizados.
-                            </p>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: 20,
+                          padding: 20,
+                          backgroundColor: '#f3f5f7',
+                          borderLeft: '6px solid #b3261e',
+                          borderRadius: 8,
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 0 }}>
+                          <div style={{ display: 'flex', width: 32, height: 32, flexShrink: 0, color: '#b3261e' }}>
+                            <ExclamationCircleOutlined style={{ fontSize: 30 }} />
                           </div>
-                          <Button
-                            className={styles.alertAction}
-                            onPress={() => navigate('/pacientes')}
-                            aria-label={`Ir para os ${stats.pendencias.exames_pendentes} exames pendentes de laudo`}
-                          >
-                            Ir para Exames
-                          </Button>
+                          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                            <span
+                              style={{
+                                fontSize: 20,
+                                fontWeight: 700,
+                                lineHeight: 1.4,
+                                color: '#14212b',
+                              }}
+                            >
+                              {stats.pendencias.exames_pendentes} Exames aguardando laudo
+                            </span>
+                            <span style={{ fontSize: 16, lineHeight: 1.5, color: '#44525e' }}>
+                              Existem exames criados que ainda não possuem laudo.
+                            </span>
+                          </div>
                         </div>
-                      </li>
+
+                        <button
+                          type="button"
+                          onClick={() => navigate('/pacientes')}
+                          aria-label={`Ir para os ${stats.pendencias.exames_pendentes} exames pendentes de laudo`}
+                          style={{
+                            display: 'inline-flex',
+                            minHeight: 48,
+                            flexShrink: 0,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            gap: 8,
+                            padding: '0 20px',
+                            backgroundColor: '#5568d3',
+                            borderRadius: 6,
+                            color: '#ffffff',
+                            fontSize: 16,
+                            fontWeight: 700,
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontFamily: 'inherit',
+                          }}
+                        >
+                          <span>Ir para Exames</span>
+                          <ArrowRightOutlined style={{ fontSize: 18 }} />
+                        </button>
+                      </div>
                     )}
-                  </ul>
+                  </>
                 )}
               </div>
             </section>
 
-            {/* Ações Rápidas — nav porque navega para outras páginas */}
-            <nav aria-label="Ações rápidas" className={styles.card}>
-              <h2 className={styles.cardTitle}>Ações Rápidas</h2>
+            {/* Ações Rápidas */}
+            <nav
+              aria-label="Ações rápidas"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 12,
+                padding: 24,
+                backgroundColor: '#ffffff',
+                border: '1px solid #d5dce3',
+                borderRadius: 8,
+              }}
+            >
+              <h2
+                style={{
+                  margin: '0 0 4px 0',
+                  fontSize: 22,
+                  fontWeight: 700,
+                  lineHeight: 1.5,
+                  color: '#14212b',
+                }}
+              >
+                Ações rápidas
+              </h2>
 
-              <ul className={styles.actionList}>
-                <li>
-                  <Button
-                    className={`${styles.actionBtn} ${styles.actionBtnPrimary}`}
-                    onPress={() => navigate('/pts/pacientes')}
-                  >
-                    <span aria-hidden="true" className={styles.btnIcon}>
-                      👥
-                    </span>
-                    Buscar Paciente p/ PTS
-                  </Button>
-                </li>
-                <li>
-                  <Button
-                    className={styles.actionBtn}
-                    onPress={() => navigate('/pacientes')}
-                  >
-                    <span aria-hidden="true" className={styles.btnIcon}>
-                      👥
-                    </span>
-                    Buscar Paciente p/ Exame
-                  </Button>
-                </li>
-                <li>
-                  <Button
-                    className={styles.actionBtn}
-                    onPress={() => navigate('/consulta')}
-                  >
-                    <span aria-hidden="true" className={styles.btnIcon}>
-                      🔍
-                    </span>
-                    Consultar Laudos
-                  </Button>
-                </li>
-              </ul>
+              <button
+                type="button"
+                onClick={() => navigate('/pts/pacientes')}
+                style={{
+                  display: 'flex',
+                  minHeight: 60,
+                  alignItems: 'center',
+                  gap: 14,
+                  padding: '0 18px',
+                  backgroundColor: '#5568d3',
+                  borderRadius: 6,
+                  color: '#ffffff',
+                  fontSize: 17,
+                  fontWeight: 700,
+                  border: 'none',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontFamily: 'inherit',
+                  width: '100%',
+                }}
+              >
+                <TeamOutlined style={{ fontSize: 22, flexShrink: 0 }} />
+                <span style={{ flex: '1 1 0%' }}>Buscar paciente para PTS</span>
+                <ArrowRightOutlined style={{ fontSize: 18, flexShrink: 0 }} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate('/pacientes')}
+                style={{
+                  display: 'flex',
+                  minHeight: 60,
+                  alignItems: 'center',
+                  gap: 14,
+                  padding: '0 18px',
+                  backgroundColor: '#ffffff',
+                  border: '2px solid #5568d3',
+                  borderRadius: 6,
+                  color: '#5568d3',
+                  fontSize: 17,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontFamily: 'inherit',
+                  width: '100%',
+                }}
+              >
+                <SearchOutlined style={{ fontSize: 22, flexShrink: 0 }} />
+                <span style={{ flex: '1 1 0%' }}>Buscar paciente para exame</span>
+                <ArrowRightOutlined style={{ fontSize: 18, flexShrink: 0 }} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate('/consulta')}
+                style={{
+                  display: 'flex',
+                  minHeight: 60,
+                  alignItems: 'center',
+                  gap: 14,
+                  padding: '0 18px',
+                  backgroundColor: '#ffffff',
+                  border: '2px solid #5568d3',
+                  borderRadius: 6,
+                  color: '#5568d3',
+                  fontSize: 17,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontFamily: 'inherit',
+                  width: '100%',
+                }}
+              >
+                <FileTextOutlined style={{ fontSize: 22, flexShrink: 0 }} />
+                <span style={{ flex: '1 1 0%' }}>Consultar laudos</span>
+                <ArrowRightOutlined style={{ fontSize: 18, flexShrink: 0 }} />
+              </button>
             </nav>
           </div>
 
           {/* ── Produtividade Mensal ───────────────────────────────── */}
           <section
             aria-labelledby="produtividade-heading"
-            className={styles.produtividadeSection}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 16,
+            }}
           >
             <h2
               id="produtividade-heading"
-              className={styles.sectionDivider}
+              style={{
+                margin: 0,
+                fontSize: 24,
+                fontWeight: 700,
+                lineHeight: 1.5,
+                color: '#14212b',
+              }}
             >
-              Produtividade Mensal
+              Produtividade do mês
             </h2>
 
-            {/*
-              <dl>/<dt>/<dd>: o NVDA lê naturalmente como
-              "PTS Elaborados/Revisados (Mês atual) — 1"
-            */}
-            <dl className={styles.statsGrid}>
-              <div className={styles.statCard}>
-                <dt className={styles.statLabel}>
-                  <span aria-hidden="true">📄</span>
-                  PTS Elaborados/Revisados (Mês atual)
-                </dt>
-                <dd className={styles.statValue}>
-                  {stats.resumo_mes.pts_finalizados}
-                </dd>
+            <dl
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))',
+                gap: 24,
+                margin: 0,
+                padding: 0,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 20,
+                  padding: 24,
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #d5dce3',
+                  borderRadius: 8,
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    width: 56,
+                    height: 56,
+                    flexShrink: 0,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    backgroundColor: '#eceffb',
+                    borderRadius: 6,
+                    color: '#5568d3',
+                  }}
+                  aria-hidden="true"
+                >
+                  <FileTextOutlined style={{ fontSize: 30 }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <dd
+                    style={{
+                      margin: 0,
+                      fontSize: 40,
+                      fontWeight: 700,
+                      lineHeight: 1.1,
+                      color: '#14212b',
+                    }}
+                  >
+                    {stats.resumo_mes.pts_finalizados}
+                  </dd>
+                  <dt
+                    style={{
+                      fontSize: 18,
+                      fontWeight: 700,
+                      lineHeight: 1.5,
+                      color: '#14212b',
+                    }}
+                  >
+                    PTS elaborados ou revisados
+                  </dt>
+                  <span style={{ fontSize: 14, lineHeight: 1.5, color: '#44525e' }}>
+                    {stats.resumo_mes.pts_finalizados === 0
+                      ? 'Mês atual · nenhum registro até agora'
+                      : `Mês atual · ${stats.resumo_mes.pts_finalizados} registro${stats.resumo_mes.pts_finalizados !== 1 ? 's' : ''}`}
+                  </span>
+                </div>
               </div>
 
-              <div className={styles.statCard}>
-                <dt className={styles.statLabel}>
-                  <span aria-hidden="true">🔊</span>
-                  Exames Realizados (Mês atual)
-                </dt>
-                <dd className={styles.statValue}>
-                  {stats.resumo_mes.exames_realizados}
-                </dd>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 20,
+                  padding: 24,
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #d5dce3',
+                  borderRadius: 8,
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    width: 56,
+                    height: 56,
+                    flexShrink: 0,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    backgroundColor: '#eceffb',
+                    borderRadius: 6,
+                    color: '#5568d3',
+                  }}
+                  aria-hidden="true"
+                >
+                  <SoundOutlined style={{ fontSize: 30 }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <dd
+                    style={{
+                      margin: 0,
+                      fontSize: 40,
+                      fontWeight: 700,
+                      lineHeight: 1.1,
+                      color: '#14212b',
+                    }}
+                  >
+                    {stats.resumo_mes.exames_realizados}
+                  </dd>
+                  <dt
+                    style={{
+                      fontSize: 18,
+                      fontWeight: 700,
+                      lineHeight: 1.5,
+                      color: '#14212b',
+                    }}
+                  >
+                    Exames realizados
+                  </dt>
+                  <span style={{ fontSize: 14, lineHeight: 1.5, color: '#44525e' }}>
+                    {stats.resumo_mes.exames_realizados === 0
+                      ? 'Mês atual · nenhum registro até agora'
+                      : `Mês atual · ${stats.resumo_mes.exames_realizados} registro${stats.resumo_mes.exames_realizados !== 1 ? 's' : ''}`}
+                  </span>
+                </div>
               </div>
             </dl>
           </section>
         </>
       )}
-    </>
+    </div>
   )
 }
