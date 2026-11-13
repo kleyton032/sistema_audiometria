@@ -217,6 +217,8 @@ export interface PtsHistoricoItemOut {
 }
 
 export interface PtsHistoricoSummaryOut {
+  cd_paciente?: string
+  nm_paciente?: string | null
   total_pts: number
   primeiro_pts_data: string | null
   ultimo_pts_data: string | null

@@ -946,7 +946,20 @@ def historico_pts_paciente(
         elapsed_ms = (time.time() - start_time) * 1000
         logger.info(f"AUDIT(HISTORICO_PTS): User={user.nm_login} | Paciente={cd_paciente} | Status=200 | Time={elapsed_ms:.2f}ms")
 
+        # Busca nome do paciente se disponível
+        nm_paciente = None
+        try:
+            pac_query = text("SELECT NM_PACIENTE FROM dbamv.PACIENTE WHERE CD_PACIENTE = :cd_paciente")
+            pac_val = int(cd_paciente) if str(cd_paciente).isdigit() else cd_paciente
+            pac_row = session.execute(pac_query, {"cd_paciente": pac_val}).fetchone()
+            if pac_row and pac_row[0]:
+                nm_paciente = pac_row[0]
+        except Exception:
+            pass
+
         return {
+            "cd_paciente": str(cd_paciente),
+            "nm_paciente": nm_paciente,
             "total_pts": total_pts,
             "primeiro_pts_data": primeiro_pts_data,
             "ultimo_pts_data": ultimo_pts_data,

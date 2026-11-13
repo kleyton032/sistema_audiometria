@@ -130,6 +130,8 @@ class PtsHistoricoItemOut(BaseModel):
     objetivos: List[PtsHistoricoObjetivoOut] = []
 
 class PtsHistoricoSummaryOut(BaseModel):
+    cd_paciente: Optional[str] = None
+    nm_paciente: Optional[str] = None
     total_pts: int
     primeiro_pts_data: Optional[str] = None
     ultimo_pts_data: Optional[str] = None
