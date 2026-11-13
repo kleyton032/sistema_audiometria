@@ -1,111 +1,216 @@
-
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import * as Accordion from '@radix-ui/react-accordion'
-import * as Tooltip from '@radix-ui/react-tooltip'
-import { DownOutlined } from '@ant-design/icons'
+import { useLocation } from 'react-router-dom'
 import { MenuConfigItem, MenuRole } from '../../config/menuConfig'
 import { SidebarItem } from './SidebarItem'
+import { IconChevronDown } from './SidebarIcons'
 import './Sidebar.css'
 
 interface SidebarMenuProps {
   items: MenuConfigItem[]
   collapsed: boolean
   permissions: Record<MenuRole, boolean>
-  level?: number
 }
 
-export function SidebarMenu({ items, collapsed, permissions, level = 1 }: SidebarMenuProps) {
-  // If we're at the root level, we provide the Accordion.Root
-  // If we're deeper, we just render Accordion.Items inside the existing Root (or handle nested Accordions if needed).
-  // Radix allows Accordions inside Accordions if we use multiple Roots, but for a sidebar, 
-  // having a single root with type="multiple" is usually best.
+export function SidebarMenu({ items, collapsed, permissions }: SidebarMenuProps) {
+  const location = useLocation()
+  const currentPath = location.pathname
+  const navRef = useRef<HTMLElement>(null)
 
-  const renderItem = (item: MenuConfigItem) => {
-    // Leaf node
-    if (!item.children || item.children.length === 0) {
-      return (
-        <li key={item.key} style={{ listStyle: 'none', margin: 0 }}>
-          <SidebarItem item={item} collapsed={collapsed} permissions={permissions} level={level} />
-        </li>
-      )
+  // Identifica quais grupos contêm a rota atual
+  const activeGroupKeys = useMemo(() => {
+    const keys: string[] = []
+    items.forEach((item) => {
+      if (item.children && item.children.length > 0) {
+        const hasActiveChild = item.children.some((child) => {
+          if (!child.path) return false
+          if (child.path === '/pacientes') {
+            return currentPath === '/pacientes' || currentPath.startsWith('/pacientes/')
+          }
+          return currentPath === child.path || currentPath.startsWith(child.path + '/')
+        })
+        if (hasActiveChild) {
+          keys.push(item.key)
+        }
+      }
+    })
+    return keys
+  }, [items, currentPath])
+
+  // Estado dos grupos abertos (por padrão abre grupos que têm rotas ativas ou os principais)
+  const [openGroups, setOpenGroups] = useState<string[]>(() => {
+    if (activeGroupKeys.length > 0) return activeGroupKeys
+    return ['grupo-exames', 'grupo-pts']
+  })
+
+  // Garante que o grupo da rota atual esteja aberto quando a rota mudar
+  useEffect(() => {
+    if (activeGroupKeys.length > 0) {
+      setOpenGroups((prev) => Array.from(new Set([...prev, ...activeGroupKeys])))
     }
+  }, [activeGroupKeys])
 
-    // Group node
-    const label = typeof item.label === 'function' ? item.label(permissions) : item.label
-    const paddingLeft = collapsed ? 16 : 16 + (level - 1) * 16
+  // Navegação por teclado com setas Cima / Baixo
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      if (!navRef.current) return
+      const focusable = navRef.current.querySelectorAll<HTMLButtonElement>(
+        'button:not([disabled]):not([aria-hidden="true"])'
+      )
+      const buttons = Array.from(focusable)
+      if (buttons.length === 0) return
 
-    const triggerContent = (
-      <>
-        <span style={{ display: 'flex', alignItems: 'center', fontSize: 16 }}>
-          {item.icon}
-        </span>
-        {!collapsed && (
-          <span style={{ marginLeft: 12, flex: 1, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {label}
-          </span>
-        )}
-        {!collapsed && (
-          <DownOutlined className="SidebarAccordionChevron" style={{ fontSize: 10, marginLeft: 8 }} aria-hidden />
-        )}
-      </>
-    )
-
-    const groupButton = collapsed ? (
-      <Tooltip.Provider delayDuration={200}>
-        <Tooltip.Root>
-          <Tooltip.Trigger asChild>
-            <Accordion.Trigger className="SidebarAccordionTrigger" style={{ paddingLeft, justifyContent: 'center' }}>
-              {triggerContent}
-            </Accordion.Trigger>
-          </Tooltip.Trigger>
-          <Tooltip.Portal>
-            <Tooltip.Content className="SidebarTooltipContent" side="right" sideOffset={10}>
-              {label} (Grupo)
-              <Tooltip.Arrow className="SidebarTooltipArrow" />
-            </Tooltip.Content>
-          </Tooltip.Portal>
-        </Tooltip.Root>
-      </Tooltip.Provider>
-    ) : (
-      <Accordion.Trigger className="SidebarAccordionTrigger" style={{ paddingLeft }}>
-        {triggerContent}
-      </Accordion.Trigger>
-    )
-
-    return (
-      <Accordion.Item value={item.key} key={item.key} asChild>
-        <li style={{ listStyle: 'none', margin: 0 }}>
-          {groupButton}
-          <Accordion.Content className="SidebarAccordionContent">
-            {/* Se estiver colapsado, o submenu fica oculto ou vira popover? 
-                Geralmente em modo collapsed o submenu do Radix pode quebrar o layout se não for em Portal.
-                Para simplicidade, se estiver colapsado e o usuário clicar, podemos descolapsar o menu 
-                ou apenas não mostrar os filhos in-place.
-            */}
-            {!collapsed && (
-              <ul style={{ padding: 0, margin: 0 }}>
-                <SidebarMenu items={item.children} collapsed={collapsed} permissions={permissions} level={level + 1} />
-              </ul>
-            )}
-          </Accordion.Content>
-        </li>
-      </Accordion.Item>
-    )
+      const currentIndex = buttons.indexOf(document.activeElement as HTMLButtonElement)
+      if (currentIndex === -1) {
+        buttons[0]?.focus()
+      } else if (e.key === 'ArrowDown') {
+        const nextIndex = (currentIndex + 1) % buttons.length
+        buttons[nextIndex]?.focus()
+      } else if (e.key === 'ArrowUp') {
+        const prevIndex = (currentIndex - 1 + buttons.length) % buttons.length
+        buttons[prevIndex]?.focus()
+      }
+    }
   }
 
-  // Se for o nível 1, embrulhamos tudo em Accordion.Root
-  // Note: defaultValue or value can be controlled if we want to auto-expand active groups.
-  if (level === 1) {
+  // ── MODO RECOLHIDO (COLLAPSED) ──────────────────────────────────────────
+  if (collapsed) {
     return (
-      <nav aria-label="Menu principal de navegação" className="sidebar-wrapper">
-        <Accordion.Root type="multiple" asChild>
-          <ul style={{ padding: '12px 0', margin: 0, width: '100%' }}>
-            {items.map(renderItem)}
-          </ul>
-        </Accordion.Root>
+      <nav
+        ref={navRef}
+        aria-label="Menu principal de navegação"
+        className="sidebar-collapsed-nav"
+        onKeyDown={handleKeyDown}
+      >
+        <div className="sidebar-collapsed-list">
+          {items.map((item, index) => {
+            // Se for folha (ex: Início)
+            if (!item.children || item.children.length === 0) {
+              return (
+                <React.Fragment key={item.key}>
+                  <SidebarItem
+                    item={item}
+                    collapsed={true}
+                    permissions={permissions}
+                  />
+                  {index === 0 && <div className="sidebar-collapsed-divider" role="separator" />}
+                </React.Fragment>
+              )
+            }
+
+            // Se for grupo de filhos, renderiza cada filho como botão 56x56
+            return (
+              <React.Fragment key={item.key}>
+                {item.children.map((child) => (
+                  <SidebarItem
+                    key={child.key}
+                    item={child}
+                    collapsed={true}
+                    permissions={permissions}
+                  />
+                ))}
+                {index < items.length - 1 && (
+                  <div className="sidebar-collapsed-divider" role="separator" />
+                )}
+              </React.Fragment>
+            )
+          })}
+        </div>
       </nav>
     )
   }
 
-  // Se for subnível, não precisa de novo Root (a não ser que quisermos sub-accordions independentes, mas o HTML é válido)
-  return <>{items.map(renderItem)}</>
+  // ── MODO EXPANDIDO ──────────────────────────────────────────────────────
+  // Separar itens iniciais (ex: Início), grupos do accordion, e itens finais (ex: Admin)
+  const topItems = items.filter((item) => (!item.children || item.children.length === 0) && item.key === '/home')
+  const groupItems = items.filter((item) => item.children && item.children.length > 0)
+  const bottomItems = items.filter((item) => (!item.children || item.children.length === 0) && item.key !== '/home')
+
+  return (
+    <nav
+      ref={navRef}
+      aria-label="Menu principal de navegação"
+      className="sidebar-expanded-nav"
+      onKeyDown={handleKeyDown}
+    >
+      {/* Itens do Topo (ex: Início) */}
+      {topItems.length > 0 && (
+        <div className="sidebar-section-top">
+          {topItems.map((item) => (
+            <SidebarItem
+              key={item.key}
+              item={item}
+              collapsed={false}
+              permissions={permissions}
+            />
+          ))}
+          <div className="sidebar-divider" role="separator" />
+        </div>
+      )}
+
+      {/* Grupos Accordion */}
+      {groupItems.length > 0 && (
+        <Accordion.Root
+          type="multiple"
+          value={openGroups}
+          onValueChange={setOpenGroups}
+          className="sidebar-accordion-root"
+        >
+          {groupItems.map((item) => {
+            const label = typeof item.label === 'function' ? item.label(permissions) : item.label
+
+            return (
+              <Accordion.Item
+                value={item.key}
+                key={item.key}
+                className="sidebar-accordion-item"
+              >
+                <Accordion.Header className="sidebar-accordion-header">
+                  <Accordion.Trigger className="sidebar-group-trigger">
+                    <span className="sidebar-group-icon" aria-hidden="true">
+                      {item.icon}
+                    </span>
+                    <span className="sidebar-group-label">{label}</span>
+                    <span className="sidebar-chevron" aria-hidden="true">
+                      <IconChevronDown size={20} />
+                    </span>
+                  </Accordion.Trigger>
+                </Accordion.Header>
+
+                <Accordion.Content className="sidebar-accordion-content">
+                  <div className="sidebar-submenu-list">
+                    {item.children?.map((child) => (
+                      <SidebarItem
+                        key={child.key}
+                        item={child}
+                        collapsed={false}
+                        permissions={permissions}
+                        isSubmenu={true}
+                      />
+                    ))}
+                  </div>
+                </Accordion.Content>
+              </Accordion.Item>
+            )
+          })}
+        </Accordion.Root>
+      )}
+
+      {/* Itens Finais (ex: Painel Administrativo) */}
+      {bottomItems.length > 0 && (
+        <div className="sidebar-section-bottom">
+          <div className="sidebar-divider" role="separator" />
+          {bottomItems.map((item) => (
+            <SidebarItem
+              key={item.key}
+              item={item}
+              collapsed={false}
+              permissions={permissions}
+            />
+          ))}
+        </div>
+      )}
+    </nav>
+  )
 }

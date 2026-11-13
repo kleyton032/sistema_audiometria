@@ -1,16 +1,17 @@
 import React from 'react'
 import {
-  DashboardOutlined,
-  SearchOutlined,
-  FileProtectOutlined,
-  SoundOutlined,
-  TeamOutlined,
-  HomeOutlined,
-  SettingOutlined,
-  HistoryOutlined,
-  BulbOutlined,
-  BookOutlined,
-} from '@ant-design/icons'
+  IconHome,
+  IconEar,
+  IconCalendarCheck,
+  IconFileSearch,
+  IconClipboardList,
+  IconUsers,
+  IconDashboard,
+  IconHistory,
+  IconBrain,
+  IconBook,
+  IconSettings,
+} from '../components/Sidebar/SidebarIcons'
 
 // Perfis e atributos do usuário mapeados do contexto de autenticação
 export type MenuRole =
@@ -35,38 +36,38 @@ export const menuTree: MenuConfigItem[] = [
   {
     key: '/home',
     label: 'Início',
-    icon: <HomeOutlined />,
+    icon: <IconHome size={22} />,
     path: '/home',
   },
   {
     key: 'grupo-exames',
-    label: 'Exames Auditivos',
-    icon: <SoundOutlined />,
+    label: 'Exames auditivos',
+    icon: <IconEar size={22} />,
     roles: ['FONOAUDIOLOGO'],
     children: [
       {
         key: '/pacientes',
-        label: 'Pacientes - Exames',
-        icon: <TeamOutlined />,
+        label: 'Pacientes Agendados',
+        icon: <IconCalendarCheck size={20} />,
         path: '/pacientes',
       },
       {
         key: '/consulta',
-        label: 'Laudos - Consultas',
-        icon: <SearchOutlined />,
+        label: 'Consulta de Exames',
+        icon: <IconFileSearch size={20} />,
         path: '/consulta',
       },
     ],
   },
   {
     key: 'grupo-pts',
-    label: 'Projeto Terapêutico Singular (PTS)',
-    icon: <FileProtectOutlined />,
+    label: 'Projeto Terapêutico Singular',
+    icon: <IconClipboardList size={22} />,
     children: [
       {
         key: '/pts/pacientes',
         label: 'Pacientes PTS',
-        icon: <TeamOutlined />,
+        icon: <IconUsers size={20} />,
         path: '/pts/pacientes',
         roles: ['ADMIN', 'SUPERVISOR', 'COORDENADOR', 'FONOAUDIOLOGO', 'OPERADOR'],
       },
@@ -77,13 +78,13 @@ export const menuTree: MenuConfigItem[] = [
           if (perms.OPERADOR || perms.FONOAUDIOLOGO) return 'Meus PTS'
           return 'Consultar PTS'
         },
-        icon: <DashboardOutlined />,
+        icon: <IconDashboard size={20} />,
         path: '/pts/dashboard',
       },
       {
         key: '/pts/historico',
-        label: 'Consulta de Histórico',
-        icon: <HistoryOutlined />,
+        label: 'Consulta de histórico',
+        icon: <IconHistory size={20} />,
         path: '/pts/historico',
       },
     ],
@@ -91,13 +92,13 @@ export const menuTree: MenuConfigItem[] = [
   {
     key: 'grupo-psicologia',
     label: 'Psicologia',
-    icon: <BulbOutlined />,
+    icon: <IconBrain size={22} />,
     roles: ['PSICOLOGO'],
     children: [
       {
         key: '/psicologia/pacientes',
         label: 'Atendimentos',
-        icon: <TeamOutlined />,
+        icon: <IconUsers size={20} />,
         path: '/psicologia/pacientes',
         roles: ['PSICOLOGO'],
       },
@@ -106,13 +107,13 @@ export const menuTree: MenuConfigItem[] = [
   {
     key: 'grupo-psicopedagogia',
     label: 'Psicopedagogia',
-    icon: <BookOutlined />,
+    icon: <IconBook size={22} />,
     roles: ['PSICOPEDAGOGO'],
     children: [
       {
         key: '/psicopedagogia/pacientes',
         label: 'Atendimentos',
-        icon: <TeamOutlined />,
+        icon: <IconUsers size={20} />,
         path: '/psicopedagogia/pacientes',
         roles: ['PSICOPEDAGOGO'],
       },
@@ -121,7 +122,7 @@ export const menuTree: MenuConfigItem[] = [
   {
     key: '/admin',
     label: 'Painel Administrativo',
-    icon: <SettingOutlined />,
+    icon: <IconSettings size={22} />,
     path: '/admin',
     roles: ['ADMIN'],
   },

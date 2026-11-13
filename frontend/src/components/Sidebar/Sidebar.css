@@ -1,158 +1,549 @@
-/* frontend/src/components/Sidebar/Sidebar.css */
+/* ==========================================================================
+   Sidebar.css — Redesenho Wonder (Nov 2026)
+   Cores:
+     - Fundo do menu: #0a1a30
+     - Header: linear-gradient(90deg, #5568d3 0%, #764ba2 100%)
+     - Linhas divisórias: #2a4270
+     - Texto normal: #c3cee0
+     - Hover item: #14284a, texto #f1f5fb
+     - Ativo: #1f3a6b, borda esquerda 4px #9fb0ff, texto #f1f5fb, peso 700
+     - Foco teclado: box-shadow: 0 0 0 3px #ffffff
+   ========================================================================== */
 
-.sidebar-wrapper {
-  position: relative;
+/* ── Container Principal do Sider (Ant Design) ─────────────────────────── */
+.ant-layout-sider.sidebar-sider {
+  background-color: #0a1a30 !important;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.25);
+  transition: all 0.2s ease;
+}
+
+.ant-layout-sider.sidebar-sider > .ant-layout-sider-children {
+  display: flex;
+  flex-direction: column;
   height: 100%;
+  overflow: hidden;
+  background-color: #0a1a30;
+}
+
+/* ── Header / Logo (76px) ──────────────────────────────────────────────── */
+.sidebar-header {
+  height: 76px;
+  flex-shrink: 0;
+  background-image: linear-gradient(90deg, #5568d3 0%, #764ba2 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  user-select: none;
+}
+
+.sidebar-header-expanded {
+  padding: 0 16px;
+  column-gap: 12px;
+}
+
+.sidebar-header-collapsed {
+  justify-content: center;
+  width: 100%;
+  padding: 0;
+}
+
+.sidebar-logo-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-logo-text {
   display: flex;
   flex-direction: column;
 }
 
-/* Base resets */
-.sidebar-nav-button {
+.sidebar-logo-title {
+  color: #ffffff;
+  font-family: 'Atkinson Hyperlegible', Inter, sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.1;
+  text-align: left;
+}
+
+.sidebar-logo-subtitle {
+  color: #ffffff;
+  font-family: 'Atkinson Hyperlegible', Inter, sans-serif;
+  font-size: 14px;
+  line-height: 1.2;
+  text-align: left;
+  opacity: 0.95;
+}
+
+/* ── Área de Navegação com Scroll ──────────────────────────────────────── */
+.sidebar-nav-container {
+  flex: 1 1 0%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Scrollbar personalizada dark */
+.sidebar-nav-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-nav-container::-webkit-scrollbar-track {
+  background: #0a1a30;
+}
+
+.sidebar-nav-container::-webkit-scrollbar-thumb {
+  background: #2a4270;
+  border-radius: 3px;
+}
+
+.sidebar-nav-container::-webkit-scrollbar-thumb:hover {
+  background: #5568d3;
+}
+
+/* ── Navegação Expandida ───────────────────────────────────────────────── */
+.sidebar-expanded-nav {
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  row-gap: 6px;
+  column-gap: 6px;
+}
+
+.sidebar-section-top,
+.sidebar-section-bottom {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Linha divisória */
+.sidebar-divider {
+  display: block;
+  height: 1px;
+  background-color: #2a4270;
+  margin: 6px 0;
+  border: none;
+}
+
+/* ── Botões de Navegação (Itens de Nível Raiz / Folha) ──────────────────── */
+.sidebar-nav-item {
   all: unset;
   box-sizing: border-box;
   display: flex;
   align-items: center;
   width: 100%;
-  padding: 10px 16px;
-  color: rgba(255, 255, 255, 0.65);
+  border-radius: 6px;
+  color: #c3cee0;
+  font-family: 'Atkinson Hyperlegible', Inter, sans-serif;
+  font-size: 16px;
   cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
-  transition: all 0.2s ease;
-  position: relative;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  user-select: none;
 }
 
-.sidebar-nav-button:hover {
-  color: #fff;
-  background-color: rgba(102, 126, 234, 0.15);
+.sidebar-root-item {
+  min-height: 48px;
+  padding: 0 14px;
+  column-gap: 14px;
+  row-gap: 14px;
 }
 
-.sidebar-nav-button:focus-visible {
-  outline: 2px solid #667eea;
-  outline-offset: -2px;
-  background-color: rgba(102, 126, 234, 0.2);
-  color: #fff;
+.sidebar-submenu-item {
+  min-height: 48px;
+  padding: 0 12px;
+  column-gap: 12px;
+  row-gap: 12px;
 }
 
-/* Active Item state */
-.sidebar-nav-button[data-active="true"] {
-  background-color: rgba(102, 126, 234, 0.2);
-  color: #fff;
-  font-weight: 500;
+.sidebar-nav-item:hover {
+  background-color: #14284a;
+  color: #f1f5fb;
 }
 
-.sidebar-nav-button[data-active="true"]::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background-color: #667eea;
-  border-top-right-radius: 4px;
-  border-bottom-right-radius: 4px;
+.sidebar-nav-item:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px #ffffff !important;
+  color: #f1f5fb;
 }
 
-/* Group Trigger */
-.SidebarAccordionTrigger {
-  all: unset;
-  box-sizing: border-box;
-  width: 100%;
-  padding: 10px 16px;
+/* Estado Ativo (Página Atual) */
+.sidebar-nav-item[data-active="true"] {
+  background-color: #1f3a6b;
+  border-left: 4px solid #9fb0ff;
+  color: #f1f5fb;
+  font-weight: 700;
+}
+
+.sidebar-item-icon {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  color: rgba(255, 255, 255, 0.65);
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar-root-item .sidebar-item-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.sidebar-submenu-item .sidebar-item-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.sidebar-item-label {
+  flex: 1 1 0%;
+  text-align: left;
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Accordion / Grupos (Radix UI) ─────────────────────────────────────── */
+.sidebar-accordion-root {
+  display: flex;
+  flex-direction: column;
+  row-gap: 4px;
+  column-gap: 4px;
+}
+
+.sidebar-accordion-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-accordion-header {
+  all: unset;
+  display: block;
+  width: 100%;
+}
+
+.sidebar-group-trigger {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  column-gap: 14px;
+  row-gap: 14px;
+  border-radius: 6px;
+  color: #f1f5fb;
+  font-family: 'Atkinson Hyperlegible', Inter, sans-serif;
+  font-size: 16px;
+  font-weight: 700;
   cursor: pointer;
-  font-size: 14px;
-  transition: all 0.2s ease;
+  transition: background-color 0.15s ease;
+  user-select: none;
 }
 
-.SidebarAccordionTrigger:hover {
-  color: #fff;
-  background-color: rgba(102, 126, 234, 0.1);
+.sidebar-group-trigger:hover {
+  background-color: #14284a;
 }
 
-.SidebarAccordionTrigger:focus-visible {
-  outline: 2px solid #667eea;
-  outline-offset: -2px;
+.sidebar-group-trigger:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px #ffffff !important;
 }
 
-.SidebarAccordionTrigger[data-state="open"] {
-  color: #fff;
-  background-color: rgba(102, 126, 234, 0.1);
+.sidebar-group-icon {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.SidebarAccordionTrigger .SidebarAccordionChevron {
-  transition: transform 300ms cubic-bezier(0.87, 0, 0.13, 1);
+.sidebar-group-label {
+  flex: 1 1 0%;
+  text-align: left;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.SidebarAccordionTrigger[data-state="open"] .SidebarAccordionChevron {
+.sidebar-chevron {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 250ms cubic-bezier(0.87, 0, 0.13, 1);
+  color: #c3cee0;
+}
+
+.sidebar-group-trigger[data-state="open"] .sidebar-chevron {
   transform: rotate(180deg);
+  color: #f1f5fb;
 }
 
-/* Accordion Animations */
-.SidebarAccordionContent {
+/* Submenu container com linha vertical #2a4270 */
+.sidebar-submenu-list {
+  display: flex;
+  flex-direction: column;
+  row-gap: 4px;
+  column-gap: 4px;
+  padding-left: 10px;
+  margin-left: 26px;
+  margin-top: 4px;
+  margin-bottom: 4px;
+  border-left: 1px solid #2a4270;
+}
+
+.sidebar-accordion-content {
   overflow: hidden;
 }
 
-.SidebarAccordionContent[data-state="open"] {
-  animation: slideDown 300ms cubic-bezier(0.87, 0, 0.13, 1);
+.sidebar-accordion-content[data-state="open"] {
+  animation: sidebarSlideDown 250ms cubic-bezier(0.87, 0, 0.13, 1);
 }
 
-.SidebarAccordionContent[data-state="closed"] {
-  animation: slideUp 300ms cubic-bezier(0.87, 0, 0.13, 1);
+.sidebar-accordion-content[data-state="closed"] {
+  animation: sidebarSlideUp 250ms cubic-bezier(0.87, 0, 0.13, 1);
 }
 
-@keyframes slideDown {
-  from { height: 0; }
-  to { height: var(--radix-accordion-content-height); }
+@keyframes sidebarSlideDown {
+  from {
+    height: 0;
+    opacity: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+    opacity: 1;
+  }
 }
 
-@keyframes slideUp {
-  from { height: var(--radix-accordion-content-height); }
-  to { height: 0; }
+@keyframes sidebarSlideUp {
+  from {
+    height: var(--radix-accordion-content-height);
+    opacity: 1;
+  }
+  to {
+    height: 0;
+    opacity: 0;
+  }
 }
 
-/* Tooltip Styles */
-.SidebarTooltipContent {
-  border-radius: 4px;
-  padding: 8px 12px;
-  font-size: 13px;
-  line-height: 1;
-  color: #fff;
-  background-color: #333;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+/* ── MODO RECOLHIDO (COLLAPSED) ────────────────────────────────────────── */
+.sidebar-collapsed-nav {
+  width: 100%;
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sidebar-collapsed-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  row-gap: 6px;
+  column-gap: 6px;
+}
+
+.sidebar-collapsed-btn {
+  all: unset;
+  box-sizing: border-box;
+  width: 56px;
+  height: 56px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c3cee0;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   user-select: none;
-  animation-duration: 200ms;
+}
+
+.sidebar-collapsed-btn:hover {
+  background-color: #14284a;
+  color: #f1f5fb;
+}
+
+.sidebar-collapsed-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px #ffffff !important;
+  color: #f1f5fb;
+}
+
+.sidebar-collapsed-btn[data-active="true"] {
+  background-color: #1f3a6b;
+  border-left: 4px solid #9fb0ff;
+  color: #f1f5fb;
+}
+
+.sidebar-collapsed-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-collapsed-divider {
+  display: block;
+  width: 48px;
+  height: 1px;
+  background-color: #2a4270;
+  margin: 6px auto;
+  border: none;
+}
+
+/* ── Rodapé / Botão de Recolher/Expandir ────────────────────────────────── */
+.sidebar-footer {
+  border-top: 1px solid #2a4270;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.sidebar-footer-expanded {
+  padding: 12px;
+}
+
+.sidebar-footer-collapsed {
+  padding: 12px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.sidebar-collapse-btn {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  column-gap: 14px;
+  row-gap: 14px;
+  border-radius: 6px;
+  color: #c3cee0;
+  font-family: 'Atkinson Hyperlegible', Inter, sans-serif;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.sidebar-collapse-btn:hover {
+  background-color: #14284a;
+  color: #f1f5fb;
+}
+
+.sidebar-collapse-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px #ffffff !important;
+  color: #f1f5fb;
+}
+
+.sidebar-collapse-icon {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar-collapse-label {
+  line-height: 1.5;
+}
+
+/* ── Tooltips Flutuantes no Modo Recolhido ──────────────────────────────── */
+.SidebarTooltipContent {
+  background-color: #0a1a30;
+  border: 1px solid #2a4270;
+  color: #f1f5fb;
+  font-family: 'Atkinson Hyperlegible', Inter, sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.5;
+  border-radius: 6px;
+  padding: 8px 14px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+  z-index: 10000;
+  user-select: none;
+  white-space: nowrap;
+  animation-duration: 150ms;
   animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   will-change: transform, opacity;
-  z-index: 9999;
 }
 
-.SidebarTooltipContent[data-state="delayed-open"][data-side="top"] { animation-name: slideDownAndFade; }
-.SidebarTooltipContent[data-state="delayed-open"][data-side="right"] { animation-name: slideLeftAndFade; }
-.SidebarTooltipContent[data-state="delayed-open"][data-side="bottom"] { animation-name: slideUpAndFade; }
-.SidebarTooltipContent[data-state="delayed-open"][data-side="left"] { animation-name: slideRightAndFade; }
+.SidebarTooltipContent[data-state="delayed-open"][data-side="top"] {
+  animation-name: slideDownAndFade;
+}
+.SidebarTooltipContent[data-state="delayed-open"][data-side="right"] {
+  animation-name: slideLeftAndFade;
+}
+.SidebarTooltipContent[data-state="delayed-open"][data-side="bottom"] {
+  animation-name: slideUpAndFade;
+}
+.SidebarTooltipContent[data-state="delayed-open"][data-side="left"] {
+  animation-name: slideRightAndFade;
+}
 
 .SidebarTooltipArrow {
-  fill: #333;
+  fill: #0a1a30;
+  stroke: #2a4270;
+  stroke-width: 1px;
 }
 
 @keyframes slideUpAndFade {
-  from { opacity: 0; transform: translateY(2px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 @keyframes slideRightAndFade {
-  from { opacity: 0; transform: translateX(-2px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 @keyframes slideDownAndFade {
-  from { opacity: 0; transform: translateY(-2px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 @keyframes slideLeftAndFade {
-  from { opacity: 0; transform: translateX(2px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }

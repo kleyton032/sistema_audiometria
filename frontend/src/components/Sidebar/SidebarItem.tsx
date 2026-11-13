@@ -1,4 +1,4 @@
-
+import { useMemo } from 'react'
 import * as Tooltip from '@radix-ui/react-tooltip'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { MenuConfigItem, MenuRole } from '../../config/menuConfig'
@@ -8,16 +8,28 @@ interface SidebarItemProps {
   item: MenuConfigItem
   collapsed: boolean
   permissions: Record<MenuRole, boolean>
-  level?: number
+  isSubmenu?: boolean
 }
 
-export function SidebarItem({ item, collapsed, permissions, level = 1 }: SidebarItemProps) {
+export function SidebarItem({ item, collapsed, permissions, isSubmenu = false }: SidebarItemProps) {
   const navigate = useNavigate()
   const location = useLocation()
-  
-  // Resolve the dynamic label if it's a function
+  const currentPath = location.pathname
+
+  // Resolve dynamic label
   const label = typeof item.label === 'function' ? item.label(permissions) : item.label
-  const isActive = item.path ? location.pathname.includes(item.path) : false
+
+  // Precise route matching so /pacientes doesn't match /pts/pacientes
+  const isActive = useMemo(() => {
+    if (!item.path) return false
+    if (item.path === '/home') {
+      return currentPath === '/' || currentPath === '/home'
+    }
+    if (item.path === '/pacientes') {
+      return currentPath === '/pacientes' || currentPath.startsWith('/pacientes/')
+    }
+    return currentPath === item.path || currentPath.startsWith(item.path + '/')
+  }, [item.path, currentPath])
 
   const handleClick = () => {
     if (item.path) {
@@ -25,37 +37,26 @@ export function SidebarItem({ item, collapsed, permissions, level = 1 }: Sidebar
     }
   }
 
-  const paddingLeft = collapsed ? 16 : 16 + (level - 1) * 16
-
-  const button = (
-    <button
-      className="sidebar-nav-button"
-      onClick={handleClick}
-      data-active={isActive}
-      aria-current={isActive ? 'page' : undefined}
-      aria-label={label}
-      style={{ paddingLeft, justifyContent: collapsed ? 'center' : 'flex-start' }}
-    >
-      <span style={{ display: 'flex', alignItems: 'center', fontSize: 16 }}>
-        {item.icon}
-      </span>
-      {!collapsed && (
-        <span style={{ marginLeft: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {label}
-        </span>
-      )}
-    </button>
-  )
-
   if (collapsed) {
     return (
-      <Tooltip.Provider delayDuration={200}>
+      <Tooltip.Provider delayDuration={150}>
         <Tooltip.Root>
           <Tooltip.Trigger asChild>
-            {button}
+            <button
+              type="button"
+              className="sidebar-collapsed-btn"
+              onClick={handleClick}
+              data-active={isActive}
+              aria-current={isActive ? 'page' : undefined}
+              aria-label={typeof label === 'string' ? label : undefined}
+            >
+              <span className="sidebar-collapsed-icon" aria-hidden="true">
+                {item.icon}
+              </span>
+            </button>
           </Tooltip.Trigger>
           <Tooltip.Portal>
-            <Tooltip.Content className="SidebarTooltipContent" side="right" sideOffset={10}>
+            <Tooltip.Content className="SidebarTooltipContent" side="right" sideOffset={12}>
               {label}
               <Tooltip.Arrow className="SidebarTooltipArrow" />
             </Tooltip.Content>
@@ -65,5 +66,20 @@ export function SidebarItem({ item, collapsed, permissions, level = 1 }: Sidebar
     )
   }
 
-  return button
+  return (
+    <button
+      type="button"
+      className={`sidebar-nav-item ${isSubmenu ? 'sidebar-submenu-item' : 'sidebar-root-item'}`}
+      onClick={handleClick}
+      data-active={isActive}
+      aria-current={isActive ? 'page' : undefined}
+    >
+      <span className="sidebar-item-icon" aria-hidden="true">
+        {item.icon}
+      </span>
+      <span className="sidebar-item-label">
+        {label}
+      </span>
+    </button>
+  )
 }
