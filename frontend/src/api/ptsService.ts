@@ -259,3 +259,39 @@ export async function getPTSObjetivosAnteriores(
   })
   return data
 }
+
+export interface PtsProtocoloDominioScore {
+  ds_dominio: string
+  nr_subtotal: number
+  nr_maximo: number
+}
+
+export interface PtsProtocoloAplicado {
+  id_avaliacao: number
+  id_protocolo: number
+  ds_codigo: string
+  ds_titulo: string
+  ds_escala?: string | null
+  dt_avaliacao: string
+  pontuacao_obtida: number
+  pontuacao_maxima: number
+  percentual: number
+  pontuacao_formatada: string
+  dominios: PtsProtocoloDominioScore[]
+}
+
+export async function getPTSProtocolosAplicados(
+  cdPaciente: string | number,
+  idUsuarioAutor?: number | null,
+): Promise<PtsProtocoloAplicado[]> {
+  const params: Record<string, any> = {}
+  if (idUsuarioAutor != null) {
+    params.id_usuario_autor = idUsuarioAutor
+  }
+  const { data } = await api.get<PtsProtocoloAplicado[]>(
+    `/pts/${cdPaciente}/protocolos-aplicados`,
+    { params },
+  )
+  return data
+}
+

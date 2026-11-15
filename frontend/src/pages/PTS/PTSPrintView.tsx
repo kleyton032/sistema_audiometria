@@ -20,6 +20,8 @@ function formatEspecialidadeConselho(user: any): string {
   return `${especialidade} / ${nomeConselho}: ${codigoConselho}`
 }
 
+import type { PtsProtocoloAplicado } from '@/api/ptsService';
+
 export interface PTSPrintData {
   paciente: any;
   formValues: any;
@@ -31,6 +33,7 @@ export interface PTSPrintData {
   conductaRows: any[];
   multidisciplinarRows: any[];
   instrumentoRows: any[];
+  protocolosAplicados?: PtsProtocoloAplicado[];
   terapias: any[];
   objetivos: any;
   objetivosNaoSeAplica?: Record<string, boolean>;
@@ -79,6 +82,7 @@ export default function PTSPrintView({ data, full = false }: Props) {
     conductaRows,
     multidisciplinarRows,
     instrumentoRows,
+    protocolosAplicados = [],
     terapias,
     objetivos,
     objetivosNaoSeAplica = {},
@@ -92,7 +96,17 @@ export default function PTSPrintView({ data, full = false }: Props) {
   const validExtTerapias = (extTerapias || []).filter(d => d?.diagnostico);
   const validConductaRows = (conductaRows || []).filter(d => d?.diagnostico);
   const validMultiRows = (multidisciplinarRows || []).filter(d => d?.diagnostico);
-  const validInstruRows = (instrumentoRows || []).filter(d => d?.diagnostico);
+  const codigosProtocolos = new Set((protocolosAplicados || []).map(p => p.ds_codigo.toUpperCase()));
+  const titulosProtocolos = new Set((protocolosAplicados || []).map(p => p.ds_titulo.toUpperCase()));
+  const validInstruRows = (instrumentoRows || []).filter(d => {
+    if (!d?.diagnostico) return false;
+    if (codigosProtocolos.size === 0) return true;
+    const cdUpper = (d.cd_instrumento || '').toUpperCase();
+    const dsUpper = String(d.diagnostico).toUpperCase();
+    if (cdUpper && codigosProtocolos.has(cdUpper)) return false;
+    if (codigosProtocolos.has(dsUpper) || titulosProtocolos.has(dsUpper)) return false;
+    return !Array.from(codigosProtocolos).some(c => dsUpper.startsWith(`${c} —`) || dsUpper.startsWith(`${c} -`));
+  });
   const validTerapias = (terapias || []).filter(t => t?.terapia);
 
   // Helper para seções
@@ -420,18 +434,59 @@ export default function PTSPrintView({ data, full = false }: Props) {
         </Section>
       )}
 
-      {full && validInstruRows.length > 0 && (
+      {(protocolosAplicados.length > 0 || (full && validInstruRows.length > 0)) && (
         <Section title="Instrumentos e Escalas de Avaliação">
-          <ul style={{ margin: 0, paddingLeft: 20 }}>
-            {validInstruRows.map((d, i) => (
-              <li key={i}>
-                {d.diagnostico}
-                {d.calculo && (
-                  <span> — <strong>Cálculo AIMS:</strong> {d.calculo}</span>
-                )}
-              </li>
-            ))}
-          </ul>
+          {protocolosAplicados.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: full && validInstruRows.length > 0 ? 8 : 0 }}>
+              {protocolosAplicados.map((prot) => (
+                <div
+                  key={prot.id_avaliacao}
+                  style={{
+                    padding: '8px 12px',
+                    border: '1px solid #d5dce3',
+                    borderLeft: '4px solid #5568d3',
+                    borderRadius: 4,
+                    breakInside: 'avoid',
+                  }}
+                >
+                  <div>
+                    <strong>Escala aplicada:</strong> {prot.ds_codigo} — {prot.ds_titulo}
+                    {prot.dt_avaliacao ? ` (${prot.dt_avaliacao})` : ''}
+                  </div>
+                  <div>
+                    <strong>Pontuação Final:</strong> {prot.pontuacao_formatada}
+                  </div>
+                  {prot.dominios && prot.dominios.length > 0 && (
+                    <div style={{ fontSize: 12, color: '#44525e', marginTop: 2 }}>
+                      <strong>Domínios:</strong>{' '}
+                      {prot.dominios.map((dom) => `${dom.ds_dominio}: ${dom.nr_subtotal}/${dom.nr_maximo} pts`).join(' | ')}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {full && validInstruRows.length > 0 && (
+            <ul style={{ margin: 0, paddingLeft: 20 }}>
+              {validInstruRows.map((d, i) => (
+                <li key={i}>
+                  {d.diagnostico}
+                  {d.calculo && (
+                    <span>
+                      {' — '}
+                      {d.diagnostico === 'AIMS' ? (
+                        <>
+                          <strong>Cálculo AIMS:</strong> {d.calculo}
+                        </>
+                      ) : (
+                        d.calculo
+                      )}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </Section>
       )}
 

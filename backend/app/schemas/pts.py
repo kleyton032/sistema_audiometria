@@ -87,6 +87,7 @@ class PTSCreate(BaseModel):
     
     # Seção 17 - Instrumentos
     class InstrumentoItem(BaseModel):
+        cd_instrumento: Optional[str] = None
         ds_instrumento: str
         ds_calculo: Optional[str] = None
 
@@ -136,3 +137,24 @@ class PtsHistoricoSummaryOut(BaseModel):
     primeiro_pts_data: Optional[str] = None
     ultimo_pts_data: Optional[str] = None
     historico: List[PtsHistoricoItemOut] = []
+
+
+class PtsProtocoloDominioScoreOut(BaseModel):
+    ds_dominio: str
+    nr_subtotal: int
+    nr_maximo: int
+
+
+class PtsProtocoloAplicadoOut(BaseModel):
+    id_avaliacao: int
+    id_protocolo: int
+    ds_codigo: str
+    ds_titulo: str
+    ds_escala: Optional[str] = None
+    dt_avaliacao: str
+    pontuacao_obtida: int
+    pontuacao_maxima: int
+    percentual: int
+    pontuacao_formatada: str
+    dominios: List[PtsProtocoloDominioScoreOut] = []
+

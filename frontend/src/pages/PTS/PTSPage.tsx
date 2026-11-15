@@ -45,8 +45,8 @@ import {
   EXTERNAL_TERAPY_OPTIONS,
   type Area,
 } from './data/listas'
-import { getMe, getPTSDiagnosticosPrincipais, getPTSDiagnosticosArea, getPTSDiagnosticosTerapeuticos, getPTSEspecialidades, getPTSItensMultidisciplinar, getPTSTerapiasIndicadas, getPTSInstrumentosAvaliacao, finalizarPTS, cancelarPTS, savePTS, updatePTS, getPTSById, getCondutaInterdisciplinarStatus, getPTSObjetivosAnteriores } from '@/api'
-import type { CondutaInterdisciplinarStatus } from '@/api/ptsService'
+import { getMe, getPTSDiagnosticosPrincipais, getPTSDiagnosticosArea, getPTSDiagnosticosTerapeuticos, getPTSEspecialidades, getPTSItensMultidisciplinar, getPTSTerapiasIndicadas, getPTSInstrumentosAvaliacao, getPTSProtocolosAplicados, finalizarPTS, cancelarPTS, savePTS, updatePTS, getPTSById, getCondutaInterdisciplinarStatus, getPTSObjetivosAnteriores } from '@/api'
+import type { CondutaInterdisciplinarStatus, PtsProtocoloAplicado } from '@/api/ptsService'
 import type { User } from '@/types'
 import { useAuth, useLayoutControls } from '@/contexts'
 import { UserProfileDropdown } from '@/components/Header/UserProfileDropdown'
@@ -130,9 +130,10 @@ interface DiagPrincipalRow {
   diagnostico: string | undefined
 }
 
-// ── tipo linha de instrumento de avaliação (estende com cálculo AIMS) ────────
+// ── tipo linha de instrumento de avaliação (estende com cálculo AIMS / protocolo) ──
 interface InstrumentoRow {
   key: number
+  cd_instrumento?: string
   diagnostico: string | undefined
   calculo: string | undefined
 }
@@ -277,6 +278,8 @@ export default function PTSPage() {
   const [opcoesMultidisciplinar, setOpcoesMultidisciplinar] = useState<{ cd: string; ds: string }[]>([])
   const [opcoesTerapiasIndicadas, setOpcoesTerapiasIndicadas] = useState<{ cd: string; ds: string }[]>([])
   const [instrumentoRows, setInstrumentoRows] = useState<InstrumentoRow[]>([{ key: 1, diagnostico: undefined, calculo: undefined }])
+  const [protocolosAplicados, setProtocolosAplicados] = useState<PtsProtocoloAplicado[]>([])
+  const [protocolosLoading, setProtocolosLoading] = useState(false)
   const [condutaStatus, setCondutaStatus] = useState<CondutaInterdisciplinarStatus | null>(null)
   const [condutaStatusLoading, setCondutaStatusLoading] = useState(false)
   const [salvandoPTS, setSalvandoPTS] = useState(false)
@@ -305,6 +308,43 @@ export default function PTSPage() {
       .catch(() => setCondutaStatus(null))
       .finally(() => setCondutaStatusLoading(false))
   }, [paciente.cd_paciente])
+
+  // Consulta protocolos clínicos de Psicologia / Psicopedagogia aplicados ao paciente
+  // pelo mesmo profissional responsável por este PTS
+  useEffect(() => {
+    if (!paciente.cd_paciente) return
+    let cancelado = false
+    setProtocolosLoading(true)
+    getPTSProtocolosAplicados(paciente.cd_paciente, idUsuarioAutor)
+      .then((lista) => {
+        if (cancelado) return
+        setProtocolosAplicados(lista)
+        if (lista.length > 0) {
+          const codigos = new Set(lista.map((p) => p.ds_codigo.toUpperCase()))
+          const titulos = new Set(lista.map((p) => p.ds_titulo.toUpperCase()))
+          setInstrumentoRows((prev) => {
+            const filtrados = prev.filter((r) => {
+              if (!r.diagnostico) return true
+              const cdUpper = (r.cd_instrumento || '').toUpperCase()
+              const dsUpper = r.diagnostico.toUpperCase()
+              if (cdUpper && codigos.has(cdUpper)) return false
+              if (codigos.has(dsUpper) || titulos.has(dsUpper)) return false
+              return !Array.from(codigos).some((c) => dsUpper.startsWith(`${c} —`) || dsUpper.startsWith(`${c} -`))
+            })
+            return filtrados.length > 0 ? filtrados : [{ key: 1, diagnostico: undefined, calculo: undefined }]
+          })
+        }
+      })
+      .catch(() => {
+        if (!cancelado) setProtocolosAplicados([])
+      })
+      .finally(() => {
+        if (!cancelado) setProtocolosLoading(false)
+      })
+    return () => {
+      cancelado = true
+    }
+  }, [paciente.cd_paciente, idUsuarioAutor])
 
   // Observador para o campo de prazo da seção 16
   const prazoEstimado = Form.useWatch('intervencao_prazo', form)
@@ -404,11 +444,30 @@ export default function PTSPage() {
     setExtTerapias(toRows(d.cer_terapias ?? []))
     setConductaRows(toRows(d.conduta_avaliacao_medica ?? []))
     setMultidisciplinarRows(toRows(d.conduta_multidisciplinar ?? []))
+    const listaProt: PtsProtocoloAplicado[] = Array.isArray(d.protocolos_aplicados) ? d.protocolos_aplicados : []
+    if (listaProt.length > 0) {
+      setProtocolosAplicados(listaProt)
+    }
+    const codigosProt = new Set(listaProt.map((p) => p.ds_codigo.toUpperCase()))
+    const titulosProt = new Set(listaProt.map((p) => p.ds_titulo.toUpperCase()))
+    const instFiltrados = (
+      (d.instrumentos ?? []) as { cd_instrumento?: string | null; ds_instrumento: string; ds_calculo?: string | null }[]
+    ).filter((inst) => {
+      if (listaProt.length === 0) return true
+      const cdUpper = (inst.cd_instrumento || '').toUpperCase()
+      const dsUpper = (inst.ds_instrumento || '').toUpperCase()
+      if (cdUpper && codigosProt.has(cdUpper)) return false
+      if (codigosProt.has(dsUpper) || titulosProt.has(dsUpper)) return false
+      return !Array.from(codigosProt).some((c) => dsUpper.startsWith(`${c} —`) || dsUpper.startsWith(`${c} -`))
+    })
     setInstrumentoRows(
-      (d.instrumentos ?? []).length > 0
-        ? (d.instrumentos as { ds_instrumento: string; ds_calculo?: string | null }[]).map(
-            (inst, i) => ({ key: i + 1, diagnostico: inst.ds_instrumento, calculo: inst.ds_calculo ?? undefined })
-          )
+      instFiltrados.length > 0
+        ? instFiltrados.map((inst, i) => ({
+            key: i + 1,
+            cd_instrumento: inst.cd_instrumento ?? undefined,
+            diagnostico: inst.ds_instrumento,
+            calculo: inst.ds_calculo ?? undefined,
+          }))
         : [{ key: 1, diagnostico: undefined, calculo: undefined }]
     )
     setTerapias(
@@ -635,6 +694,33 @@ export default function PTSPage() {
     setErrosTerapias(false)
 
     setSalvandoPTS(true)
+    const instrumentosAutomaticos = protocolosAplicados.map((p) => {
+      const dominiosTexto = p.dominios
+        .map((d) => `${d.ds_dominio}: ${d.nr_subtotal}/${d.nr_maximo} pts`)
+        .join(' | ')
+      const resumoCalculo = [
+        `Pontuação Final: ${p.pontuacao_formatada}`,
+        p.dt_avaliacao ? `Aplicado em: ${p.dt_avaliacao}` : null,
+        p.ds_escala ? `Escala: ${p.ds_escala}` : null,
+        dominiosTexto ? `Domínios: ${dominiosTexto}` : null,
+      ]
+        .filter(Boolean)
+        .join(' — ')
+      return {
+        cd_instrumento: p.ds_codigo,
+        ds_instrumento: p.ds_titulo.toUpperCase().includes(p.ds_codigo.toUpperCase())
+          ? p.ds_titulo
+          : `${p.ds_codigo} — ${p.ds_titulo}`,
+        ds_calculo: resumoCalculo,
+      }
+    })
+    const instrumentosManuais = instrumentoRows
+      .filter((r) => r.diagnostico)
+      .map((r) => ({
+        cd_instrumento: r.cd_instrumento ?? null,
+        ds_instrumento: r.diagnostico!,
+        ds_calculo: r.calculo ?? null,
+      }))
     const payload = {
       ...values,
       cd_paciente: String(paciente.cd_paciente || ''),
@@ -644,9 +730,7 @@ export default function PTSPage() {
       cer_terapias: extTerapias.map((r) => r.diagnostico).filter(Boolean),
       conduta_avaliacao_medica: conductaRows.map((r) => r.diagnostico).filter(Boolean),
       conduta_multidisciplinar: multidisciplinarRows.map((r) => r.diagnostico).filter(Boolean),
-      instrumentos: instrumentoRows
-        .filter((r) => r.diagnostico)
-        .map((r) => ({ ds_instrumento: r.diagnostico!, ds_calculo: r.calculo ?? null })),
+      instrumentos: [...instrumentosAutomaticos, ...instrumentosManuais],
       diagnosticos_area: diagnosticosArea,
       grau_area: grauArea,
       objetivos,
@@ -882,7 +966,7 @@ export default function PTSPage() {
     if (temTexto(v.conduta_interdisciplinar)) ids.add('sec-conduta-inter')
     if (temTexto(v.intervencao_descricao)) ids.add('sec-intervencao')
     if (temTexto(v.intervencao_prazo)) ids.add('sec-prazo')
-    if (instrumentoRows.some((r) => r.diagnostico)) ids.add('sec-instrumentos')
+    if (protocolosAplicados.length > 0 || instrumentoRows.some((r) => r.diagnostico)) ids.add('sec-instrumentos')
     if (
       v.prog_nao_se_aplica || v.prog_glaucoma || v.prog_catarata || v.prog_alem_olhar || v.prog_zika ||
       v.prog_apoio_familiar || v.prog_tea || v.prog_intervencao_precoce || v.prog_rop ||
@@ -895,7 +979,7 @@ export default function PTSPage() {
   }, [
     formValues, diagPrincipais, diagnosticosArea, grauArea, diagTerapeuticos,
     extTerapias, conductaRows, multidisciplinarRows, objetivos, objetivosNaoSeAplica,
-    instrumentoRows, terapias,
+    instrumentoRows, protocolosAplicados, terapias,
   ])
 
   const pendencias = useMemo(() => {
@@ -1826,27 +1910,230 @@ export default function PTSPage() {
           </Row>
         </Card>
 
-        {/* ── SEÇÃO 17: Instrumentos usados na avaliação ── */}
+        {/* ── SEÇÃO 18: Instrumentos usados na avaliação ── */}
         <Card
           role="region"
           aria-labelledby="sec-instrumentos"
           title={
             <SectionHeader title="18. Instrumentos e Escalas de Avaliação" id="sec-instrumentos">
-              <Button
-                size="small"
-                icon={<PlusOutlined />}
-                disabled={ptsFinalizado}
-                onClick={() =>
-                  setInstrumentoRows((prev) => [...prev, { key: Date.now(), diagnostico: undefined, calculo: undefined }])
-                }
-              >
-                Adicionar
-              </Button>
+              <Space size={8}>
+                {protocolosAplicados.length > 0 && (
+                  <Tag
+                    style={{
+                      margin: 0,
+                      background: '#eceffb',
+                      color: '#5568d3',
+                      border: '1px solid #5568d3',
+                      fontWeight: 700,
+                      borderRadius: 6,
+                    }}
+                  >
+                    {protocolosAplicados.length}{' '}
+                    {protocolosAplicados.length === 1 ? 'protocolo aplicado' : 'protocolos aplicados'}
+                  </Tag>
+                )}
+                <Button
+                  size="small"
+                  icon={<PlusOutlined />}
+                  disabled={ptsFinalizado}
+                  onClick={() =>
+                    setInstrumentoRows((prev) => [
+                      ...prev,
+                      { key: Date.now(), diagnostico: undefined, calculo: undefined },
+                    ])
+                  }
+                >
+                  {protocolosAplicados.length > 0 ? 'Adicionar outro instrumento' : 'Adicionar'}
+                </Button>
+              </Space>
             </SectionHeader>
           }
           style={{ marginBottom: 16 }}
           styles={{ body: { padding: 0 } }}
         >
+          {protocolosLoading && (
+            <div style={{ padding: '12px 24px', borderBottom: '1px solid #f0f0f0' }}>
+              <Spin size="small" />{' '}
+              <Text type="secondary" style={{ marginLeft: 8 }}>
+                Verificando protocolos de avaliação aplicados para o paciente...
+              </Text>
+            </div>
+          )}
+
+          {!protocolosLoading && protocolosAplicados.length > 0 && (
+            <div
+              style={{
+                padding: '16px 24px',
+                background: '#f8faff',
+                borderBottom: '1px solid #d5dce3',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 12,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                <Text strong style={{ fontSize: 13, color: '#14212b' }}>
+                  Protocolos clínicos de avaliação aplicados pelo profissional responsável:
+                </Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  Vinculados automaticamente a este PTS
+                </Text>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {protocolosAplicados.map((prot) => (
+                  <div
+                    key={prot.id_avaliacao}
+                    role="group"
+                    aria-label={`Protocolo ${prot.ds_codigo} — Pontuação final ${prot.pontuacao_formatada}`}
+                    style={{
+                      background: '#ffffff',
+                      border: '1px solid #d5dce3',
+                      borderLeft: '5px solid #5568d3',
+                      borderRadius: 8,
+                      padding: '14px 18px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 10,
+                      boxShadow: '0 1px 2px rgba(20, 33, 43, 0.04)',
+                    }}
+                  >
+                    {/* Linha Superior: Identificação da Escala + Pontuação Final */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: 12,
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', flex: 1, minWidth: 240 }}>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '4px 10px',
+                            borderRadius: 6,
+                            background: '#5568d3',
+                            color: '#ffffff',
+                            fontWeight: 800,
+                            fontSize: 13,
+                            letterSpacing: '0.03em',
+                          }}
+                        >
+                          {prot.ds_codigo}
+                        </span>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <Text strong style={{ fontSize: 15, color: '#14212b', lineHeight: 1.3 }}>
+                            {prot.ds_titulo}
+                          </Text>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2, flexWrap: 'wrap' }}>
+                            {prot.dt_avaliacao && (
+                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                Aplicado em {prot.dt_avaliacao}
+                              </Text>
+                            )}
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                padding: '1px 8px',
+                                borderRadius: 999,
+                                background: '#e4f3e9',
+                                color: '#1b6b3a',
+                                fontSize: 11,
+                                fontWeight: 700,
+                              }}
+                            >
+                              <CheckCircleOutlined style={{ fontSize: 11 }} /> Finalizado
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Bloco de Destaque da Pontuação Final */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'flex-end',
+                          background: '#eceffb',
+                          border: '1px solid #5568d3',
+                          borderRadius: 8,
+                          padding: '6px 14px',
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            color: '#44525e',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                          }}
+                        >
+                          Pontuação Final
+                        </span>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                          <span style={{ fontSize: 18, fontWeight: 800, color: '#14212b' }}>
+                            {prot.pontuacao_obtida} / {prot.pontuacao_maxima} pts
+                          </span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: '#5568d3' }}>
+                            ({prot.percentual}%)
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Escala de referência do protocolo */}
+                    {prot.ds_escala && (
+                      <div style={{ fontSize: 12, color: '#44525e', background: '#f3f5f7', padding: '6px 10px', borderRadius: 6 }}>
+                        <strong style={{ color: '#14212b' }}>Escala de pontuação:</strong> {prot.ds_escala}
+                      </div>
+                    )}
+
+                    {/* Subtotais por Domínio */}
+                    {prot.dominios.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                        {prot.dominios.map((dom) => (
+                          <div
+                            key={dom.ds_dominio}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 6,
+                              padding: '4px 10px',
+                              background: '#ffffff',
+                              border: '1px solid #d5dce3',
+                              borderRadius: 6,
+                              fontSize: 12,
+                            }}
+                          >
+                            <span style={{ color: '#44525e' }}>{dom.ds_dominio}:</span>
+                            <strong style={{ color: '#14212b' }}>
+                              {dom.nr_subtotal} / {dom.nr_maximo} pts
+                            </strong>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {protocolosAplicados.length > 0 && (
+            <div style={{ padding: '8px 24px 4px', background: '#fafafa', borderBottom: '1px solid #f0f0f0' }}>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Outros instrumentos complementares de avaliação (opcional):
+              </Text>
+            </div>
+          )}
+
           <Table<InstrumentoRow>
             dataSource={instrumentoRows}
             rowKey="key"
@@ -2245,6 +2532,7 @@ export default function PTSPage() {
             conductaRows,
             multidisciplinarRows,
             instrumentoRows,
+            protocolosAplicados,
             terapias,
             objetivos,
             objetivosNaoSeAplica,

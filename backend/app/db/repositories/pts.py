@@ -12,6 +12,9 @@ from app.db.models import (
     PTSInstrumento,
     PTSObjetivo,
     PTSTerapia,
+    PsiAvaliacao,
+    PsiProtocolo,
+    PsiItem,
 )
 from app.schemas.pts import PTSCreate
 
@@ -134,7 +137,11 @@ def pts_to_dict(pts: PTS) -> dict:
             r.ds_item for r in sorted(pts.condutas_multi, key=lambda x: x.nr_ordem)
         ],
         "instrumentos": [
-            {"ds_instrumento": r.ds_instrumento, "ds_calculo": r.ds_calculo}
+            {
+                "cd_instrumento": r.cd_instrumento,
+                "ds_instrumento": r.ds_instrumento,
+                "ds_calculo": r.ds_calculo,
+            }
             for r in sorted(pts.instrumentos, key=lambda x: x.nr_ordem)
         ],
         "terapias_indicadas": [
@@ -262,6 +269,7 @@ def _inserir_filhos(db: Session, id_pts: int, vigencia: str, pts_data: PTSCreate
         db.add(PTSInstrumento(
             id_pts=id_pts,
             nr_ordem=i+1,
+            cd_instrumento=inst.cd_instrumento,
             ds_instrumento=inst.ds_instrumento,
             ds_calculo=inst.ds_calculo,
         ))
@@ -368,6 +376,7 @@ def create_pts(db: Session, pts_data: PTSCreate, id_usuario: int) -> PTS:
     db.flush()
 
     _inserir_filhos(db, db_pts.id_pts, vigencia, pts_data)
+    _vincular_avaliacoes_pts(db, db_pts.id_pts, str(pts_data.cd_paciente or ""), id_usuario)
 
     db.commit()
     db.refresh(db_pts)
@@ -434,8 +443,122 @@ def update_pts(db: Session, id_pts: int, pts_data: PTSCreate) -> PTS:
     db.flush()
 
     _inserir_filhos(db, id_pts, vigencia, pts_data)
+    _vincular_avaliacoes_pts(db, id_pts, str(db_pts.cd_paciente or ""), db_pts.id_usuario)
 
     db.commit()
     db.refresh(db_pts)
     return db_pts
+
+
+def _vincular_avaliacoes_pts(db: Session, id_pts: int, cd_paciente: str, id_usuario: int) -> None:
+    """Vincula avaliações finalizadas do paciente feitas pelo mesmo profissional ao PTS."""
+    if not cd_paciente or not id_usuario:
+        return
+    try:
+        (
+            db.query(PsiAvaliacao)
+            .filter(
+                PsiAvaliacao.cd_paciente == str(cd_paciente),
+                PsiAvaliacao.id_usuario == id_usuario,
+                PsiAvaliacao.ds_situacao == "FINALIZADO",
+                PsiAvaliacao.id_pts.is_(None),
+            )
+            .update({"id_pts": id_pts}, synchronize_session=False)
+        )
+    except Exception:
+        pass
+
+
+def get_protocolos_aplicados_paciente(db: Session, cd_paciente: str, id_usuario: int) -> list[dict]:
+    """
+    Retorna os protocolos estruturados (Psicologia / Psicopedagogia) finalizados
+    para o paciente quando aplicados pelo mesmo profissional responsável pelo PTS.
+    Se o profissional aplicou mais de um protocolo diferente (ex: PAFE e PASAC,
+    ou PAPE e PAHB), retorna a avaliação finalizada mais recente de cada protocolo.
+    """
+    from sqlalchemy.orm import joinedload
+
+    rows = (
+        db.query(PsiAvaliacao, PsiProtocolo)
+        .join(PsiProtocolo, PsiProtocolo.id_protocolo == PsiAvaliacao.id_protocolo)
+        .options(
+            joinedload(PsiAvaliacao.resultados),
+            joinedload(PsiAvaliacao.respostas),
+        )
+        .filter(
+            PsiAvaliacao.cd_paciente == str(cd_paciente),
+            PsiAvaliacao.id_usuario == id_usuario,
+            PsiAvaliacao.ds_situacao == "FINALIZADO",
+        )
+        .order_by(
+            PsiAvaliacao.dt_finalizacao.desc(),
+            PsiAvaliacao.dt_clinica.desc(),
+            PsiAvaliacao.id_avaliacao.desc(),
+        )
+        .all()
+    )
+
+    vistos: set[str] = set()
+    resultado: list[dict] = []
+
+    for avaliacao, protocolo in rows:
+        codigo = (protocolo.ds_codigo or "").strip().upper()
+        if not codigo or codigo in vistos:
+            continue
+        vistos.add(codigo)
+
+        # Subtotais por domínio consolidados na tabela FAV_TB_PSI_RESULTADO
+        dominios_list: list[dict] = []
+        if avaliacao.resultados:
+            for r in sorted(avaliacao.resultados, key=lambda x: x.id_resultado):
+                dominios_list.append({
+                    "ds_dominio": r.ds_dominio,
+                    "nr_subtotal": int(r.nr_subtotal or 0),
+                    "nr_maximo": int(r.nr_maximo or 0),
+                })
+        else:
+            # Fallback caso resultados não estejam populados: calcula a partir dos itens/respostas
+            itens = (
+                db.query(PsiItem)
+                .filter(PsiItem.id_protocolo == protocolo.id_protocolo)
+                .order_by(PsiItem.nr_ordem, PsiItem.id_item)
+                .all()
+            )
+            por_item = {resp.id_item: int(resp.nr_valor or 0) for resp in avaliacao.respostas}
+            mapa_dom: dict[str, list[int]] = {}
+            for item in itens:
+                if item.ds_dominio not in mapa_dom:
+                    mapa_dom[item.ds_dominio] = [0, 0]
+                mapa_dom[item.ds_dominio][0] += por_item.get(item.id_item, 0)
+                mapa_dom[item.ds_dominio][1] += 2
+            for dom, (sub, maximo) in mapa_dom.items():
+                dominios_list.append({
+                    "ds_dominio": dom,
+                    "nr_subtotal": sub,
+                    "nr_maximo": maximo,
+                })
+
+        pontuacao_obtida = sum(d["nr_subtotal"] for d in dominios_list)
+        pontuacao_maxima = sum(d["nr_maximo"] for d in dominios_list)
+        percentual = round((pontuacao_obtida / pontuacao_maxima) * 100) if pontuacao_maxima > 0 else 0
+
+        dt_ref = avaliacao.dt_finalizacao or avaliacao.dt_clinica or avaliacao.dt_criacao
+        dt_fmt = dt_ref.strftime("%d/%m/%Y") if dt_ref else ""
+
+        resultado.append({
+            "id_avaliacao": avaliacao.id_avaliacao,
+            "id_protocolo": protocolo.id_protocolo,
+            "ds_codigo": codigo,
+            "ds_titulo": protocolo.ds_titulo,
+            "ds_escala": protocolo.ds_escala,
+            "dt_avaliacao": dt_fmt,
+            "pontuacao_obtida": pontuacao_obtida,
+            "pontuacao_maxima": pontuacao_maxima,
+            "percentual": percentual,
+            "pontuacao_formatada": f"{pontuacao_obtida} / {pontuacao_maxima} pts ({percentual}%)",
+            "dominios": dominios_list,
+        })
+
+    return resultado
+
 

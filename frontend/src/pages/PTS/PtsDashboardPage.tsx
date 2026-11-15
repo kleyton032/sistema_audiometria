@@ -238,9 +238,11 @@ export default function PtsDashboardPage() {
         multidisciplinarRows: toRows(d.conduta_multidisciplinar || []),
         instrumentoRows: (d.instrumentos || []).map((v: any, i: number) => ({
           key: i + 1,
+          cd_instrumento: typeof v === 'object' ? v.cd_instrumento : undefined,
           diagnostico: typeof v === 'string' ? v : v.ds_instrumento,
           calculo: typeof v === 'object' ? v.ds_calculo : undefined,
         })),
+        protocolosAplicados: d.protocolos_aplicados || [],
         terapias: d.terapias_indicadas || [],
         objetivos: { ...criarObjetivosIniciais(), ...(d.objetivos || {}) },
         usuarioMe: {

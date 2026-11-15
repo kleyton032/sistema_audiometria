@@ -8,8 +8,15 @@ from pydantic import BaseModel
 
 from app.dependencies import get_db, get_current_user, require_escrita
 from app.db.models import User, PTS
-from app.schemas.pts import PTSCreate, PtsHistoricoSummaryOut
-from app.db.repositories.pts import create_pts, update_pts, get_pts_by_id, get_pts_status_batch, calcular_vigencia
+from app.schemas.pts import PTSCreate, PtsHistoricoSummaryOut, PtsProtocoloAplicadoOut
+from app.db.repositories.pts import (
+    create_pts,
+    update_pts,
+    get_pts_by_id,
+    get_pts_status_batch,
+    calcular_vigencia,
+    get_protocolos_aplicados_paciente,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -860,7 +867,36 @@ def carregar_pts(
         pts = get_pts_by_id(session, id_pts)
         if pts is None:
             raise HTTPException(status_code=404, detail="PTS não encontrado")
-        return pts_to_dict(pts)
+        d = pts_to_dict(pts)
+        try:
+            d["protocolos_aplicados"] = get_protocolos_aplicados_paciente(
+                session, str(pts.cd_paciente), pts.id_usuario
+            )
+        except Exception:
+            d["protocolos_aplicados"] = []
+        return d
+    finally:
+        if user.nm_login == 'testesoul':
+            session.close()
+
+
+@router.get(
+    "/{cd_paciente}/protocolos-aplicados",
+    response_model=list[PtsProtocoloAplicadoOut],
+    summary="Lista protocolos de Psicologia/Psicopedagogia aplicados ao paciente pelo profissional do PTS",
+)
+def listar_protocolos_aplicados_pts(
+    cd_paciente: str,
+    id_usuario_autor: int | None = Query(default=None, description="ID do usuário autor do PTS (padrão: usuário logado)"),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    session = get_db_session(user, db)
+    try:
+        alvo_usuario = id_usuario_autor if id_usuario_autor is not None else user.id_usuario
+        return get_protocolos_aplicados_paciente(session, str(cd_paciente), alvo_usuario)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar protocolos aplicados: {str(e)}")
     finally:
         if user.nm_login == 'testesoul':
             session.close()
