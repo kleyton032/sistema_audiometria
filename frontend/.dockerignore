@@ -1,0 +1,23 @@
+# Dependências locais e artefatos de build
+node_modules
+dist
+.vite
+*.tsbuildinfo
+
+# Controle de versão e IDE
+.git
+.gitignore
+.vscode
+.idea
+
+# Variáveis de ambiente locais e logs
+.env.local
+.env.*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Arquivos Docker (evita invalidar cache desnecessariamente)
+Dockerfile
+.dockerignore

@@ -23,5 +23,14 @@ export default defineConfig({
   },
   build: {
     target: ['chrome86', 'es2015'],
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-antd': ['antd', '@ant-design/icons', '@ant-design/cssinjs'],
+          'vendor-charts': ['recharts'],
+        },
+      },
+    },
   },
 })
